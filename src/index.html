@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolyBot Pro v16 (Persistence & Navigation)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Consolas', 'Monaco', 'Courier New', monospace; background-color: #0c0e14; color: #d1d5db; font-size: 11px; }
+        .excel-table { border-collapse: collapse; width: 100%; border: 1px solid #1f2937; margin-bottom: 2px; }
+        .excel-table th { background: #111827; border: 1px solid #1f2937; padding: 4px 8px; text-align: left; color: #9ca3af; font-weight: normal; }
+        .excel-table td { border: 1px solid #1f2937; padding: 2px 8px; vertical-align: middle; }
+        .win { color: #10b981; }
+        .loss { color: #ef4444; }
+        .stopped { color: #f59e0b; font-weight: bold; }
+        .stat-box { border: 1px solid #1f2937; padding: 4px 10px; background: #111827; min-width: 140px; border-radius: 4px; border-left: 2px solid #374151; }
+        input, select { background: #111827; border: 1px solid #374151; color: white; padding: 2px 6px; outline: none; border-radius: 2px; }
+        button { background: #1f2937; border: 1px solid #374151; color: #10b981; padding: 2px 10px; cursor: pointer; text-transform: uppercase; font-weight: bold; }
+        button:hover { background: #374151; border-color: #10b981; }
+        .idr { color: #64748b; font-size: 10px; display: block; filter: brightness(1.2); }
+        .compact-label { font-size: 9px; color: #6b7280; text-transform: uppercase; font-weight: bold; }
+        .chart-box { border: 1px solid #1f2937; background: #0c0e14; padding: 8px; height: 180px; position: relative; }
+        .settings-bar { border: 1px solid #1f2937; background: #0c0e14; padding: 8px 12px; margin-bottom: 8px; border-radius: 6px; }
+    </style>
+</head>
+<body class="p-2">
+
+    <div id="mainApp" class="max-w-[1600px] mx-auto">
+        <!-- HEADER PANEL -->
+        <div class="settings-bar flex gap-6 items-center flex-wrap shadow-xl">
+            <div class="flex items-center gap-2">
+                <span class="compact-label text-emerald-500">INIT BAL:</span>
+                <input type="number" id="setInitialBal" value="100" class="w-24 h-8 text-center text-lg font-black bg-slate-900 border-emerald-500/50 text-white italic">
+                <button id="btnReset" onclick="applySettings(true)" class="h-8 bg-emerald-500/10 text-emerald-400 px-4 hover:shadow-lg active:scale-95 transition-all">HARD RESET</button>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button onclick="toggleBot('start')" id="btnStart" class="h-8 bg-emerald-700 text-white border-none px-6 rounded font-black hover:bg-emerald-600 shadow-lg" style="display:none;">▶ START</button>
+                <button onclick="toggleBot('stop')" id="btnStop" class="h-8 bg-rose-900 text-rose-300 border-none px-6 rounded font-black hover:bg-rose-800 shadow-lg" style="display:none;">■ STOP</button>
+            </div>
+
+            <div class="stat-box border-slate-700 !min-w-0 px-4 bg-slate-900/50">
+                <span class="compact-label opacity-40">WIN RATE / TRADES</span>
+                <span id="mWinRate" class="text-emerald-500 text-xl font-black block">0%</span>
+                <span id="mTotalTrades" class="text-[9px] text-slate-500 font-mono">Total: 0</span>
+            </div>
+
+            <div class="ml-auto flex items-center gap-4">
+                <div id="statusBadge" class="text-[10px] font-black px-4 py-1.5 rounded-full tracking-tighter border-2">CONNECTING...</div>
+                <div class="stat-box !min-w-0 bg-transparent border-none opacity-40 text-[10px]" id="lastSync">--:--:--</div>
+            </div>
+        </div>
+
+        <!-- STATS GRID -->
+        <div class="flex flex-wrap gap-3 mb-4">
+            <div class="stat-box border-emerald-900"><span class="compact-label opacity-40">Wallet Balance</span><span id="mBal" class="text-white text-xl font-black block">$0.00</span><span id="mBalIDR" class="idr font-mono">Rp 0</span></div>
+            <div class="stat-box border-slate-700"><span class="compact-label opacity-40">Realized PnL</span><span id="mPnlR" class="text-xl font-black block">$0.00</span><span id="mPnlRIDR" class="idr font-mono">Rp 0</span></div>
+            <div class="stat-box border-emerald-900/50"><span class="compact-label opacity-40">Total Won</span><span id="mPnlWon" class="win text-xl font-black block">$0.00</span><span id="mPnlWonIDR" class="idr font-mono text-emerald-600/80">Rp 0</span></div>
+            <div class="stat-box border-rose-900/50 text-right"><span class="compact-label opacity-40">Total Lost</span><span id="mPnlLost" class="loss text-xl font-black block">$0.00</span><span id="mPnlLostIDR" class="idr font-mono text-rose-600/80">Rp 0</span></div>
+            <div class="stat-box border-amber-900/50"><span class="compact-label opacity-40">Exposure In-Bet</span><span id="mInBet" class="text-amber-500 text-xl font-black block">$0.00</span><span id="mInBetIDR" class="idr font-mono text-amber-600/80">Rp 0</span></div>
+            <div class="stat-box border-slate-800 bg-slate-900/10 flex flex-col justify-center px-1">
+                <div class="flex items-center gap-1 mb-1"><span class="text-[8px] opacity-40">MinProb</span><input type="number" id="setMinProb" step="0.05" value="0.85" class="w-12 h-4 text-center text-[9px]"></div>
+                <div class="flex items-center gap-1"><span class="text-[8px] opacity-40">MaxBet</span><input type="number" id="setMaxBet" value="25" class="w-12 h-4 text-center text-[9px]"></div>
+            </div>
+        </div>
+
+        <!-- CHARTS SECTION -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-2 mb-4">
+            <div class="lg:col-span-3 chart-box"><canvas id="equityChart"></canvas></div>
+            <div class="chart-box"><canvas id="distChart"></canvas></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div class="lg:col-span-9 space-y-2">
+                <!-- ACTIVE TRADES -->
+                <div class="border border-slate-800 rounded bg-slate-900/10">
+                    <div class="ctrl-bar px-2 py-1 bg-slate-900/50 flex justify-between">
+                        <span class="compact-label">[1] Active Positions (inc. Moonshots 🚀)</span>
+                        <div class="text-[9px] text-amber-500 font-bold italic animate-pulse">STOP-LOSS PROTECTION ACTIVE (-20%)</div>
+                    </div>
+                    <table class="excel-table">
+                        <thead><tr><th width="80">ID</th><th>Target Market</th><th width="120">Stake (USD/IDR)</th><th width="40">%</th><th width="80">Unrealized</th><th width="40">Url</th></tr></thead>
+                        <tbody id="openTableBody"></tbody>
+                    </table>
+                </div>
+
+                <!-- HISTORY WITH NAVIGATION -->
+                <div class="border border-slate-800 rounded bg-slate-900/10">
+                    <div class="ctrl-bar px-2 py-1 bg-slate-900/50 flex flex-wrap gap-4 items-center">
+                        <span class="compact-label">[2] Trade Ledger</span>
+                        
+                        <div class="flex gap-2 ml-4">
+                            <input type="text" id="histSearch" placeholder="Search Markets..." class="w-32 h-5 text-[9px]" oninput="historyPage=0;renderAll()">
+                            <select id="histFilter" class="h-5 text-[9px]" onchange="historyPage=0;renderAll()">
+                                <option value="all">ALL TYPES</option>
+                                <option value="win">WINS ONLY</option>
+                                <option value="loss">LOSS ONLY</option>
+                                <option value="stopped">S/L ONLY</option>
+                            </select>
+                        </div>
+
+                        <div class="ml-auto flex items-center gap-1">
+                            <button onclick="changePage(-1)" class="h-5 px-2 bg-transparent border-slate-800 text-slate-500">&laquo;</button>
+                            <span id="pageInfo" class="text-[10px] font-bold w-16 text-center text-slate-600">P1</span>
+                            <button onclick="changePage(1)" class="h-5 px-2 bg-transparent border-slate-800 text-slate-500">&raquo;</button>
+                        </div>
+                    </div>
+                    <table class="excel-table">
+                        <thead><tr><th width="50">Res</th><th>Market Record</th><th width="80">Stake</th><th width="120">Outcome PnL (IDR)</th><th width="60">Time</th></tr></thead>
+                        <tbody id="historyTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SCANNER -->
+            <div class="lg:col-span-3">
+                <div class="border border-slate-800 rounded bg-slate-900/10 h-full">
+                    <div class="ctrl-bar px-2 py-1 bg-slate-900/50"><span class="compact-label">[3] Poly Scan Feed</span></div>
+                    <table class="excel-table"><thead><tr><th>Markets Scanning...</th><th width="30">%</th></tr></thead><tbody id="marketTableBody"></tbody></table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const IDR_RATE = 16200;
+        let RAW_DATA = null;
+        let equityChart = null;
+        let distChart = null;
+        let historyPage = 0;
+        const PAGE_SIZE = 12;
+
+        function fUSD(val) { return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function fIDR(val) { return 'Rp ' + (val * IDR_RATE).toLocaleString('id-ID', { maximumFractionDigits: 0 }); }
+
+        async function toggleBot(action) { await fetch(`/api/${action}`, { method: 'POST' }); updateData(); }
+
+        async function applySettings(isReset) {
+            const bal = parseFloat(document.getElementById('setInitialBal').value);
+            const mProb = parseFloat(document.getElementById('setMinProb').value);
+            const mBet = parseFloat(document.getElementById('setMaxBet').value);
+            
+            // SAVE TO LOCAL STORAGE
+            localStorage.setItem('bot_bal', bal);
+            localStorage.setItem('bot_prob', mProb);
+            localStorage.setItem('bot_bet', mBet);
+
+            const body = { min_prob: mProb, max_bet: mBet, reset_balance: isReset ? bal : null };
+            await fetch(`/api/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            if(isReset) { historyPage = 0; setTimeout(updateData, 500); }
+        }
+
+        // LOAD FROM LOCAL STORAGE ON START
+        function loadSettings() {
+            if(localStorage.getItem('bot_bal')) document.getElementById('setInitialBal').value = localStorage.getItem('bot_bal');
+            if(localStorage.getItem('bot_prob')) document.getElementById('setMinProb').value = localStorage.getItem('bot_prob');
+            if(localStorage.getItem('bot_bet')) document.getElementById('setMaxBet').value = localStorage.getItem('bot_bet');
+        }
+
+        function initCharts() {
+            const ctxE = document.getElementById('equityChart').getContext('2d');
+            equityChart = new Chart(ctxE, {
+                type: 'line',
+                data: { labels: [], datasets: [
+                    { label: 'Equity', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, tension: 0.1, borderWidth: 1.5, pointRadius: 0 },
+                    { label: 'Wallet', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.04)', fill: true, tension: 0.1, borderWidth: 1, pointRadius: 0 }
+                ] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: true, grid: { color: '#1f2937' }, ticks: { color: '#4b5563', font: {size: 8} } }, y: { grid: { color: '#111827' }, ticks: { color: '#6b7280', font: {size: 10} } } }, plugins: { legend: { display: false } } }
+            });
+            const ctxD = document.getElementById('distChart').getContext('2d');
+            distChart = new Chart(ctxD, { type: 'bar', data: { labels: ['WIN', 'LOSS'], datasets: [{ data: [0, 0], backgroundColor: ['#065f46', '#7f1d1d'], borderWidth: 0 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: true, ticks: { color: '#9ca3af', font: {weight: 'bold'} } } }, plugins: { legend: { display: false } } } });
+        }
+
+        async function updateData() {
+            try {
+                const res = await fetch(`/api/status`);
+                if (!res.ok) return;
+                RAW_DATA = await res.json();
+                renderAll(); updateCharts();
+            } catch (e) {}
+        }
+
+        function updateCharts() {
+            if(!RAW_DATA) return;
+            equityChart.data.labels = RAW_DATA.chart_history.map(p => p.time);
+            equityChart.data.datasets[0].data = RAW_DATA.chart_history.map(p => p.total);
+            equityChart.data.datasets[1].data = RAW_DATA.chart_history.map(p => p.wallet);
+            equityChart.update('none');
+            const h = RAW_DATA.history;
+            const wins = h.filter(x => x.won).length;
+            const losses = h.filter(x => !x.won).length;
+            distChart.data.datasets[0].data = [wins, losses];
+            distChart.update('none');
+            const total = wins + losses;
+            document.getElementById('mWinRate').textContent = total > 0 ? (wins / total * 100).toFixed(1) + "%" : "0%";
+            document.getElementById('mTotalTrades').textContent = "Total: " + total;
+        }
+
+        function changePage(delta) { historyPage = Math.max(0, historyPage + delta); renderAll(); }
+
+        function renderAll() {
+            if(!RAW_DATA) return;
+            const data = RAW_DATA;
+            
+            document.getElementById('btnStart').style.display = data.running ? 'none' : 'block';
+            document.getElementById('btnStop').style.display = data.running ? 'block' : 'none';
+            document.getElementById('statusBadge').textContent = data.running ? 'BOT ACTIVE' : 'BOT STANDBY';
+            document.getElementById('statusBadge').className = `text-[10px] font-black px-4 py-1.5 rounded-full tracking-tighter border-2 shadow-inner transition-all ${data.running ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/40 shadow-emerald-500/10' : 'bg-slate-900/40 text-slate-500 border-slate-800'}`;
+
+            const stats = ['Bal', 'PnlR', 'PnlWon', 'PnlLost', 'InBet'];
+            const pkey = ['balance', 'pnl_realized', 'pnl_won', 'pnl_lost', 'usd_in_bet'];
+            stats.forEach((s, i) => {
+                const val = data[pkey[i]];
+                document.getElementById('m'+s).textContent = fUSD(val);
+                document.getElementById('m'+s+'IDR').textContent = fIDR(val);
+                if(s==='PnlR') document.getElementById('mPnlR').className = val >= 0 ? 'win text-xl font-black block' : 'loss text-xl font-black block';
+            });
+            document.getElementById('lastSync').textContent = data.last_sync;
+
+            document.getElementById('openTableBody').innerHTML = data.open_trades.map(t => `
+                <tr class="hover:bg-slate-800/10"><td>${t.id}</td><td class="font-bold truncate" style="max-width:280px;">${t.is_moonshot?'🚀 ':''}${t.question}</td><td>${fUSD(t.bet_amount)}<br><span class="idr">${fIDR(t.bet_amount)}</span></td><td class="text-emerald-500 font-mono">${(t.entry_prob*100).toFixed(0)}%</td><td class="${t.unrealized_pnl >= 0 ? 'win font-bold' : 'loss font-bold'}">${fUSD(t.unrealized_pnl)}</td><td><a href="${t.slug}" target="_blank" class="text-blue-500 inline-block font-black">↗</a></td></tr>
+            `).join('');
+
+            // FILTER & SEARCH LOGIC
+            const searchQ = document.getElementById('histSearch').value.toLowerCase();
+            const filterVal = document.getElementById('histFilter').value;
+            
+            let filteredHistory = data.history.filter(h => {
+                const matchesSearch = h.question.toLowerCase().includes(searchQ);
+                let matchesFilter = true;
+                if(filterVal === 'win') matchesFilter = h.won;
+                if(filterVal === 'loss') matchesFilter = !h.won && !h.was_stopped;
+                if(filterVal === 'stopped') matchesFilter = h.was_stopped;
+                return matchesSearch && matchesFilter;
+            });
+
+            const start = historyPage * PAGE_SIZE;
+            const hDisplay = filteredHistory.slice(start, start + PAGE_SIZE);
+            const totalPages = Math.ceil(filteredHistory.length / PAGE_SIZE) || 1;
+            document.getElementById('pageInfo').textContent = `P${historyPage + 1} / ${totalPages}`;
+
+            document.getElementById('historyTableBody').innerHTML = hDisplay.map(x => `
+                <tr class="hover:bg-slate-800/10"><td class="${x.won?'win':(x.was_stopped?'stopped':'loss')} font-black italic">${x.won?'WIN':(x.was_stopped?'S/L':'LOSE')}</td><td class="truncate" style="max-width:300px;">${x.question}</td><td>${fUSD(x.bet_amount)}</td><td class="${x.pnl>=0?'win font-bold':'loss font-bold'}">${fUSD(x.pnl)}<br><span class="idr">${fIDR(x.pnl)}</span></td><td class="opacity-50">${x.time}</td></tr>
+            `).join('');
+
+            document.getElementById('marketTableBody').innerHTML = data.current_markets.map(m => `
+                <tr class="${m.prob >= data.min_prob_threshold ? 'bg-emerald-500/5' : 'opacity-20'}"><td>${m.question}</td><td class="font-black text-right">${(m.prob*100).toFixed(0)}</td></tr>
+            `).join('');
+        }
+
+        loadSettings(); initCharts(); setInterval(updateData, 2000); updateData();
+    </script>
+</body>
+</html>

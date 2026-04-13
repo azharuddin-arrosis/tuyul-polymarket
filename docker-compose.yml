@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  polybot:
+    build: .
+    container_name: polybot_engine
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
