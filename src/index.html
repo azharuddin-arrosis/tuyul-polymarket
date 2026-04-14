@@ -121,19 +121,21 @@
                         <input type="number" id="sa_balance" value="10" segment="initial_balance" class="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xl font-black mono outline-none focus:border-emerald-500 transition-colors">
                     </div>
                     <div class="space-y-1">
-                        <div class="flex justify-between">
-                            <label class="stat-label text-emerald-500">Minimum Odds (Threshold)</label>
-                            <span id="sa_odds_label" class="mono text-emerald-500 font-bold">80%</span>
-                        </div>
-                        <input type="range" id="sa_odds" min="50" max="95" value="80" oninput="document.getElementById('sa_odds_label').textContent = this.value + '%'" class="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500">
-                        <div class="flex justify-between text-[8px] opacity-40 font-bold tracking-widest">
-                            <span>50% (HIGH RISK)</span>
-                            <span>95% (SAFE)</span>
+                        <label class="stat-label text-emerald-500 italic">Configure Odds Range (Risk Distribution)</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="space-y-1">
+                                <span class="text-[8px] opacity-40 font-bold uppercase tracking-widest pl-1">Start (Min %)</span>
+                                <input type="number" id="sa_odds_min" value="50" class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm font-black mono outline-none focus:border-emerald-500 transition-colors">
+                            </div>
+                            <div class="space-y-1">
+                                <span class="text-[8px] opacity-40 font-bold uppercase tracking-widest pl-1">End (Max %)</span>
+                                <input type="number" id="sa_odds_max" value="80" class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm font-black mono outline-none focus:border-emerald-500 transition-colors">
+                            </div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 bg-white/5 p-3 rounded border border-white/5">
                         <input type="checkbox" id="sa_spread" checked class="w-4 h-4 accent-emerald-500">
-                        <label for="sa_spread" class="text-[10px] font-bold tracking-wider cursor-pointer">SPREAD ODDS (Sequential +5% every 2 bots)</label>
+                        <label for="sa_spread" class="text-[10px] font-bold tracking-wider cursor-pointer italic">Distribute across pairs (Start to End)</label>
                     </div>
                     <div class="pt-2">
                         <button onclick="executeStartAll()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded font-black text-[11px] tracking-widest transition-all shadow-xl shadow-emerald-500/10 active:scale-[0.98]">ACTIVATE ALL 10 INSTANCES</button>
@@ -368,14 +370,20 @@
 
         async function executeStartAll() {
             const balance = parseFloat(document.getElementById('sa_balance').value);
-            const odds = parseFloat(document.getElementById('sa_odds').value) / 100;
+            const min_odds = parseFloat(document.getElementById('sa_odds_min').value) / 100;
+            const max_odds = parseFloat(document.getElementById('sa_odds_max').value) / 100;
             const spread = document.getElementById('sa_spread').checked;
             
             try {
                 const res = await fetch('/api/start_all', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ initial_balance: balance, min_prob: odds, spread: spread })
+                    body: JSON.stringify({ 
+                        initial_balance: balance, 
+                        min_prob: min_odds, 
+                        max_prob: max_odds, 
+                        spread: spread 
+                    })
                 });
                 
                 if(res.ok) {

@@ -202,6 +202,7 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
 struct StartAllPayload {
     initial_balance: f64,
     min_prob: f64,
+    max_prob: f64,
     spread: bool,
 }
 
@@ -213,10 +214,12 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
         bot.id = bot_names[i].to_string(); 
         bot.balance = p.initial_balance;
         
-        // Pattern: 2 bots per odds level, increasing by 5% each step
+        // Pattern: Distribute odds across 5 pairs from min to max
         let threshold = if p.spread {
-            let step = (i / 2) as f64 * 0.05;
-            (p.min_prob + step).min(0.98)
+            let pair_idx = (i / 2) as f64;
+            let range = p.max_prob - p.min_prob;
+            let step = if range > 0.0 { range / 4.0 } else { 0.0 };
+            (p.min_prob + (pair_idx * step)).min(0.98)
         } else {
             p.min_prob
         };
