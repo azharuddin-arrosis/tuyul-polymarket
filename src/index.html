@@ -101,33 +101,40 @@
         <div id="startAllModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
             <div class="bg-[#0f0f0f] border border-white/10 rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
                 <div class="bg-white/5 px-4 py-3 border-b border-white/5 flex justify-between items-center">
-                    <span class="font-black text-[10px] tracking-widest uppercase">Start All bots</span>
+                    <span class="font-black text-[10px] tracking-widest uppercase text-emerald-500">Quantum Auto-Scale Engine</span>
                     <button onclick="hideStartAllModal()" class="opacity-40 hover:opacity-100 text-lg">&times;</button>
                 </div>
                 <div class="p-4 space-y-4">
                     <div class="space-y-1">
-                        <label class="stat-label text-emerald-500">Initial Balance (per bot)</label>
-                        <input type="number" id="sa_balance" value="10" segment="initial_balance" class="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xl font-black mono outline-none focus:border-emerald-500 transition-colors">
+                        <label class="stat-label text-blue-400">Total Farm Liquidity (USDC)</label>
+                        <input type="number" id="sa_total_capital" value="23" oninput="previewScaling()" class="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xl font-black mono outline-none focus:border-blue-500 transition-colors">
+                        <div id="sa_preview" class="text-[9px] italic opacity-60 mt-1">Ready to deploy 2 bots + $3 reserve.</div>
                     </div>
                     <div class="space-y-1">
-                        <label class="stat-label text-emerald-500 italic">Configure Odds Range (Risk Distribution)</label>
+                        <label class="stat-label text-emerald-500 italic">Core Risk Parameters (Odds Range)</label>
                         <div class="grid grid-cols-2 gap-2">
                             <div class="space-y-1">
-                                <span class="text-[8px] opacity-40 font-bold uppercase tracking-widest pl-1">Start (Min %)</span>
+                                <span class="text-[8px] opacity-40 font-bold uppercase tracking-widest pl-1">Min Odds %</span>
                                 <input type="number" id="sa_odds_min" value="50" class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm font-black mono outline-none focus:border-emerald-500 transition-colors">
                             </div>
                             <div class="space-y-1">
-                                <span class="text-[8px] opacity-40 font-bold uppercase tracking-widest pl-1">End (Max %)</span>
+                                <span class="text-[8px] opacity-40 font-bold uppercase tracking-widest pl-1">Max Odds %</span>
                                 <input type="number" id="sa_odds_max" value="80" class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm font-black mono outline-none focus:border-emerald-500 transition-colors">
                             </div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 bg-white/5 p-3 rounded border border-white/5">
-                        <input type="checkbox" id="sa_spread" checked class="w-4 h-4 accent-emerald-500">
-                        <label for="sa_spread" class="text-[10px] font-bold tracking-wider cursor-pointer italic">Distribute across pairs (Start to End)</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2 bg-white/5 p-3 rounded border border-white/5">
+                            <input type="checkbox" id="sa_autoscale" checked class="w-4 h-4 accent-emerald-500">
+                            <label for="sa_autoscale" class="text-[10px] font-black tracking-wider cursor-pointer italic text-emerald-300">ACTIVATE AUTO-COMPOUND SCALING</label>
+                        </div>
+                        <div class="flex items-center gap-2 bg-emerald-500/5 p-2 rounded border border-emerald-500/20">
+                            <input type="checkbox" id="sa_spread" checked class="w-2.5 h-2.5 accent-emerald-500">
+                            <label for="sa_spread" class="text-[8px] font-bold tracking-wider cursor-pointer opacity-60 uppercase">Distribute Odds Spreads Across Instances</label>
+                        </div>
                     </div>
                     <div class="pt-2">
-                        <button onclick="executeStartAll()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded font-black text-[11px] tracking-widest transition-all shadow-xl shadow-emerald-500/10 active:scale-[0.98]">ACTIVATE ALL 10 INSTANCES</button>
+                        <button onclick="executeStartAll()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded font-black text-[11px] tracking-widest transition-all shadow-xl shadow-emerald-500/20 active:scale-[0.98]">INITIALIZE QUANTUM FARM</button>
                     </div>
                 </div>
             </div>
@@ -191,9 +198,9 @@
                         <div class="text-[8px] opacity-20">Realized PnL > 0</div>
                     </div>
                     <div class="compact-panel p-3 bg-white/2">
-                        <span class="stat-label text-rose-500">Losers</span>
-                        <div id="losingBotCount" class="mono font-bold text-lg text-rose-500">0 Bots</div>
-                        <div class="text-[8px] opacity-20">Realized PnL < 0</div>
+                        <span class="stat-label text-blue-400">Scaling</span>
+                        <div id="scalingStatus" class="mono font-bold text-lg text-blue-400 italic">INACTIVE</div>
+                        <div id="scalingNext" class="text-[8px] opacity-20">No active compound target</div>
                     </div>
                 </div>
 
@@ -400,7 +407,19 @@
                 document.getElementById('totalFarmLossesIDR').textContent = 'Rp ' + (totalLosses * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
                 
                 document.getElementById('winningBotCount').textContent = winningCount + " Bots";
-                document.getElementById('losingBotCount').textContent = losingCount + " Bots";
+                
+                // --- SCALING UPDATE ---
+                const scalingEl = document.getElementById('scalingStatus');
+                const scalingNextEl = document.getElementById('scalingNext');
+                if(MASTER_DATA.auto_scale) {
+                    const activeCount = MASTER_DATA.bots.filter(b => b.running).count();
+                    const nextThreshold = (activeCount + 1) * 10;
+                    scalingEl.textContent = `LEVEL ${activeCount}`;
+                    scalingNextEl.textContent = `Next bot at ${fUSD(nextThreshold)} (Need ${fUSD(nextThreshold - totalEquity)})`;
+                } else {
+                    scalingEl.textContent = "INACTIVE";
+                    scalingNextEl.textContent = "No active compound target";
+                }
 
                 const pnlEl = document.getElementById('totalFarmPnl');
                 pnlEl.textContent = fUSD(totalPnL);
@@ -581,21 +600,30 @@
         function showStartAllModal() { document.getElementById('startAllModal').classList.remove('hidden'); }
         function hideStartAllModal() { document.getElementById('startAllModal').classList.add('hidden'); }
 
+        function previewScaling() {
+            const val = parseFloat(document.getElementById('sa_total_capital').value) || 0;
+            const bots = Math.floor(val / 10);
+            const reserve = val % 10;
+            document.getElementById('sa_preview').textContent = `Ready to deploy ${bots} bots + ${fUSD(reserve)} reserve.`;
+        }
+
         async function executeStartAll() {
-            const balance = parseFloat(document.getElementById('sa_balance').value);
+            const total_capital = parseFloat(document.getElementById('sa_total_capital').value);
             const min_odds = parseFloat(document.getElementById('sa_odds_min').value) / 100;
             const max_odds = parseFloat(document.getElementById('sa_odds_max').value) / 100;
             const spread = document.getElementById('sa_spread').checked;
+            const auto_scale = document.getElementById('sa_autoscale').checked;
             
             try {
                 const res = await fetch('/api/start_all', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ 
-                        initial_balance: balance, 
+                        total_capital, 
                         min_prob: min_odds, 
                         max_prob: max_odds, 
-                        spread: spread 
+                        spread: spread,
+                        auto_scale: auto_scale
                     })
                 });
                 

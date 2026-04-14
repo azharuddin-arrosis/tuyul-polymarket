@@ -75,6 +75,8 @@ struct BotState {
 #[derive(Serialize, Deserialize, Clone)]
 struct MasterState {
     bots: Vec<BotState>,
+    auto_scale: bool,
+    target_capital: f64,
 }
 
 type SharedState = Arc<Mutex<MasterState>>;
@@ -92,6 +94,52 @@ async fn main() {
             bot_worker(slave_state, bot_id).await;
         });
     }
+
+    // --- AUTO SCALING MONITOR ---
+    let monitor_state = Arc::clone(&state);
+    tokio::spawn(async move {
+        loop {
+            sleep(Duration::from_secs(10)).await;
+            let mut s = monitor_state.lock().await;
+            if s.auto_scale {
+                let total_equity: f64 = s.bots.iter().map(|b| {
+                    let unrealized: f64 = b.open_trades.iter().map(|t| t.unrealized_pnl).sum();
+                    b.balance + b.usd_in_bet + unrealized
+                }).sum();
+
+                let active_count = s.bots.iter().filter(|b| b.running).count();
+                let possible_bots = (total_equity / 10.0).floor() as usize;
+
+                if possible_bots > active_count && possible_bots <= 10 && active_count > 0 {
+                    println!("🚀 [SCALING] Profit target reached! Scaling from {} to {} bots.", active_count, possible_bots);
+                    
+                    // Logic: Reset and Re-allocate
+                    let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
+                    let per_bot_bal = total_equity / (possible_bots as f64);
+                    
+                    for i in 0..10 {
+                        let bot = &mut s.bots[i];
+                        bot.id = bot_names[i].to_string();
+                        bot.history.clear(); bot.open_trades.clear(); bot.chart_history.clear();
+                        bot.pnl_realized = 0.0; bot.pnl_won = 0.0; bot.pnl_lost = 0.0;
+                        bot.usd_in_bet = 0.0;
+                        
+                        if i < possible_bots {
+                            bot.balance = per_bot_bal;
+                            bot.initial_balance = per_bot_bal;
+                            bot.running = true;
+                            bot.last_sync = "SCALED".to_string();
+                        } else {
+                            bot.balance = 0.0;
+                            bot.initial_balance = 0.0;
+                            bot.running = false;
+                        }
+                    }
+                    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                }
+            }
+        }
+    });
 
     let app = Router::new()
         .route("/", get(get_dashboard))
@@ -144,7 +192,7 @@ fn load_state() -> MasterState {
             running: false,
         });
     }
-    MasterState { bots }
+    MasterState { bots, auto_scale: false, target_capital: 0.0 }
 }
 
 async fn get_status(State(state): State<SharedState>) -> impl IntoResponse { Json(state.lock().await.clone()) }
@@ -211,36 +259,50 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
 
 #[derive(Deserialize)]
 struct StartAllPayload {
-    initial_balance: f64,
+    total_capital: f64,
     min_prob: f64,
     max_prob: f64,
     spread: bool,
+    auto_scale: bool,
 }
 
 async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAllPayload>) -> impl IntoResponse {
     let mut s = state.lock().await;
+    s.auto_scale = p.auto_scale;
+    s.target_capital = p.total_capital;
+
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
+    let num_bots = (p.total_capital / 10.0).floor() as usize;
+    let num_bots = num_bots.clamp(1, 10);
+    let per_bot_bal = p.total_capital / (num_bots as f64);
+
     for i in 0..s.bots.len() {
         let bot = &mut s.bots[i];
         bot.id = bot_names[i].to_string(); 
-        bot.balance = p.initial_balance;
-        bot.initial_balance = p.initial_balance;
-        
-        // Pattern: Distribute odds across 5 pairs from min to max
-        let threshold = if p.spread {
-            let pair_idx = (i / 2) as f64;
-            let range = p.max_prob - p.min_prob;
-            let step = if range > 0.0 { range / 4.0 } else { 0.0 };
-            (p.min_prob + (pair_idx * step)).min(0.98)
-        } else {
-            p.min_prob
-        };
-        
-        bot.min_prob_threshold = (threshold * 100.0).round() / 100.0;
-        bot.pnl_realized = 0.0; bot.pnl_won = 0.0; bot.pnl_lost = 0.0;
         bot.history.clear(); bot.chart_history.clear(); bot.open_trades.clear();
-        bot.running = true;
-        bot.last_sync = "START_ALL".to_string();
+        bot.pnl_realized = 0.0; bot.pnl_won = 0.0; bot.pnl_lost = 0.0;
+        bot.usd_in_bet = 0.0;
+
+        if i < num_bots {
+            bot.balance = per_bot_bal;
+            bot.initial_balance = per_bot_bal;
+            bot.running = true;
+            
+            let threshold = if p.spread {
+                let pair_idx = (i / 2) as f64;
+                let range = p.max_prob - p.min_prob;
+                let step = if range > 0.0 { range / 4.0 } else { 0.0 };
+                (p.min_prob + (pair_idx * step)).min(0.98)
+            } else {
+                p.min_prob
+            };
+            bot.min_prob_threshold = (threshold * 100.0).round() / 100.0;
+            bot.last_sync = "START_ALL".to_string();
+        } else {
+            bot.balance = 0.0;
+            bot.initial_balance = 0.0;
+            bot.running = false;
+        }
     }
     axum::http::StatusCode::OK
 }
