@@ -82,9 +82,10 @@ type SharedState = Arc<Mutex<MasterState>>;
 async fn main() {
     let state = Arc::new(Mutex::new(load_state()));
 
+    let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
     for i in 0..10 {
         let slave_state = Arc::clone(&state);
-        let bot_id = format!("BOT-{}", i + 1);
+        let bot_id = bot_names[i].to_string();
         tokio::spawn(async move {
             bot_worker(slave_state, bot_id).await;
         });
