@@ -271,10 +271,6 @@
                     <div class="compact-panel p-3">
                         <span class="stat-label">Status</span>
                         <div id="mStatus" class="text-xl font-black mono">OFFLINE</div>
-                        <div id="mActionBtns" class="flex gap-2 mt-1">
-                            <button id="btnToggle" class="bg-emerald-600 hover:bg-emerald-500 px-2 py-0.5 rounded font-bold text-[9px]">START</button>
-                            <button id="btnReset" class="bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded font-bold text-[9px]">RESET</button>
-                        </div>
                     </div>
                 </div>
 
@@ -447,7 +443,10 @@
                 return `
                     <div onclick="selectBot('${bot.id}')" class="bot-card p-2 rounded ${bot.id === selectedBotId ? 'active' : ''}">
                         <div class="flex justify-between items-start mb-1">
-                            <span class="font-black text-[9px]">${bot.id}</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full ${bot.running ? 'bg-emerald-500 shadow-[0_0_5px_#10b981] animate-pulse' : 'bg-rose-500/50 shadow-[0_0_3px_#ef4444]'}"></span>
+                                <span class="font-black text-[9px]">${bot.id}</span>
+                            </div>
                             <span class="text-[8px] font-bold ${isWinner?'win':'loss'}">${isWinner?'+':''}${roi}%</span>
                         </div>
                         <div class="mono font-bold text-[10px] ${isWinner ? 'win' : 'loss'}">
@@ -498,10 +497,6 @@
 
             document.getElementById('mWallet').textContent = fUSD(bot.balance);
             document.getElementById('mWalletIDR').textContent = 'Rp ' + (bot.balance * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
-
-            document.getElementById('btnToggle').textContent = bot.running ? "STOP" : "START";
-            document.getElementById('btnToggle').onclick = () => toggleBot(bot.id, bot.running ? 'stop' : 'start');
-            document.getElementById('btnReset').onclick = () => resetBot(bot.id);
 
             // Tables
             document.getElementById('openTableBody').innerHTML = bot.open_trades.map(t => `
