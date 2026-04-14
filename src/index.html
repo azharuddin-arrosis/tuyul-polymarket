@@ -249,12 +249,18 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                     <div class="compact-panel p-3 border-l-4 border-l-emerald-500">
                         <span class="stat-label">Net Equity</span>
-                        <div id="mTotal" class="text-xl font-black mono">$0.00</div>
+                        <div class="flex items-baseline gap-2">
+                            <div id="mTotal" class="text-xl font-black mono">$0.00</div>
+                            <div id="mTotalIDR" class="text-[9px] opacity-40">Rp 0</div>
+                        </div>
                         <div id="mWinRate" class="text-[10px] win font-bold">0% Win Rate</div>
                     </div>
                     <div class="compact-panel p-3">
                         <span class="stat-label">Pnl Realized</span>
-                        <div id="mPnlR" class="text-xl font-black mono">$0.00</div>
+                        <div class="flex items-baseline gap-2">
+                            <div id="mPnlR" class="text-xl font-black mono">$0.00</div>
+                            <div id="mPnlRIDR" class="text-[9px] opacity-40">Rp 0</div>
+                        </div>
                         <div id="mTrades" class="text-[10px] opacity-40">0 Trades</div>
                     </div>
                     <div class="compact-panel p-3">
@@ -276,19 +282,31 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                     <div class="compact-panel p-3">
                         <span class="stat-label">Initial Modal</span>
-                        <div id="mInitial" class="text-xl font-black mono opacity-40">$0.00</div>
+                        <div class="flex items-baseline gap-2">
+                            <div id="mInitial" class="text-xl font-black mono opacity-40">$0.00</div>
+                            <div id="mInitialIDR" class="text-[9px] opacity-20">Rp 0</div>
+                        </div>
                     </div>
                     <div class="compact-panel p-3">
                         <span class="stat-label">Wins Sum</span>
-                        <div id="mGains" class="text-xl font-black mono win">$0.00</div>
+                        <div class="flex items-baseline gap-2">
+                            <div id="mGains" class="text-xl font-black mono win">$0.00</div>
+                            <div id="mGainsIDR" class="text-[9px] win opacity-40">Rp 0</div>
+                        </div>
                     </div>
                     <div class="compact-panel p-3">
                         <span class="stat-label">Losses Sum</span>
-                        <div id="mLosses" class="text-xl font-black mono loss">$0.00</div>
+                        <div class="flex items-baseline gap-2">
+                            <div id="mLosses" class="text-xl font-black mono loss">$0.00</div>
+                            <div id="mLossesIDR" class="text-[9px] loss opacity-40">Rp 0</div>
+                        </div>
                     </div>
                     <div class="compact-panel p-3 border-l-4 border-l-blue-500 bg-blue-500/5">
                         <span class="stat-label text-blue-400">Wallet Balance</span>
-                        <div id="mWallet" class="text-xl font-black mono text-blue-400">$0.00</div>
+                        <div class="flex items-baseline gap-2">
+                            <div id="mWallet" class="text-xl font-black mono text-blue-400">$0.00</div>
+                            <div id="mWalletIDR" class="text-[9px] text-blue-400 opacity-40">Rp 0</div>
+                        </div>
                     </div>
                 </div>
 
@@ -443,20 +461,31 @@
             const realizedRoi = (bot.pnl_realized / initial * 100).toFixed(1);
             
             document.getElementById('mTotal').innerHTML = `${fUSD(equity)} <span class="text-[10px] ${equity>=initial?'win':'loss'} ml-2 font-bold">${equity>=initial?'+':''}${equityRoi}%</span>`;
+            document.getElementById('mTotalIDR').textContent = 'Rp ' + (equity * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+            
             document.getElementById('mPnlR').innerHTML = `${fUSD(bot.pnl_realized)} <span class="text-[10px] ${bot.pnl_realized>=0?'win':'loss'} ml-2 font-bold">${bot.pnl_realized>=0?'+':''}${realizedRoi}%</span>`;
+            document.getElementById('mPnlRIDR').textContent = 'Rp ' + Math.abs(bot.pnl_realized * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+
             document.getElementById('mThreshold').textContent = (bot.min_prob_threshold*100).toFixed(0) + "%";
             document.getElementById('mStatus').textContent = bot.running ? "ACTIVE" : "PAUSED";
             document.getElementById('mStatus').className = `text-xl font-black mono ${bot.running ? 'win' : 'opacity-40'}`;
             
-            const total = bot.pnl_won + Math.abs(bot.pnl_lost) || 1;
-            const winRate = (bot.pnl_won / total * 100).toFixed(1);
+            const totalRank = bot.pnl_won + Math.abs(bot.pnl_lost) || 1;
+            const winRate = (bot.pnl_won / totalRank * 100).toFixed(1);
             document.getElementById('mWinRate').textContent = winRate + "% Success Rate";
             document.getElementById('mTrades').textContent = bot.history.length + " Closures";
             
             document.getElementById('mInitial').textContent = fUSD(initial);
+            document.getElementById('mInitialIDR').textContent = 'Rp ' + (initial * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+
             document.getElementById('mGains').textContent = fUSD(bot.pnl_won);
+            document.getElementById('mGainsIDR').textContent = 'Rp ' + (bot.pnl_won * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+
             document.getElementById('mLosses').textContent = fUSD(Math.abs(bot.pnl_lost));
+            document.getElementById('mLossesIDR').textContent = 'Rp ' + (Math.abs(bot.pnl_lost) * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+
             document.getElementById('mWallet').textContent = fUSD(bot.balance);
+            document.getElementById('mWalletIDR').textContent = 'Rp ' + (bot.balance * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
 
             document.getElementById('btnToggle').textContent = bot.running ? "STOP" : "START";
             document.getElementById('btnToggle').onclick = () => toggleBot(bot.id, bot.running ? 'stop' : 'start');
