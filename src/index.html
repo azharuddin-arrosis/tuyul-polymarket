@@ -90,6 +90,13 @@
                             <span id="totalFarmCapitalIDR" class="opacity-40 text-[10px]">Rp 0</span>
                         </div>
                     </div>
+                    <div class="flex flex-col border-r border-white/10 pr-6">
+                        <span class="stat-label text-emerald-400">Farm Net Equity</span>
+                        <div class="flex items-baseline gap-2">
+                            <span id="totalFarmEquity" class="mono font-black text-xl text-emerald-400">$0.00</span>
+                            <span id="totalFarmEquityIDR" class="opacity-40 text-[10px]">Rp 0</span>
+                        </div>
+                    </div>
                     <div class="flex flex-col">
                         <span class="stat-label">Cumulative Farm PnL</span>
                         <div class="flex items-baseline gap-3">
@@ -295,10 +302,17 @@
                 
                 const totalPnL = MASTER_DATA.bots.reduce((acc, b) => acc + b.pnl_realized, 0);
                 const totalCapital = MASTER_DATA.bots.reduce((acc, b) => acc + (b.initial_balance || 10), 0);
+                const totalEquity = MASTER_DATA.bots.reduce((acc, b) => {
+                    const unrealized = b.open_trades.reduce((u, t) => u + t.unrealized_pnl, 0);
+                    return acc + b.balance + b.usd_in_bet + unrealized;
+                }, 0);
                 const totalRoi = totalCapital > 0 ? (totalPnL / totalCapital * 100).toFixed(1) : 0;
 
                 document.getElementById('totalFarmCapital').textContent = fUSD(totalCapital);
                 document.getElementById('totalFarmCapitalIDR').textContent = 'Rp ' + (totalCapital * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+
+                document.getElementById('totalFarmEquity').textContent = fUSD(totalEquity);
+                document.getElementById('totalFarmEquityIDR').textContent = 'Rp ' + (totalEquity * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
 
                 const pnlEl = document.getElementById('totalFarmPnl');
                 pnlEl.textContent = fUSD(totalPnL);
