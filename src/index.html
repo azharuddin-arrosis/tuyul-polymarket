@@ -379,7 +379,7 @@
                 MASTER_DATA = await res.json();
                 
                 const totalPnL = MASTER_DATA.bots.reduce((acc, b) => acc + b.pnl_realized, 0);
-                const totalCapital = MASTER_DATA.bots.reduce((acc, b) => acc + (b.initial_balance || 10), 0);
+                const totalCapital = MASTER_DATA.bots.reduce((acc, b) => acc + (b.initial_balance || 0), 0);
                 const totalEquity = MASTER_DATA.bots.reduce((acc, b) => {
                     const unrealized = b.open_trades.reduce((u, t) => u + t.unrealized_pnl, 0);
                     return acc + b.balance + b.usd_in_bet + unrealized;
@@ -438,8 +438,8 @@
             grid.innerHTML = MASTER_DATA.bots.map(bot => {
                 const isWinner = bot.pnl_realized >= 0;
                 const pnlIDR = Math.abs(bot.pnl_realized * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
-                const initial = bot.initial_balance || 10;
-                const roi = (bot.pnl_realized / initial * 100).toFixed(1);
+                const initial = bot.initial_balance || 0;
+                const roi = initial > 0 ? (bot.pnl_realized / initial * 100).toFixed(1) : "0.0";
                 return `
                     <div onclick="selectBot('${bot.id}')" class="bot-card p-2 rounded ${bot.id === selectedBotId ? 'active' : ''}">
                         <div class="flex justify-between items-start mb-1">
@@ -467,9 +467,9 @@
 
             const unrealized = bot.open_trades.reduce((acc, t) => acc + t.unrealized_pnl, 0);
             const equity = bot.balance + bot.usd_in_bet + unrealized;
-            const initial = bot.initial_balance || 10;
-            const equityRoi = ((equity - initial) / initial * 100).toFixed(1);
-            const realizedRoi = (bot.pnl_realized / initial * 100).toFixed(1);
+            const initial = bot.initial_balance || 0;
+            const equityRoi = initial > 0 ? ((equity - initial) / initial * 100).toFixed(1) : "0.0";
+            const realizedRoi = initial > 0 ? (bot.pnl_realized / initial * 100).toFixed(1) : "0.0";
             
             document.getElementById('mTotal').innerHTML = `${fUSD(equity)} <span class="text-[10px] ${equity>=initial?'win':'loss'} ml-2 font-bold">${equity>=initial?'+':''}${equityRoi}%</span>`;
             document.getElementById('mTotalIDR').textContent = 'Rp ' + (equity * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
