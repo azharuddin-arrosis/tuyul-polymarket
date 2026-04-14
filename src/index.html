@@ -412,7 +412,7 @@
                 const scalingEl = document.getElementById('scalingStatus');
                 const scalingNextEl = document.getElementById('scalingNext');
                 if(MASTER_DATA.auto_scale) {
-                    const activeCount = MASTER_DATA.bots.filter(b => b.running).count();
+                    const activeCount = MASTER_DATA.bots.filter(b => b.running).length;
                     const nextThreshold = (activeCount + 1) * 10;
                     scalingEl.textContent = `LEVEL ${activeCount}`;
                     scalingNextEl.textContent = `Next bot at ${fUSD(nextThreshold)} (Need ${fUSD(nextThreshold - totalEquity)})`;
