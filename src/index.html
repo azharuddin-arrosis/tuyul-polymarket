@@ -82,33 +82,15 @@
                     <div class="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded text-[9px] font-bold uppercase tracking-widest">10 Instances</div>
                 </div>
 
-                <div class="flex items-center gap-6 bg-white/5 px-4 py-2 rounded-lg border border-white/10 shadow-lg">
-                    <div class="flex flex-col border-r border-white/10 pr-6">
-                        <span class="stat-label">Farm Total Capital</span>
-                        <div class="flex items-baseline gap-2">
-                            <span id="totalFarmCapital" class="mono font-black text-xl text-blue-400">$0.00</span>
-                            <span id="totalFarmCapitalIDR" class="opacity-40 text-[10px]">Rp 0</span>
-                        </div>
-                    </div>
-                    <div class="flex flex-col border-r border-white/10 pr-6">
-                        <span class="stat-label text-emerald-400">Farm Net Equity</span>
-                        <div class="flex items-baseline gap-2">
-                            <span id="totalFarmEquity" class="mono font-black text-xl text-emerald-400">$0.00</span>
-                            <span id="totalFarmEquityIDR" class="opacity-40 text-[10px]">Rp 0</span>
-                        </div>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="stat-label">Cumulative Farm PnL</span>
-                        <div class="flex items-baseline gap-3">
-                            <span id="totalFarmPnl" class="mono font-black text-xl win">$0.00</span>
-                            <span id="totalFarmPnlIDR" class="idr-label text-[11px]">Rp 0</span>
-                            <span id="totalFarmRoi" class="text-[10px] bg-emerald-500/20 text-emerald-500 px-1.5 py-0.5 rounded font-bold">+0%</span>
-                        </div>
+                <div class="flex items-center gap-10">
+                    <div class="flex items-center gap-4">
+                        <span class="font-black text-xl tracking-tighter">POLYNEX <span class="text-emerald-500 italic">QUANTUM</span> GRID v21</span>
+                        <div class="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded text-[9px] font-bold uppercase tracking-widest">10 Instances</div>
                     </div>
                 </div>
             </div>
 
-            <div class="flex items-center gap-10">
+            <div class="flex items-center gap-6">
                 <div class="flex items-center gap-2">
                     <button onclick="showStartAllModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">START ALL BOTS</button>
                     <button onclick="resetAll()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-rose-900/20 active:scale-95 transition-all">RESET ALL BOTS</button>
@@ -161,31 +143,87 @@
         <!-- FARM PERFORMANCE OVERVIEW -->
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-3 mb-4">
             
-            <!-- LEFT: CHART -->
-            <div class="xl:col-span-9 compact-panel p-4 border-t-2 border-t-blue-500 bg-blue-500/5">
-                <div class="flex justify-between items-center mb-3">
-                    <div class="flex items-center gap-3">
-                        <span class="text-[10px] font-black tracking-[0.2em] text-blue-400 uppercase">Farm Performance Analysis</span>
-                        <div class="h-px w-20 bg-blue-500/20"></div>
+            <!-- LEFT: DETAILED FARM STATS & CHART -->
+            <div class="xl:col-span-9 space-y-3">
+                
+                <!-- PRIMARY FARM METRICS (Moved from Header) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="compact-panel p-4 border-l-4 border-l-blue-500 bg-blue-500/5">
+                        <span class="stat-label">Farm Total Capital</span>
+                        <div class="flex items-baseline gap-2">
+                            <span id="totalFarmCapital" class="mono font-black text-2xl text-blue-400">$0.00</span>
+                            <span id="totalFarmCapitalIDR" class="opacity-40 text-[11px]">Rp 0</span>
+                        </div>
                     </div>
-                    <div class="flex gap-6 text-[8px] font-black tracking-widest uppercase">
-                        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-[#10b981] rounded-full shadow-[0_0_8px_#10b981]"></span> PnL Realized</span>
-                        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-[#ef4444] rounded-full shadow-[0_0_8px_#ef4444]"></span> PnL Loss</span>
-                        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-[#3b82f6] rounded-full shadow-[0_0_8px_#3b82f6]"></span> Balance All</span>
+                    <div class="compact-panel p-4 border-l-4 border-l-emerald-500 bg-emerald-500/5">
+                        <span class="stat-label text-emerald-400">Farm Net Equity</span>
+                        <div class="flex items-baseline gap-2">
+                            <span id="totalFarmEquity" class="mono font-black text-2xl text-emerald-400">$0.00</span>
+                            <span id="totalFarmEquityIDR" class="opacity-40 text-[11px]">Rp 0</span>
+                        </div>
+                    </div>
+                    <div class="compact-panel p-4 border-l-4 border-l-amber-500 bg-amber-500/5">
+                        <span class="stat-label">Cumulative Farm PnL</span>
+                        <div class="flex items-baseline gap-3">
+                            <span id="totalFarmPnl" class="mono font-black text-2xl win">$0.00</span>
+                            <div class="flex flex-col">
+                                <span id="totalFarmPnlIDR" class="idr-label text-[10px]">Rp 0</span>
+                                <span id="totalFarmRoi" class="text-[10px] font-bold win">+0%</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="h-[180px] w-full mt-2">
-                    <canvas id="farmChart"></canvas>
+
+                <!-- SECONDARY AGGREGATE METRICS -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div class="compact-panel p-3 bg-white/2">
+                        <span class="stat-label win">Total Gains</span>
+                        <div id="totalFarmGains" class="mono font-bold text-lg win">$0.00</div>
+                        <div class="text-[8px] opacity-20">Sum of Win Trades</div>
+                    </div>
+                    <div class="compact-panel p-3 bg-white/2">
+                        <span class="stat-label loss">Total Losses</span>
+                        <div id="totalFarmLosses" class="mono font-bold text-lg loss">$0.00</div>
+                        <div class="text-[8px] opacity-20">Sum of Lose Trades</div>
+                    </div>
+                    <div class="compact-panel p-3 bg-white/2">
+                        <span class="stat-label text-emerald-500">Winners</span>
+                        <div id="winningBotCount" class="mono font-bold text-lg text-emerald-500">0 Bots</div>
+                        <div class="text-[8px] opacity-20">Realized PnL > 0</div>
+                    </div>
+                    <div class="compact-panel p-3 bg-white/2">
+                        <span class="stat-label text-rose-500">Losers</span>
+                        <div id="losingBotCount" class="mono font-bold text-lg text-rose-500">0 Bots</div>
+                        <div class="text-[8px] opacity-20">Realized PnL < 0</div>
+                    </div>
+                </div>
+
+                <!-- CHART PANEL -->
+                <div class="compact-panel p-4 border-t-2 border-t-blue-500 bg-blue-500/5">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] font-black tracking-[0.2em] text-blue-400 uppercase">Farm Performance Analysis</span>
+                            <div class="h-px w-20 bg-blue-500/20"></div>
+                        </div>
+                        <div class="flex gap-6 text-[8px] font-black tracking-widest uppercase">
+                            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-[#10b981] rounded-full shadow-[0_0_8px_#10b981]"></span> PnL Realized</span>
+                            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-[#ef4444] rounded-full shadow-[0_0_8px_#ef4444]"></span> PnL Loss</span>
+                            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-[#3b82f6] rounded-full shadow-[0_0_8px_#3b82f6]"></span> Balance All</span>
+                        </div>
+                    </div>
+                    <div class="h-[180px] w-full mt-2">
+                        <canvas id="farmChart"></canvas>
+                    </div>
                 </div>
             </div>
 
             <!-- RIGHT: LIVE RANKING -->
-            <div class="xl:col-span-3 compact-panel p-4 border-t-2 border-t-amber-500 bg-amber-500/5">
+            <div class="xl:col-span-3 compact-panel p-4 border-t-2 border-t-amber-500 bg-amber-500/5 flex flex-col h-full">
                 <div class="flex items-center gap-2 mb-3">
                     <span class="text-[10px] font-black tracking-widest text-amber-500 uppercase">Top Performers</span>
                     <div class="h-px flex-1 bg-amber-500/20"></div>
                 </div>
-                <div id="rankingList" class="space-y-1 overflow-y-auto max-h-[190px] pr-1 custom-scrollbar">
+                <div id="rankingList" class="space-y-1 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0">
                     <!-- Rankings injected here -->
                 </div>
             </div>
@@ -326,6 +364,11 @@
                     const unrealized = b.open_trades.reduce((u, t) => u + t.unrealized_pnl, 0);
                     return acc + b.balance + b.usd_in_bet + unrealized;
                 }, 0);
+                const totalGains = MASTER_DATA.bots.reduce((acc, b) => acc + b.pnl_won, 0);
+                const totalLosses = MASTER_DATA.bots.reduce((acc, b) => acc + Math.abs(b.pnl_lost), 0);
+                const winningCount = MASTER_DATA.bots.filter(b => b.pnl_realized > 0).length;
+                const losingCount = MASTER_DATA.bots.filter(b => b.pnl_realized < 0).length;
+                
                 const totalRoi = totalCapital > 0 ? (totalPnL / totalCapital * 100).toFixed(1) : 0;
 
                 document.getElementById('totalFarmCapital').textContent = fUSD(totalCapital);
@@ -334,14 +377,19 @@
                 document.getElementById('totalFarmEquity').textContent = fUSD(totalEquity);
                 document.getElementById('totalFarmEquityIDR').textContent = 'Rp ' + (totalEquity * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
 
+                document.getElementById('totalFarmGains').textContent = fUSD(totalGains);
+                document.getElementById('totalFarmLosses').textContent = fUSD(totalLosses);
+                document.getElementById('winningBotCount').textContent = winningCount + " Bots";
+                document.getElementById('losingBotCount').textContent = losingCount + " Bots";
+
                 const pnlEl = document.getElementById('totalFarmPnl');
                 pnlEl.textContent = fUSD(totalPnL);
-                pnlEl.className = `mono font-black text-xl ${totalPnL >= 0 ? 'win' : 'loss'}`;
+                pnlEl.className = `mono font-black text-2xl ${totalPnL >= 0 ? 'win' : 'loss'}`;
                 document.getElementById('totalFarmPnlIDR').textContent = 'Rp ' + Math.abs(totalPnL * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
                 
                 const roiEl = document.getElementById('totalFarmRoi');
                 roiEl.textContent = (totalPnL >= 0 ? '+' : '') + totalRoi + '%';
-                roiEl.className = `text-[10px] px-1.5 py-0.5 rounded font-bold ${totalPnL >= 0 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-rose-500/20 text-rose-500'}`;
+                roiEl.className = `text-[10px] font-bold ${totalPnL >= 0 ? 'win' : 'loss'}`;
 
                 renderLeaderboard();
                 renderBotDetail();
