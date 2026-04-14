@@ -377,11 +377,17 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ initial_balance: balance, min_prob: odds, spread: spread })
                 });
+                
                 if(res.ok) {
                     hideStartAllModal();
                     updateData();
+                } else {
+                    const err = await res.text();
+                    alert(`Server Error (${res.status}): ${err}`);
                 }
-            } catch(e) { alert("Failed to start all bots"); }
+            } catch(e) { 
+                alert("Network Error: Could not reach the server. Please check if the bot is running."); 
+            }
         }
 
         function selectBot(id) { selectedBotId = id; renderBotDetail(); renderLeaderboard(); }
