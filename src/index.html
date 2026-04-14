@@ -131,6 +131,10 @@
                             <span>95% (SAFE)</span>
                         </div>
                     </div>
+                    <div class="flex items-center gap-2 bg-white/5 p-3 rounded border border-white/5">
+                        <input type="checkbox" id="sa_spread" checked class="w-4 h-4 accent-emerald-500">
+                        <label for="sa_spread" class="text-[10px] font-bold tracking-wider cursor-pointer">SPREAD ODDS (Sequential +5% every 2 bots)</label>
+                    </div>
                     <div class="pt-2">
                         <button onclick="executeStartAll()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded font-black text-[11px] tracking-widest transition-all shadow-xl shadow-emerald-500/10 active:scale-[0.98]">ACTIVATE ALL 10 INSTANCES</button>
                     </div>
@@ -365,12 +369,13 @@
         async function executeStartAll() {
             const balance = parseFloat(document.getElementById('sa_balance').value);
             const odds = parseFloat(document.getElementById('sa_odds').value) / 100;
+            const spread = document.getElementById('sa_spread').checked;
             
             try {
                 const res = await fetch('/api/start_all', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ initial_balance: balance, min_prob: odds })
+                    body: JSON.stringify({ initial_balance: balance, min_prob: odds, spread: spread })
                 });
                 if(res.ok) {
                     hideStartAllModal();

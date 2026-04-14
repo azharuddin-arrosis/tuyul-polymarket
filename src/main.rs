@@ -202,14 +202,26 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
 struct StartAllPayload {
     initial_balance: f64,
     min_prob: f64,
+    spread: bool,
 }
 
 async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAllPayload>) -> impl IntoResponse {
     let mut s = state.lock().unwrap();
+    let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
     for i in 0..s.bots.len() {
         let bot = &mut s.bots[i];
+        bot.id = bot_names[i].to_string(); 
         bot.balance = p.initial_balance;
-        bot.min_prob_threshold = p.min_prob;
+        
+        // Pattern: 2 bots per odds level, increasing by 5% each step
+        let threshold = if p.spread {
+            let step = (i / 2) as f64 * 0.05;
+            (p.min_prob + step).min(0.98)
+        } else {
+            p.min_prob
+        };
+        
+        bot.min_prob_threshold = (threshold * 100.0).round() / 100.0;
         bot.pnl_realized = 0.0; bot.pnl_won = 0.0; bot.pnl_lost = 0.0;
         bot.history.clear(); bot.chart_history.clear(); bot.open_trades.clear();
         bot.running = true;
