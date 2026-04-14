@@ -95,13 +95,14 @@ async fn main() {
         });
     }
 
-    // --- AUTO SCALING MONITOR ---
+    // --- AUTO SCALING & BAILOUT ENGINE ---
     let monitor_state = Arc::clone(&state);
     tokio::spawn(async move {
         loop {
             sleep(Duration::from_secs(10)).await;
             let mut s = monitor_state.lock().await;
             if s.auto_scale {
+                // 1. Calculate Farm Metrics
                 let total_equity: f64 = s.bots.iter().map(|b| {
                     let unrealized: f64 = b.open_trades.iter().map(|t| t.unrealized_pnl).sum();
                     b.balance + b.usd_in_bet + unrealized
@@ -109,41 +110,67 @@ async fn main() {
 
                 let active_count = s.bots.iter().filter(|b| b.running).count();
                 let possible_bots = (total_equity / 10.0).floor() as usize;
+                let possible_bots = possible_bots.clamp(1, 10);
                 
-                let mut needs_rebalance = false;
+                // 2. Identify Bailout Needs
+                let mut needs_bailout = false;
                 if active_count > 0 {
                     for i in 0..10 {
                         let b = &s.bots[i];
-                        if b.running {
-                            let b_equity = b.balance + b.usd_in_bet;
-                            if b_equity < 3.0 { needs_rebalance = true; break; }
+                        if b.running && b.balance < 2.0 {
+                            needs_bailout = true;
+                            break;
                         }
                     }
                 }
 
-                // Trigger if: can scale up OR needs rebalance to save a bot
-                if (possible_bots > active_count || (needs_rebalance && total_equity >= (active_count as f64 * 10.0))) && possible_bots <= 10 && active_count > 0 {
-                    println!("🚀 [AUTO-SCALE/BAILOUT] Triggered! Equity: ${:.2}, Active: {}, Target: {}", total_equity, active_count, possible_bots);
+                // 3. Decision Tree: Scale Up vs Soft Bailout
+                if possible_bots > active_count && active_count > 0 && possible_bots <= 10 {
+                    // --- HARD SCALE UP ---
+                    // Triggered when total equity justifies a new bot instance
+                    println!("🚀 [AUTO-SCALE] Leveling Up! Equity: ${:.2}, Active: {}, Next Target: {} Bots", total_equity, active_count, possible_bots);
                     
-                    let target_count = if possible_bots > active_count { possible_bots } else { active_count };
+                    let target_count = possible_bots;
                     let per_bot_bal = total_equity / (target_count as f64);
                     
                     for i in 0..10 {
                         let bot = &mut s.bots[i];
-                        bot.id = bot_names[i].to_string();
-                        bot.history.clear(); bot.open_trades.clear(); bot.chart_history.clear();
-                        bot.pnl_realized = 0.0; bot.pnl_won = 0.0; bot.pnl_lost = 0.0;
-                        bot.usd_in_bet = 0.0;
-                        
                         if i < target_count {
-                            bot.balance = per_bot_bal;
+                            if !bot.running {
+                                // It's a brand new bot or a previously stopped one
+                                bot.history.clear(); bot.open_trades.clear(); bot.chart_history.clear();
+                                bot.pnl_realized = 0.0; bot.pnl_won = 0.0; bot.pnl_lost = 0.0;
+                                bot.usd_in_bet = 0.0;
+                                bot.running = true;
+                                println!("✨ [FARM] Instance {} Activated.", bot.id);
+                            }
+                            // Re-normalize everyone's working capital
+                            bot.balance = per_bot_bal - bot.usd_in_bet;
                             bot.initial_balance = per_bot_bal;
-                            bot.running = true;
-                            bot.last_sync = "REBALANCED".to_string();
+                            bot.last_sync = "SCALED".to_string();
                         } else {
                             bot.balance = 0.0;
-                            bot.initial_balance = 0.0;
                             bot.running = false;
+                        }
+                    }
+                    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                } 
+                else if needs_bailout && active_count > 0 {
+                    // --- SOFT BAILOUT / PROFIT REDISTRIBUTION ---
+                    // Inject liquidity from winners to losers WITHOUT resetting their history/trades
+                    println!("💸 [BAILOUT] Emergency Liquidity Injection! Redistributing profit to save struggling bots...");
+                    
+                    let total_liquid: f64 = s.bots.iter().filter(|b| b.running).map(|b| b.balance).sum();
+                    let per_bot_liquid = total_liquid / (active_count as f64);
+                    
+                    for i in 0..10 {
+                        if s.bots[i].running {
+                            let old_bal = s.bots[i].balance;
+                            s.bots[i].balance = per_bot_liquid;
+                            if old_bal < 2.0 {
+                                s.bots[i].last_sync = "REFILLED".to_string();
+                                println!("🩹 [BAILOUT] Bot {} refilled from ${:.2} to ${:.2}", s.bots[i].id, old_bal, per_bot_liquid);
+                            }
                         }
                     }
                     if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
