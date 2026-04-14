@@ -57,6 +57,7 @@ struct HistoryPoint {
 struct BotState {
     id: String,
     balance: f64,
+    initial_balance: f64,
     pnl_realized: f64,
     pnl_won: f64,
     pnl_lost: f64,
@@ -132,6 +133,7 @@ fn load_state() -> MasterState {
         bots.push(BotState {
             id: bot_names[i].to_string(),
             balance: 10.0,
+            initial_balance: 10.0,
             pnl_realized: 0.0, pnl_won: 0.0, pnl_lost: 0.0,
             usd_in_bet: 0.0, open_trades: vec![], history: vec![],
             current_markets: vec![],
@@ -177,6 +179,7 @@ async fn update_settings(State(state): State<SharedState>, Json(p): Json<Setting
         bot.max_bet_cap = p.max_bet.max(1.0);
         if let Some(bal) = p.reset_balance {
             bot.balance = bal;
+            bot.initial_balance = bal;
             bot.pnl_realized = 0.0; bot.pnl_won = 0.0; bot.pnl_lost = 0.0;
             bot.history.clear(); bot.chart_history.clear(); bot.open_trades.clear();
         }
@@ -192,6 +195,7 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
         s.bots[i] = BotState {
             id: bot_names[i].to_string(),
             balance: 10.0,
+            initial_balance: 10.0,
             pnl_realized: 0.0, pnl_won: 0.0, pnl_lost: 0.0,
             usd_in_bet: 0.0, open_trades: vec![], history: vec![],
             current_markets: vec![],
@@ -220,6 +224,7 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
         let bot = &mut s.bots[i];
         bot.id = bot_names[i].to_string(); 
         bot.balance = p.initial_balance;
+        bot.initial_balance = p.initial_balance;
         
         // Pattern: Distribute odds across 5 pairs from min to max
         let threshold = if p.spread {

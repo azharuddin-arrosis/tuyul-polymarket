@@ -82,7 +82,14 @@
                     <div class="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded text-[9px] font-bold uppercase tracking-widest">10 Instances</div>
                 </div>
 
-                <div class="flex items-center gap-6 bg-white/5 px-4 py-2 rounded-lg border border-white/5">
+                <div class="flex items-center gap-6 bg-white/5 px-4 py-2 rounded-lg border border-white/10 shadow-lg">
+                    <div class="flex flex-col border-r border-white/10 pr-6">
+                        <span class="stat-label">Farm Total Capital</span>
+                        <div class="flex items-baseline gap-2">
+                            <span id="totalFarmCapital" class="mono font-black text-xl text-blue-400">$0.00</span>
+                            <span id="totalFarmCapitalIDR" class="opacity-40 text-[10px]">Rp 0</span>
+                        </div>
+                    </div>
                     <div class="flex flex-col">
                         <span class="stat-label">Cumulative Farm PnL</span>
                         <div class="flex items-baseline gap-3">
@@ -287,12 +294,15 @@
                 MASTER_DATA = await res.json();
                 
                 const totalPnL = MASTER_DATA.bots.reduce((acc, b) => acc + b.pnl_realized, 0);
-                const initialTotal = MASTER_DATA.bots.length * 10;
-                const totalRoi = (totalPnL / initialTotal * 100).toFixed(1);
+                const totalCapital = MASTER_DATA.bots.reduce((acc, b) => acc + (b.initial_balance || 10), 0);
+                const totalRoi = totalCapital > 0 ? (totalPnL / totalCapital * 100).toFixed(1) : 0;
+
+                document.getElementById('totalFarmCapital').textContent = fUSD(totalCapital);
+                document.getElementById('totalFarmCapitalIDR').textContent = 'Rp ' + (totalCapital * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
 
                 const pnlEl = document.getElementById('totalFarmPnl');
                 pnlEl.textContent = fUSD(totalPnL);
-                pnlEl.className = `mono font-black text-sm ${totalPnL >= 0 ? 'win' : 'loss'}`;
+                pnlEl.className = `mono font-black text-xl ${totalPnL >= 0 ? 'win' : 'loss'}`;
                 document.getElementById('totalFarmPnlIDR').textContent = 'Rp ' + Math.abs(totalPnL * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
                 
                 const roiEl = document.getElementById('totalFarmRoi');
@@ -311,7 +321,8 @@
             grid.innerHTML = MASTER_DATA.bots.map(bot => {
                 const isWinner = bot.pnl_realized >= 0;
                 const pnlIDR = Math.abs(bot.pnl_realized * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
-                const roi = (bot.pnl_realized / 10 * 100).toFixed(1); // Assuming 10 init balance
+                const initial = bot.initial_balance || 10;
+                const roi = (bot.pnl_realized / initial * 100).toFixed(1);
                 return `
                     <div onclick="selectBot('${bot.id}')" class="bot-card p-2 rounded ${bot.id === selectedBotId ? 'active' : ''}">
                         <div class="flex justify-between items-start mb-1">
@@ -336,10 +347,11 @@
 
             const unrealized = bot.open_trades.reduce((acc, t) => acc + t.unrealized_pnl, 0);
             const equity = bot.balance + bot.usd_in_bet + unrealized;
-            const equityRoi = ((equity - 10) / 10 * 100).toFixed(1);
-            const realizedRoi = (bot.pnl_realized / 10 * 100).toFixed(1);
+            const initial = bot.initial_balance || 10;
+            const equityRoi = ((equity - initial) / initial * 100).toFixed(1);
+            const realizedRoi = (bot.pnl_realized / initial * 100).toFixed(1);
             
-            document.getElementById('mTotal').innerHTML = `${fUSD(equity)} <span class="text-[10px] ${equity>=10?'win':'loss'} ml-2 font-bold">${equity>=10?'+':''}${equityRoi}%</span>`;
+            document.getElementById('mTotal').innerHTML = `${fUSD(equity)} <span class="text-[10px] ${equity>=initial?'win':'loss'} ml-2 font-bold">${equity>=initial?'+':''}${equityRoi}%</span>`;
             document.getElementById('mPnlR').innerHTML = `${fUSD(bot.pnl_realized)} <span class="text-[10px] ${bot.pnl_realized>=0?'win':'loss'} ml-2 font-bold">${bot.pnl_realized>=0?'+':''}${realizedRoi}%</span>`;
             document.getElementById('mThreshold').textContent = (bot.min_prob_threshold*100).toFixed(0) + "%";
             document.getElementById('mStatus').textContent = bot.running ? "ACTIVE" : "PAUSED";
