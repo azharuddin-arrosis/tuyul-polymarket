@@ -178,12 +178,18 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                     <div class="compact-panel p-3 bg-white/2">
                         <span class="stat-label win">Total Gains</span>
-                        <div id="totalFarmGains" class="mono font-bold text-lg win">$0.00</div>
+                        <div class="flex items-baseline gap-2">
+                            <div id="totalFarmGains" class="mono font-bold text-lg win">$0.00</div>
+                            <div id="totalFarmGainsIDR" class="text-[9px] win opacity-40">Rp 0</div>
+                        </div>
                         <div class="text-[8px] opacity-20">Sum of Win Trades</div>
                     </div>
                     <div class="compact-panel p-3 bg-white/2">
                         <span class="stat-label loss">Total Losses</span>
-                        <div id="totalFarmLosses" class="mono font-bold text-lg loss">$0.00</div>
+                        <div class="flex items-baseline gap-2">
+                            <div id="totalFarmLosses" class="mono font-bold text-lg loss">$0.00</div>
+                            <div id="totalFarmLossesIDR" class="text-[9px] loss opacity-40">Rp 0</div>
+                        </div>
                         <div class="text-[8px] opacity-20">Sum of Lose Trades</div>
                     </div>
                     <div class="compact-panel p-3 bg-white/2">
@@ -378,7 +384,10 @@
                 document.getElementById('totalFarmEquityIDR').textContent = 'Rp ' + (totalEquity * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
 
                 document.getElementById('totalFarmGains').textContent = fUSD(totalGains);
+                document.getElementById('totalFarmGainsIDR').textContent = 'Rp ' + (totalGains * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
                 document.getElementById('totalFarmLosses').textContent = fUSD(totalLosses);
+                document.getElementById('totalFarmLossesIDR').textContent = 'Rp ' + (totalLosses * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+                
                 document.getElementById('winningBotCount').textContent = winningCount + " Bots";
                 document.getElementById('losingBotCount').textContent = losingCount + " Bots";
 
