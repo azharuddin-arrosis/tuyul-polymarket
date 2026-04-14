@@ -5,7 +5,8 @@ use axum::{
     Router,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time::sleep;
 use chrono::Local;
@@ -122,17 +123,17 @@ async fn main() {
 struct SettingsPayload { min_prob: f64 }
 
 async fn update_settings(State(state): State<SharedState>, Json(p): Json<SettingsPayload>) -> impl IntoResponse {
-    state.lock().unwrap().min_prob_threshold = p.min_prob;
+    state.lock().await.min_prob_threshold = p.min_prob;
     axum::http::StatusCode::OK
 }
 
 async fn get_dashboard() -> Html<&'static str> { Html(include_str!("real_dashboard.html")) }
-async fn get_status(State(state): State<SharedState>) -> impl IntoResponse { Json(state.lock().unwrap().clone()) }
-async fn start_bot(State(state): State<SharedState>) -> impl IntoResponse { state.lock().unwrap().running = true; axum::http::StatusCode::OK }
-async fn stop_bot(State(state): State<SharedState>) -> impl IntoResponse { state.lock().unwrap().running = false; axum::http::StatusCode::OK }
+async fn get_status(State(state): State<SharedState>) -> impl IntoResponse { Json(state.lock().await.clone()) }
+async fn start_bot(State(state): State<SharedState>) -> impl IntoResponse { state.lock().await.running = true; axum::http::StatusCode::OK }
+async fn stop_bot(State(state): State<SharedState>) -> impl IntoResponse { state.lock().await.running = false; axum::http::StatusCode::OK }
 
 async fn reset_bot(State(state): State<SharedState>) -> impl IntoResponse {
-    let mut s = state.lock().unwrap();
+    let mut s = state.lock().await;
     s.history.clear();
     s.chart_history.clear();
     s.pnl_realized = 0.0;
@@ -162,7 +163,7 @@ async fn worker_loop(state: SharedState) {
                 if let Ok(json) = res.json::<Value>().await {
                     if let Some(bal_str) = json["balance"].as_str() {
                         if let Ok(bal) = bal_str.parse::<f64>() {
-                            state.lock().unwrap().balance = bal;
+                            state.lock().await.balance = bal;
                         }
                     }
                 }
@@ -241,7 +242,7 @@ async fn worker_loop(state: SharedState) {
         }
 
         {
-            let mut s = state.lock().unwrap();
+            let mut s = state.lock().await;
             s.open_trades = open_trades;
             s.usd_in_bet = usd_in_bet;
             if !history.is_empty() { s.history = history; }

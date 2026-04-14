@@ -5,7 +5,8 @@ use axum::{
     Router,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use std::time::Duration;
 use tokio::time::sleep;
 use chrono::Local;
@@ -144,19 +145,19 @@ fn load_state() -> MasterState {
     MasterState { bots }
 }
 
-async fn get_status(State(state): State<SharedState>) -> impl IntoResponse { Json(state.lock().unwrap().clone()) }
+async fn get_status(State(state): State<SharedState>) -> impl IntoResponse { Json(state.lock().await.clone()) }
 
 #[derive(Deserialize)]
 struct BotAction { id: String }
 
 async fn start_bot(State(state): State<SharedState>, Json(payload): Json<BotAction>) -> impl IntoResponse {
-    let mut s = state.lock().unwrap();
+    let mut s = state.lock().await;
     if let Some(bot) = s.bots.iter_mut().find(|b| b.id == payload.id) { bot.running = true; }
     axum::http::StatusCode::OK
 }
 
 async fn stop_bot(State(state): State<SharedState>, Json(payload): Json<BotAction>) -> impl IntoResponse {
-    let mut s = state.lock().unwrap();
+    let mut s = state.lock().await;
     if let Some(bot) = s.bots.iter_mut().find(|b| b.id == payload.id) { bot.running = false; }
     axum::http::StatusCode::OK
 }
@@ -170,7 +171,7 @@ struct SettingsPayload {
 }
 
 async fn update_settings(State(state): State<SharedState>, Json(p): Json<SettingsPayload>) -> impl IntoResponse {
-    let mut s = state.lock().unwrap();
+    let mut s = state.lock().await;
     if let Some(bot) = s.bots.iter_mut().find(|b| b.id == p.id) {
         bot.min_prob_threshold = p.min_prob;
         bot.max_bet_cap = p.max_bet;
@@ -184,7 +185,7 @@ async fn update_settings(State(state): State<SharedState>, Json(p): Json<Setting
 }
 
 async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
-    let mut s = state.lock().unwrap();
+    let mut s = state.lock().await;
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
     for i in 0..10 {
         let prob = 0.50 + (i as f64 * 0.05);
@@ -213,7 +214,7 @@ struct StartAllPayload {
 }
 
 async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAllPayload>) -> impl IntoResponse {
-    let mut s = state.lock().unwrap();
+    let mut s = state.lock().await;
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
     for i in 0..s.bots.len() {
         let bot = &mut s.bots[i];
@@ -243,7 +244,7 @@ async fn bot_worker(state: SharedState, bot_id: String) {
     use rand::Rng;
     loop {
         {
-            let mut master = state.lock().unwrap();
+            let mut master = state.lock().await;
             let bot = match master.bots.iter_mut().find(|b| b.id == bot_id) {
                 Some(b) => b,
                 None => {
