@@ -137,7 +137,7 @@ fn load_state() -> MasterState {
             current_markets: vec![],
             chart_history: vec![],
             min_prob_threshold: (prob * 100.0).round() / 100.0,
-            max_bet_cap: 2.5,
+            max_bet_cap: 3.0,
             last_sync: "INIT".to_string(), 
             running: false,
         });
@@ -174,7 +174,7 @@ async fn update_settings(State(state): State<SharedState>, Json(p): Json<Setting
     let mut s = state.lock().await;
     if let Some(bot) = s.bots.iter_mut().find(|b| b.id == p.id) {
         bot.min_prob_threshold = p.min_prob;
-        bot.max_bet_cap = p.max_bet;
+        bot.max_bet_cap = p.max_bet.max(1.0);
         if let Some(bal) = p.reset_balance {
             bot.balance = bal;
             bot.pnl_realized = 0.0; bot.pnl_won = 0.0; bot.pnl_lost = 0.0;
@@ -197,7 +197,7 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
             current_markets: vec![],
             chart_history: vec![],
             min_prob_threshold: (prob * 100.0).round() / 100.0,
-            max_bet_cap: 2.5,
+            max_bet_cap: 3.0,
             last_sync: "RESET".to_string(), 
             running: false,
         };
@@ -269,7 +269,7 @@ async fn bot_worker(state: SharedState, bot_id: String) {
             if bot.running {
                 for m in &bot.current_markets {
                     if m.prob >= bot.min_prob_threshold && bot.open_trades.len() < 5 {
-                        let bet = (bot.balance.sqrt() * 0.35).min(bot.max_bet_cap);
+                        let bet = (bot.balance.sqrt() * 0.35).max(1.0).min(bot.max_bet_cap);
                         if bot.balance >= (bet + 0.02) {
                             bot.balance -= bet + 0.02; bot.usd_in_bet += bet;
                             bot.open_trades.push(Trade {
