@@ -228,6 +228,26 @@
                     </div>
                 </div>
 
+                <!-- SECONDARY STATS ROW -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                    <div class="compact-panel p-3">
+                        <span class="stat-label">Initial Modal</span>
+                        <div id="mInitial" class="text-xl font-black mono opacity-40">$0.00</div>
+                    </div>
+                    <div class="compact-panel p-3">
+                        <span class="stat-label">Wins Sum</span>
+                        <div id="mGains" class="text-xl font-black mono win">$0.00</div>
+                    </div>
+                    <div class="compact-panel p-3">
+                        <span class="stat-label">Losses Sum</span>
+                        <div id="mLosses" class="text-xl font-black mono loss">$0.00</div>
+                    </div>
+                    <div class="compact-panel p-3 border-l-4 border-l-blue-500 bg-blue-500/5">
+                        <span class="stat-label text-blue-400">Wallet Balance</span>
+                        <div id="mWallet" class="text-xl font-black mono text-blue-400">$0.00</div>
+                    </div>
+                </div>
+
                 <!-- CHART -->
                 <div class="compact-panel p-3">
                     <div class="chart-container"><canvas id="equityChart"></canvas></div>
@@ -375,6 +395,11 @@
             const winRate = (bot.pnl_won / total * 100).toFixed(1);
             document.getElementById('mWinRate').textContent = winRate + "% Success Rate";
             document.getElementById('mTrades').textContent = bot.history.length + " Closures";
+            
+            document.getElementById('mInitial').textContent = fUSD(initial);
+            document.getElementById('mGains').textContent = fUSD(bot.pnl_won);
+            document.getElementById('mLosses').textContent = fUSD(Math.abs(bot.pnl_lost));
+            document.getElementById('mWallet').textContent = fUSD(bot.balance);
 
             document.getElementById('btnToggle').textContent = bot.running ? "STOP" : "START";
             document.getElementById('btnToggle').onclick = () => toggleBot(bot.id, bot.running ? 'stop' : 'start');
