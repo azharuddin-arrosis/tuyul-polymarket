@@ -3,253 +3,353 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PolyBot Pro v16 (Persistence & Navigation)</title>
+    <title>PolyBot Farm Master Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Consolas', 'Monaco', 'Courier New', monospace; background-color: #0c0e14; color: #d1d5db; font-size: 11px; }
-        .excel-table { border-collapse: collapse; width: 100%; border: 1px solid #1f2937; margin-bottom: 2px; }
-        .excel-table th { background: #111827; border: 1px solid #1f2937; padding: 4px 8px; text-align: left; color: #9ca3af; font-weight: normal; }
-        .excel-table td { border: 1px solid #1f2937; padding: 2px 8px; vertical-align: middle; }
-        .win { color: #10b981; }
-        .loss { color: #ef4444; }
-        .stopped { color: #f59e0b; font-weight: bold; }
-        .stat-box { border: 1px solid #1f2937; padding: 4px 10px; background: #111827; min-width: 140px; border-radius: 4px; border-left: 2px solid #374151; }
-        input, select { background: #111827; border: 1px solid #374151; color: white; padding: 2px 6px; outline: none; border-radius: 2px; }
-        button { background: #1f2937; border: 1px solid #374151; color: #10b981; padding: 2px 10px; cursor: pointer; text-transform: uppercase; font-weight: bold; }
-        button:hover { background: #374151; border-color: #10b981; }
-        .idr { color: #64748b; font-size: 10px; display: block; filter: brightness(1.2); }
-        .compact-label { font-size: 9px; color: #6b7280; text-transform: uppercase; font-weight: bold; }
-        .chart-box { border: 1px solid #1f2937; background: #0c0e14; padding: 8px; height: 180px; position: relative; }
-        .settings-bar { border: 1px solid #1f2937; background: #0c0e14; padding: 8px 12px; margin-bottom: 8px; border-radius: 6px; }
+        :root {
+            --bg-color: #000000;
+            --panel-bg: rgba(15, 15, 15, 0.95);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+        }
+
+        .light-mode {
+            --bg-color: #f9fafb;
+            --panel-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            font-size: 11px;
+            letter-spacing: -0.01em;
+            transition: all 0.3s;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        .compact-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .bot-card {
+            border: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.02);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .bot-card.active { border-color: var(--accent-green); background: rgba(16, 185, 129, 0.05); }
+        .bot-card:hover { transform: translateY(-2px); border-color: #3b82f6; }
+
+        .stat-label { font-size: 8px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
+        .win { color: var(--accent-green); }
+        .loss { color: var(--accent-red); }
+
+        .excel-table { width: 100%; border-collapse: collapse; }
+        .excel-table th { 
+            background: rgba(255, 255, 255, 0.03); 
+            border-bottom: 1px solid var(--border-color);
+            padding: 4px; text-align: left; font-size: 9px; color: var(--text-muted);
+        }
+        .excel-table td { padding: 3px 4px; border-bottom: 1px solid var(--border-color); }
+
+        .chart-container { height: 180px; }
+        
+        #themeToggle { cursor: pointer; opacity: 0.6; }
+        #themeToggle:hover { opacity: 1; }
     </style>
 </head>
-<body class="p-2">
+<body class="p-2 sm:p-4">
 
-    <div id="mainApp" class="max-w-[1600px] mx-auto">
-        <!-- HEADER PANEL -->
-        <div class="settings-bar flex gap-6 items-center flex-wrap shadow-xl">
-            <div class="flex items-center gap-2">
-                <span class="compact-label text-emerald-500">INIT BAL:</span>
-                <input type="number" id="setInitialBal" value="100" class="w-24 h-8 text-center text-lg font-black bg-slate-900 border-emerald-500/50 text-white italic">
-                <button id="btnReset" onclick="applySettings(true)" class="h-8 bg-emerald-500/10 text-emerald-400 px-4 hover:shadow-lg active:scale-95 transition-all">HARD RESET</button>
+    <div id="masterApp" class="w-full space-y-3">
+        
+        <!-- TOP HEADER -->
+        <header class="flex flex-wrap justify-between items-center px-2 py-4 border-b border-white/5 mb-4">
+            <div class="flex flex-wrap items-center gap-10">
+                <div class="flex items-center gap-4">
+                    <span class="font-black text-xl tracking-tighter">POLYBOT <span class="text-emerald-500 italic">FARM</span> v17</span>
+                    <div class="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded text-[9px] font-bold uppercase tracking-widest">10 Instances</div>
+                </div>
+
+                <div class="flex items-center gap-6 bg-white/5 px-4 py-2 rounded-lg border border-white/5">
+                    <div class="flex flex-col">
+                        <span class="stat-label">Cumulative Farm PnL</span>
+                        <div class="flex items-baseline gap-3">
+                            <span id="totalFarmPnl" class="mono font-black text-xl win">$0.00</span>
+                            <span id="totalFarmPnlIDR" class="idr-label text-[11px]">Rp 0</span>
+                            <span id="totalFarmRoi" class="text-[10px] bg-emerald-500/20 text-emerald-500 px-1.5 py-0.5 rounded font-bold">+0%</span>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <div class="flex items-center gap-10">
+                <div onclick="toggleTheme()" id="themeToggle" class="text-xl hover:scale-110 transition-transform cursor-pointer">🌓</div>
+                <div class="text-right border-l border-white/10 pl-6">
+                    <span class="stat-label">System Health</span>
+                    <div class="flex items-center gap-2 font-black text-[10px]"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span class="mono">STABLE</span></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- BOT LEADERBOARD / SELECTOR -->
+        <div id="botGrid" class="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-2">
+            <!-- Bot cards will be injected here -->
+        </div>
+
+        <!-- MAIN BOT DETAIL VIEW -->
+        <div id="botDetail" class="grid grid-cols-1 xl:grid-cols-12 gap-3">
             
-            <div class="flex items-center gap-2">
-                <button onclick="toggleBot('start')" id="btnStart" class="h-8 bg-emerald-700 text-white border-none px-6 rounded font-black hover:bg-emerald-600 shadow-lg" style="display:none;">▶ START</button>
-                <button onclick="toggleBot('stop')" id="btnStop" class="h-8 bg-rose-900 text-rose-300 border-none px-6 rounded font-black hover:bg-rose-800 shadow-lg" style="display:none;">■ STOP</button>
-            </div>
-
-            <div class="stat-box border-slate-700 !min-w-0 px-4 bg-slate-900/50">
-                <span class="compact-label opacity-40">WIN RATE / TRADES</span>
-                <span id="mWinRate" class="text-emerald-500 text-xl font-black block">0%</span>
-                <span id="mTotalTrades" class="text-[9px] text-slate-500 font-mono">Total: 0</span>
-            </div>
-
-            <div class="ml-auto flex items-center gap-4">
-                <div id="statusBadge" class="text-[10px] font-black px-4 py-1.5 rounded-full tracking-tighter border-2">CONNECTING...</div>
-                <div class="stat-box !min-w-0 bg-transparent border-none opacity-40 text-[10px]" id="lastSync">--:--:--</div>
-            </div>
-        </div>
-
-        <!-- STATS GRID -->
-        <div class="flex flex-wrap gap-3 mb-4">
-            <div class="stat-box border-emerald-900"><span class="compact-label opacity-40">Wallet Balance</span><span id="mBal" class="text-white text-xl font-black block">$0.00</span><span id="mBalIDR" class="idr font-mono">Rp 0</span></div>
-            <div class="stat-box border-slate-700"><span class="compact-label opacity-40">Realized PnL</span><span id="mPnlR" class="text-xl font-black block">$0.00</span><span id="mPnlRIDR" class="idr font-mono">Rp 0</span></div>
-            <div class="stat-box border-emerald-900/50"><span class="compact-label opacity-40">Total Won</span><span id="mPnlWon" class="win text-xl font-black block">$0.00</span><span id="mPnlWonIDR" class="idr font-mono text-emerald-600/80">Rp 0</span></div>
-            <div class="stat-box border-rose-900/50 text-right"><span class="compact-label opacity-40">Total Lost</span><span id="mPnlLost" class="loss text-xl font-black block">$0.00</span><span id="mPnlLostIDR" class="idr font-mono text-rose-600/80">Rp 0</span></div>
-            <div class="stat-box border-amber-900/50"><span class="compact-label opacity-40">Exposure In-Bet</span><span id="mInBet" class="text-amber-500 text-xl font-black block">$0.00</span><span id="mInBetIDR" class="idr font-mono text-amber-600/80">Rp 0</span></div>
-            <div class="stat-box border-slate-800 bg-slate-900/10 flex flex-col justify-center px-1">
-                <div class="flex items-center gap-1 mb-1"><span class="text-[8px] opacity-40">MinProb</span><input type="number" id="setMinProb" step="0.05" value="0.85" class="w-12 h-4 text-center text-[9px]"></div>
-                <div class="flex items-center gap-1"><span class="text-[8px] opacity-40">MaxBet</span><input type="number" id="setMaxBet" value="25" class="w-12 h-4 text-center text-[9px]"></div>
-            </div>
-        </div>
-
-        <!-- CHARTS SECTION -->
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-2 mb-4">
-            <div class="lg:col-span-3 chart-box"><canvas id="equityChart"></canvas></div>
-            <div class="chart-box"><canvas id="distChart"></canvas></div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div class="lg:col-span-9 space-y-2">
-                <!-- ACTIVE TRADES -->
-                <div class="border border-slate-800 rounded bg-slate-900/10">
-                    <div class="ctrl-bar px-2 py-1 bg-slate-900/50 flex justify-between">
-                        <span class="compact-label">[1] Active Positions (inc. Moonshots 🚀)</span>
-                        <div class="text-[9px] text-amber-500 font-bold italic animate-pulse">STOP-LOSS PROTECTION ACTIVE (-20%)</div>
+            <!-- LEFT PANEL: STATS & LISTS -->
+            <div class="xl:col-span-9 space-y-3">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div class="compact-panel p-3 border-l-4 border-l-emerald-500">
+                        <span class="stat-label">Net Equity</span>
+                        <div id="mTotal" class="text-xl font-black mono">$0.00</div>
+                        <div id="mWinRate" class="text-[10px] win font-bold">0% Win Rate</div>
                     </div>
-                    <table class="excel-table">
-                        <thead><tr><th width="80">ID</th><th>Target Market</th><th width="120">Stake (USD/IDR)</th><th width="40">%</th><th width="80">Unrealized</th><th width="40">Url</th></tr></thead>
-                        <tbody id="openTableBody"></tbody>
-                    </table>
+                    <div class="compact-panel p-3">
+                        <span class="stat-label">Pnl Realized</span>
+                        <div id="mPnlR" class="text-xl font-black mono">$0.00</div>
+                        <div id="mTrades" class="text-[10px] opacity-40">0 Trades</div>
+                    </div>
+                    <div class="compact-panel p-3">
+                        <span class="stat-label">Threshold</span>
+                        <div id="mThreshold" class="text-xl font-black mono">0%</div>
+                        <div class="text-[10px] opacity-40">Min. Probability</div>
+                    </div>
+                    <div class="compact-panel p-3">
+                        <span class="stat-label">Status</span>
+                        <div id="mStatus" class="text-xl font-black mono">OFFLINE</div>
+                        <div id="mActionBtns" class="flex gap-2 mt-1">
+                            <button id="btnToggle" class="bg-emerald-600 hover:bg-emerald-500 px-2 py-0.5 rounded font-bold text-[9px]">START</button>
+                            <button id="btnReset" class="bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded font-bold text-[9px]">RESET</button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- HISTORY WITH NAVIGATION -->
-                <div class="border border-slate-800 rounded bg-slate-900/10">
-                    <div class="ctrl-bar px-2 py-1 bg-slate-900/50 flex flex-wrap gap-4 items-center">
-                        <span class="compact-label">[2] Trade Ledger</span>
-                        
-                        <div class="flex gap-2 ml-4">
-                            <input type="text" id="histSearch" placeholder="Search Markets..." class="w-32 h-5 text-[9px]" oninput="historyPage=0;renderAll()">
-                            <select id="histFilter" class="h-5 text-[9px]" onchange="historyPage=0;renderAll()">
-                                <option value="all">ALL TYPES</option>
-                                <option value="win">WINS ONLY</option>
-                                <option value="loss">LOSS ONLY</option>
-                                <option value="stopped">S/L ONLY</option>
-                            </select>
-                        </div>
+                <!-- CHART -->
+                <div class="compact-panel p-3">
+                    <div class="chart-container"><canvas id="equityChart"></canvas></div>
+                </div>
 
-                        <div class="ml-auto flex items-center gap-1">
-                            <button onclick="changePage(-1)" class="h-5 px-2 bg-transparent border-slate-800 text-slate-500">&laquo;</button>
-                            <span id="pageInfo" class="text-[10px] font-bold w-16 text-center text-slate-600">P1</span>
-                            <button onclick="changePage(1)" class="h-5 px-2 bg-transparent border-slate-800 text-slate-500">&raquo;</button>
-                        </div>
+                <!-- TABLES -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="compact-panel overflow-hidden">
+                        <div class="bg-white/5 px-2 py-1 stat-label text-white">Active Positions</div>
+                        <table class="excel-table mono">
+                            <thead><tr><th>ID</th><th>Market</th><th>Stake</th><th>PnL</th></tr></thead>
+                            <tbody id="openTableBody"></tbody>
+                        </table>
                     </div>
-                    <table class="excel-table">
-                        <thead><tr><th width="50">Res</th><th>Market Record</th><th width="80">Stake</th><th width="120">Outcome PnL (IDR)</th><th width="60">Time</th></tr></thead>
-                        <tbody id="historyTableBody"></tbody>
-                    </table>
+                    <div class="compact-panel overflow-hidden">
+                        <div class="bg-white/5 px-2 py-1 flex flex-wrap gap-2 items-center justify-between">
+                            <span class="stat-label text-white">Execution History</span>
+                            <div class="flex gap-2">
+                                <input type="text" id="histSearch" placeholder="Search..." class="w-20 h-4 text-[9px]" oninput="historyPage=0;renderBotDetail()">
+                                <select id="histFilter" class="h-4 text-[9px]" onchange="historyPage=0;renderBotDetail()">
+                                    <option value="all">ALL</option>
+                                    <option value="win">WINS</option>
+                                    <option value="loss">LOSSES</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <button onclick="changePage(-1)" class="hover:text-white px-1">&laquo;</button>
+                                <span id="pageInfo" class="text-[9px] opacity-40">P1</span>
+                                <button onclick="changePage(1)" class="hover:text-white px-1">&raquo;</button>
+                            </div>
+                        </div>
+                        <table class="excel-table mono">
+                            <thead><tr><th width="40">Res</th><th>Market</th><th width="80">Outcome</th></tr></thead>
+                            <tbody id="historyTableBody" class="text-[10px]"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- SCANNER -->
-            <div class="lg:col-span-3">
-                <div class="border border-slate-800 rounded bg-slate-900/10 h-full">
-                    <div class="ctrl-bar px-2 py-1 bg-slate-900/50"><span class="compact-label">[3] Poly Scan Feed</span></div>
-                    <table class="excel-table"><thead><tr><th>Markets Scanning...</th><th width="30">%</th></tr></thead><tbody id="marketTableBody"></tbody></table>
+            <!-- RIGHT PANEL: SCANNER -->
+            <div class="xl:col-span-3">
+                <div class="compact-panel h-full flex flex-col">
+                    <div class="bg-white/5 px-2 py-1 stat-label text-white flex justify-between">
+                        <span>Scanner (Target Zone)</span>
+                        <span id="mLastSync" class="opacity-40">--:--</span>
+                    </div>
+                    <div class="overflow-y-auto max-h-[600px]">
+                        <table class="excel-table mono text-[10px]">
+                            <tbody id="marketTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const IDR_RATE = 16200;
-        let RAW_DATA = null;
+        let MASTER_DATA = null;
+        let selectedBotId = "BOT-1";
         let equityChart = null;
-        let distChart = null;
         let historyPage = 0;
-        const PAGE_SIZE = 12;
+        const IDR_RATE = 16200;
 
-        function fUSD(val) { return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-        function fIDR(val) { return 'Rp ' + (val * IDR_RATE).toLocaleString('id-ID', { maximumFractionDigits: 0 }); }
-
-        async function toggleBot(action) { await fetch(`/api/${action}`, { method: 'POST' }); updateData(); }
-
-        async function applySettings(isReset) {
-            const bal = parseFloat(document.getElementById('setInitialBal').value);
-            const mProb = parseFloat(document.getElementById('setMinProb').value);
-            const mBet = parseFloat(document.getElementById('setMaxBet').value);
-            
-            // SAVE TO LOCAL STORAGE
-            localStorage.setItem('bot_bal', bal);
-            localStorage.setItem('bot_prob', mProb);
-            localStorage.setItem('bot_bet', mBet);
-
-            const body = { min_prob: mProb, max_bet: mBet, reset_balance: isReset ? bal : null };
-            await fetch(`/api/settings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-            if(isReset) { historyPage = 0; setTimeout(updateData, 500); }
-        }
-
-        // LOAD FROM LOCAL STORAGE ON START
-        function loadSettings() {
-            if(localStorage.getItem('bot_bal')) document.getElementById('setInitialBal').value = localStorage.getItem('bot_bal');
-            if(localStorage.getItem('bot_prob')) document.getElementById('setMinProb').value = localStorage.getItem('bot_prob');
-            if(localStorage.getItem('bot_bet')) document.getElementById('setMaxBet').value = localStorage.getItem('bot_bet');
-        }
-
-        function initCharts() {
-            const ctxE = document.getElementById('equityChart').getContext('2d');
-            equityChart = new Chart(ctxE, {
-                type: 'line',
-                data: { labels: [], datasets: [
-                    { label: 'Equity', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, tension: 0.1, borderWidth: 1.5, pointRadius: 0 },
-                    { label: 'Wallet', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.04)', fill: true, tension: 0.1, borderWidth: 1, pointRadius: 0 }
-                ] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: true, grid: { color: '#1f2937' }, ticks: { color: '#4b5563', font: {size: 8} } }, y: { grid: { color: '#111827' }, ticks: { color: '#6b7280', font: {size: 10} } } }, plugins: { legend: { display: false } } }
-            });
-            const ctxD = document.getElementById('distChart').getContext('2d');
-            distChart = new Chart(ctxD, { type: 'bar', data: { labels: ['WIN', 'LOSS'], datasets: [{ data: [0, 0], backgroundColor: ['#065f46', '#7f1d1d'], borderWidth: 0 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: true, ticks: { color: '#9ca3af', font: {weight: 'bold'} } } }, plugins: { legend: { display: false } } } });
-        }
+        function fUSD(v) { return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
         async function updateData() {
             try {
-                const res = await fetch(`/api/status`);
-                if (!res.ok) return;
-                RAW_DATA = await res.json();
-                renderAll(); updateCharts();
-            } catch (e) {}
+                const res = await fetch('/api/status');
+                MASTER_DATA = await res.json();
+                
+                const totalPnL = MASTER_DATA.bots.reduce((acc, b) => acc + b.pnl_realized, 0);
+                const initialTotal = MASTER_DATA.bots.length * 100;
+                const totalRoi = (totalPnL / initialTotal * 100).toFixed(1);
+
+                const pnlEl = document.getElementById('totalFarmPnl');
+                pnlEl.textContent = fUSD(totalPnL);
+                pnlEl.className = `mono font-black text-sm ${totalPnL >= 0 ? 'win' : 'loss'}`;
+                document.getElementById('totalFarmPnlIDR').textContent = 'Rp ' + Math.abs(totalPnL * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+                
+                const roiEl = document.getElementById('totalFarmRoi');
+                roiEl.textContent = (totalPnL >= 0 ? '+' : '') + totalRoi + '%';
+                roiEl.className = `text-[10px] px-1.5 py-0.5 rounded font-bold ${totalPnL >= 0 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-rose-500/20 text-rose-500'}`;
+
+                renderLeaderboard();
+                renderBotDetail();
+            } catch(e) {}
         }
 
-        function updateCharts() {
-            if(!RAW_DATA) return;
-            equityChart.data.labels = RAW_DATA.chart_history.map(p => p.time);
-            equityChart.data.datasets[0].data = RAW_DATA.chart_history.map(p => p.total);
-            equityChart.data.datasets[1].data = RAW_DATA.chart_history.map(p => p.wallet);
-            equityChart.update('none');
-            const h = RAW_DATA.history;
-            const wins = h.filter(x => x.won).length;
-            const losses = h.filter(x => !x.won).length;
-            distChart.data.datasets[0].data = [wins, losses];
-            distChart.update('none');
-            const total = wins + losses;
-            document.getElementById('mWinRate').textContent = total > 0 ? (wins / total * 100).toFixed(1) + "%" : "0%";
-            document.getElementById('mTotalTrades').textContent = "Total: " + total;
+        function renderLeaderboard() {
+            const grid = document.getElementById('botGrid');
+            grid.innerHTML = MASTER_DATA.bots.map(bot => {
+                const isWinner = bot.pnl_realized >= 0;
+                const pnlIDR = Math.abs(bot.pnl_realized * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+                const roi = (bot.pnl_realized / 100 * 100).toFixed(1); // Assuming 100 init balance
+                return `
+                    <div onclick="selectBot('${bot.id}')" class="bot-card p-2 rounded ${bot.id === selectedBotId ? 'active' : ''}">
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="font-black text-[9px]">${bot.id}</span>
+                            <span class="text-[8px] font-bold ${isWinner?'win':'loss'}">${isWinner?'+':''}${roi}%</span>
+                        </div>
+                        <div class="mono font-bold text-[10px] ${isWinner ? 'win' : 'loss'}">
+                            ${fUSD(bot.pnl_realized)}
+                            <span class="text-[8px] opacity-40 ml-1">Rp ${pnlIDR}</span>
+                        </div>
+                        <div class="stat-label mt-1">Odds: ${(bot.min_prob_threshold*100).toFixed(0)}%</div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        function changePage(delta) { historyPage = Math.max(0, historyPage + delta); renderAll(); }
+        function changePage(delta) { historyPage = Math.max(0, historyPage + delta); renderBotDetail(); }
 
-        function renderAll() {
-            if(!RAW_DATA) return;
-            const data = RAW_DATA;
+        function renderBotDetail() {
+            const bot = MASTER_DATA.bots.find(b => b.id === selectedBotId);
+            if(!bot) return;
+
+            const unrealized = bot.open_trades.reduce((acc, t) => acc + t.unrealized_pnl, 0);
+            const equity = bot.balance + bot.usd_in_bet + unrealized;
+            const equityRoi = ((equity - 100) / 100 * 100).toFixed(1);
+            const realizedRoi = (bot.pnl_realized / 100 * 100).toFixed(1);
             
-            document.getElementById('btnStart').style.display = data.running ? 'none' : 'block';
-            document.getElementById('btnStop').style.display = data.running ? 'block' : 'none';
-            document.getElementById('statusBadge').textContent = data.running ? 'BOT ACTIVE' : 'BOT STANDBY';
-            document.getElementById('statusBadge').className = `text-[10px] font-black px-4 py-1.5 rounded-full tracking-tighter border-2 shadow-inner transition-all ${data.running ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/40 shadow-emerald-500/10' : 'bg-slate-900/40 text-slate-500 border-slate-800'}`;
+            document.getElementById('mTotal').innerHTML = `${fUSD(equity)} <span class="text-[10px] ${equity>=100?'win':'loss'} ml-2 font-bold">${equity>=100?'+':''}${equityRoi}%</span>`;
+            document.getElementById('mPnlR').innerHTML = `${fUSD(bot.pnl_realized)} <span class="text-[10px] ${bot.pnl_realized>=0?'win':'loss'} ml-2 font-bold">${bot.pnl_realized>=0?'+':''}${realizedRoi}%</span>`;
+            document.getElementById('mThreshold').textContent = (bot.min_prob_threshold*100).toFixed(0) + "%";
+            document.getElementById('mStatus').textContent = bot.running ? "ACTIVE" : "PAUSED";
+            document.getElementById('mStatus').className = `text-xl font-black mono ${bot.running ? 'win' : 'opacity-40'}`;
+            
+            const total = bot.pnl_won + Math.abs(bot.pnl_lost) || 1;
+            const winRate = (bot.pnl_won / total * 100).toFixed(1);
+            document.getElementById('mWinRate').textContent = winRate + "% Success Rate";
+            document.getElementById('mTrades').textContent = bot.history.length + " Closures";
 
-            const stats = ['Bal', 'PnlR', 'PnlWon', 'PnlLost', 'InBet'];
-            const pkey = ['balance', 'pnl_realized', 'pnl_won', 'pnl_lost', 'usd_in_bet'];
-            stats.forEach((s, i) => {
-                const val = data[pkey[i]];
-                document.getElementById('m'+s).textContent = fUSD(val);
-                document.getElementById('m'+s+'IDR').textContent = fIDR(val);
-                if(s==='PnlR') document.getElementById('mPnlR').className = val >= 0 ? 'win text-xl font-black block' : 'loss text-xl font-black block';
-            });
-            document.getElementById('lastSync').textContent = data.last_sync;
+            document.getElementById('btnToggle').textContent = bot.running ? "STOP" : "START";
+            document.getElementById('btnToggle').onclick = () => toggleBot(bot.id, bot.running ? 'stop' : 'start');
+            document.getElementById('btnReset').onclick = () => resetBot(bot.id);
 
-            document.getElementById('openTableBody').innerHTML = data.open_trades.map(t => `
-                <tr class="hover:bg-slate-800/10"><td>${t.id}</td><td class="font-bold truncate" style="max-width:280px;">${t.is_moonshot?'🚀 ':''}${t.question}</td><td>${fUSD(t.bet_amount)}<br><span class="idr">${fIDR(t.bet_amount)}</span></td><td class="text-emerald-500 font-mono">${(t.entry_prob*100).toFixed(0)}%</td><td class="${t.unrealized_pnl >= 0 ? 'win font-bold' : 'loss font-bold'}">${fUSD(t.unrealized_pnl)}</td><td><a href="${t.slug}" target="_blank" class="text-blue-500 inline-block font-black">↗</a></td></tr>
+            // Tables
+            document.getElementById('openTableBody').innerHTML = bot.open_trades.map(t => `
+                <tr><td>${t.id}</td><td>${t.is_moonshot?'🚀 ':''}${t.question}</td><td>${fUSD(t.bet_amount)}</td><td class="${t.unrealized_pnl>=0?'win':'loss'}">${fUSD(t.unrealized_pnl)}</td></tr>
             `).join('');
-
-            // FILTER & SEARCH LOGIC
+            
+            // HISTORY FILTER & PAGING
             const searchQ = document.getElementById('histSearch').value.toLowerCase();
             const filterVal = document.getElementById('histFilter').value;
-            
-            let filteredHistory = data.history.filter(h => {
+            let filteredHistory = bot.history.filter(h => {
                 const matchesSearch = h.question.toLowerCase().includes(searchQ);
                 let matchesFilter = true;
                 if(filterVal === 'win') matchesFilter = h.won;
-                if(filterVal === 'loss') matchesFilter = !h.won && !h.was_stopped;
-                if(filterVal === 'stopped') matchesFilter = h.was_stopped;
+                if(filterVal === 'loss') matchesFilter = !h.won;
                 return matchesSearch && matchesFilter;
             });
 
+            const PAGE_SIZE = 12;
             const start = historyPage * PAGE_SIZE;
             const hDisplay = filteredHistory.slice(start, start + PAGE_SIZE);
             const totalPages = Math.ceil(filteredHistory.length / PAGE_SIZE) || 1;
-            document.getElementById('pageInfo').textContent = `P${historyPage + 1} / ${totalPages}`;
+            document.getElementById('pageInfo').textContent = `P${historyPage + 1}/${totalPages}`;
 
-            document.getElementById('historyTableBody').innerHTML = hDisplay.map(x => `
-                <tr class="hover:bg-slate-800/10"><td class="${x.won?'win':(x.was_stopped?'stopped':'loss')} font-black italic">${x.won?'WIN':(x.was_stopped?'S/L':'LOSE')}</td><td class="truncate" style="max-width:300px;">${x.question}</td><td>${fUSD(x.bet_amount)}</td><td class="${x.pnl>=0?'win font-bold':'loss font-bold'}">${fUSD(x.pnl)}<br><span class="idr">${fIDR(x.pnl)}</span></td><td class="opacity-50">${x.time}</td></tr>
+            document.getElementById('historyTableBody').innerHTML = hDisplay.map(h => `
+                <tr><td class="${h.won?'win':'loss'} font-bold">${h.won?'WIN':'LOSE'}</td><td>${h.question}</td><td class="${h.pnl>=0?'win':'loss'} font-bold">${fUSD(h.pnl)}</td></tr>
             `).join('');
 
-            document.getElementById('marketTableBody').innerHTML = data.current_markets.map(m => `
-                <tr class="${m.prob >= data.min_prob_threshold ? 'bg-emerald-500/5' : 'opacity-20'}"><td>${m.question}</td><td class="font-black text-right">${(m.prob*100).toFixed(0)}</td></tr>
+            document.getElementById('marketTableBody').innerHTML = bot.current_markets.slice(0, 100).map(m => `
+                <tr class="${m.prob >= bot.min_prob_threshold ? 'bg-emerald-500/5' : 'opacity-20'}">
+                    <td>${m.question}</td><td class="text-right font-bold text-emerald-500">${(m.prob*100).toFixed(0)}%</td>
+                </tr>
             `).join('');
+
+            document.getElementById('mLastSync').textContent = bot.last_sync;
+
+            updateChart(bot);
         }
 
-        loadSettings(); initCharts(); setInterval(updateData, 2000); updateData();
+        function updateChart(bot) {
+            if(!equityChart) return;
+            equityChart.data.labels = bot.chart_history.map(p => p.time);
+            equityChart.data.datasets[0].data = bot.chart_history.map(p => p.total);
+            equityChart.data.datasets[1].data = bot.chart_history.map(p => p.wallet);
+            equityChart.update('none');
+        }
+
+        async function toggleBot(id, action) { await fetch(`/api/${action}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id}) }); updateData(); }
+        async function resetBot(id) { await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id, min_prob: 0.8, max_bet: 25, reset_balance: 100 })}); updateData(); }
+
+        function selectBot(id) { selectedBotId = id; renderBotDetail(); renderLeaderboard(); }
+
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLight = document.body.classList.contains('light-mode');
+            localStorage.setItem('bot_theme', isLight ? 'light' : 'dark');
+            if(equityChart) {
+                const color = isLight ? '#6b7280' : '#4b5563';
+                equityChart.options.scales.y.ticks.color = color;
+                equityChart.update();
+            }
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('equityChart').getContext('2d');
+            equityChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [
+                    { label: 'Equity', data: [], borderColor: '#10b981', borderWidth: 2, fill: false, pointRadius: 0, tension: 0.3 },
+                    { label: 'Wallet', data: [], borderColor: '#3b82f6', borderDash: [2,2], borderWidth: 1, fill: false, pointRadius: 0, tension: 0.3 }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { ticks: { font: { size: 9 }, color: '#4b5563' }, grid: { color: 'rgba(255,255,255,0.02)' } } } }
+            });
+        }
+
+        if(localStorage.getItem('bot_theme') === 'light') document.body.classList.add('light-mode');
+        initChart(); setInterval(updateData, 2000); updateData();
     </script>
 </body>
 </html>

@@ -1,14 +1,16 @@
 use axum::{
     extract::State,
-    response::{Html, IntoResponse, Response},
+    response::{Html, IntoResponse, Json},
     routing::{get, post},
-    Json, Router,
+    Router,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::time::sleep;
 use chrono::Local;
+use std::net::SocketAddr;
+use dotenv::dotenv;
 
 // --- CORE BOT TYPES ---
 
@@ -18,6 +20,7 @@ struct Market {
     category: String,
     prob: f64,
     slug: String,
+    token_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,7 +32,6 @@ struct Trade {
     unrealized_pnl: f64,
     current_price: f64,
     slug: String,
-    start_time: String,
     is_moonshot: bool, 
 }
 
@@ -41,7 +43,6 @@ struct HistoryEntry {
     won: bool,
     was_stopped: bool,
     time: String,
-    slug: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,14 +53,8 @@ struct HistoryPoint {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct BotSettings {
-    min_prob: f64,
-    max_bet: f64,
-    reset_balance: Option<f64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 struct BotState {
+    id: String,
     balance: f64,
     pnl_realized: f64,
     pnl_won: f64,
@@ -75,143 +70,176 @@ struct BotState {
     running: bool,
 }
 
-type SharedState = Arc<Mutex<BotState>>;
-
-// --- API HANDLERS ---
-
-async fn get_status(State(state): State<SharedState>) -> Response {
-    let s = state.lock().unwrap();
-    Json(s.clone()).into_response()
+#[derive(Serialize, Deserialize, Clone)]
+struct MasterState {
+    bots: Vec<BotState>,
 }
 
-async fn update_settings(State(state): State<SharedState>, Json(settings): Json<BotSettings>) -> Response {
-    let mut s = state.lock().unwrap();
-    s.min_prob_threshold = settings.min_prob;
-    s.max_bet_cap = settings.max_bet;
-    if let Some(bal) = settings.reset_balance {
-        s.balance = bal;
-        s.pnl_realized = 0.0; s.pnl_won = 0.0; s.pnl_lost = 0.0; s.usd_in_bet = 0.0;
-        s.open_trades.clear(); s.history.clear();
-        s.chart_history = vec![HistoryPoint { time: Local::now().format("%H:%M:%S").to_string(), wallet: bal, total: bal }];
-        s.running = false;
+type SharedState = Arc<Mutex<MasterState>>;
+
+
+#[tokio::main]
+async fn main() {
+    let state = Arc::new(Mutex::new(load_state()));
+
+    for i in 0..10 {
+        let slave_state = Arc::clone(&state);
+        let bot_id = format!("BOT-{}", i + 1);
+        tokio::spawn(async move {
+            bot_worker(slave_state, bot_id).await;
+        });
     }
-    (axum::http::StatusCode::OK, "Applied").into_response()
-}
 
-async fn bot_start(State(state): State<SharedState>) -> Response {
-    let mut s = state.lock().unwrap();
-    s.running = true;
-    (axum::http::StatusCode::OK, "Started").into_response()
-}
+    let app = Router::new()
+        .route("/", get(get_dashboard))
+        .route("/api/status", get(get_status))
+        .route("/api/start", post(start_bot))
+        .route("/api/stop", post(stop_bot))
+        .route("/api/settings", post(update_settings))
+        .with_state(state);
 
-async fn bot_stop(State(state): State<SharedState>) -> Response {
-    let mut s = state.lock().unwrap();
-    s.running = false;
-    (axum::http::StatusCode::OK, "Stopped").into_response()
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+    println!("🚀 PolyBot Farm listening on {}", addr);
+    axum::Server::bind(&addr).serve(app.into_make_service()).await.unwrap();
 }
 
 async fn get_dashboard() -> Html<&'static str> { Html(include_str!("index.html")) }
 
-// --- ENGINE v15 ---
+const SAVE_FILE: &str = "storage/farm_state.json";
 
-async fn bot_worker(state: SharedState) {
+fn load_state() -> MasterState {
+    let _ = std::fs::create_dir_all("storage");
+    if let Ok(content) = std::fs::read_to_string(SAVE_FILE) {
+        if let Ok(state) = serde_json::from_str::<MasterState>(&content) {
+            return state;
+        }
+    }
+    
+    let mut bots = vec![];
+    for i in 0..10 {
+        let prob = 0.50 + (i as f64 * 0.05);
+        bots.push(BotState {
+            id: format!("BOT-{}", i + 1),
+            balance: 100.0,
+            pnl_realized: 0.0, pnl_won: 0.0, pnl_lost: 0.0,
+            usd_in_bet: 0.0, open_trades: vec![], history: vec![],
+            current_markets: vec![],
+            chart_history: vec![],
+            min_prob_threshold: (prob * 100.0).round() / 100.0,
+            max_bet_cap: 25.0,
+            last_sync: "INIT".to_string(), 
+            running: false,
+        });
+    }
+    MasterState { bots }
+}
+
+async fn get_status(State(state): State<SharedState>) -> impl IntoResponse { Json(state.lock().unwrap().clone()) }
+
+#[derive(Deserialize)]
+struct BotAction { id: String }
+
+async fn start_bot(State(state): State<SharedState>, Json(payload): Json<BotAction>) -> impl IntoResponse {
+    let mut s = state.lock().unwrap();
+    if let Some(bot) = s.bots.iter_mut().find(|b| b.id == payload.id) { bot.running = true; }
+    axum::http::StatusCode::OK
+}
+
+async fn stop_bot(State(state): State<SharedState>, Json(payload): Json<BotAction>) -> impl IntoResponse {
+    let mut s = state.lock().unwrap();
+    if let Some(bot) = s.bots.iter_mut().find(|b| b.id == payload.id) { bot.running = false; }
+    axum::http::StatusCode::OK
+}
+
+#[derive(Deserialize)]
+struct SettingsPayload {
+    id: String,
+    min_prob: f64,
+    max_bet: f64,
+    reset_balance: Option<f64>,
+}
+
+async fn update_settings(State(state): State<SharedState>, Json(p): Json<SettingsPayload>) -> impl IntoResponse {
+    let mut s = state.lock().unwrap();
+    if let Some(bot) = s.bots.iter_mut().find(|b| b.id == p.id) {
+        bot.min_prob_threshold = p.min_prob;
+        bot.max_bet_cap = p.max_bet;
+        if let Some(bal) = p.reset_balance {
+            bot.balance = bal;
+            bot.pnl_realized = 0.0; bot.pnl_won = 0.0; bot.pnl_lost = 0.0;
+            bot.history.clear(); bot.chart_history.clear(); bot.open_trades.clear();
+        }
+    }
+    axum::http::StatusCode::OK
+}
+
+async fn bot_worker(state: SharedState, bot_id: String) {
     use rand::Rng;
     loop {
         {
-            let mut s = state.lock().unwrap();
+            let mut master = state.lock().unwrap();
+            let bot = master.bots.iter_mut().find(|b| b.id == bot_id).unwrap();
             let mut rng = rand::thread_rng();
-            if s.running {
-                s.current_markets = vec![
-                    Market { question: "BTC > $100k?".to_string(), category: "Crypto".to_string(), prob: 0.88, slug: "btc-100k".to_string() },
-                    Market { question: "Nvidia Up?".to_string(), category: "Stocks".to_string(), prob: 0.81, slug: "nvda-up".to_string() },
-                    Market { question: "ETH > $4k?".to_string(), category: "Crypto".to_string(), prob: 0.78, slug: "eth-4k".to_string() },
-                    Market { question: "SOL Moonshot?".to_string(), category: "Moonshot".to_string(), prob: 0.42, slug: "sol-moonshot".to_string() },
-                    Market { question: "Trump Wins?".to_string(), category: "Politics".to_string(), prob: 0.49, slug: "trump-wins".to_string() },
-                ].into_iter().map(|mut m| { m.slug = format!("https://polymarket.com/event/{}", m.slug); m }).collect();
-                s.last_sync = Local::now().format("%H:%M:%S").to_string();
 
-                if s.open_trades.len() < 5 && rng.gen_bool(0.3) {
-                    let eligible: Vec<Market> = s.current_markets.iter()
-                        .filter(|m| m.prob >= s.min_prob_threshold || (m.prob >= 0.35 && m.prob <= 0.55 && rng.gen_bool(0.2)))
-                        .cloned().collect();
-                    if !eligible.is_empty() {
-                        let m = eligible[rng.gen_range(0..eligible.len())].clone();
-                        let is_moonshot = m.prob < 0.60;
-                        let mut bet = s.balance.sqrt() * 0.316;
-                        if is_moonshot { bet *= 0.5; }
-                        bet = bet.max(1.0).min(s.max_bet_cap);
-                        if s.balance >= bet {
-                            s.balance -= bet; s.usd_in_bet += bet;
-                            s.open_trades.push(Trade {
+            let questions = ["BTC Bullish?", "ETH Pump?", "Trump Wins?", "Fed Pivot?", "Gold ATH?", "AI Peak?"];
+            bot.current_markets = (0..500).map(|i| {
+                let prob = if rng.gen_bool(0.7) { rng.gen_range(0.40..0.98) } else { rng.gen_range(0.10..0.40) };
+                Market {
+                    question: format!("{} (#{})", questions[rng.gen_range(0..questions.len())], i),
+                    category: "Global".to_string(), prob, slug: format!("https://poly.com/{}", i), token_id: None
+                }
+            }).collect();
+            bot.last_sync = Local::now().format("%H:%M:%S").to_string();
+
+            if bot.running {
+                for m in &bot.current_markets {
+                    if m.prob >= bot.min_prob_threshold && bot.open_trades.len() < 5 {
+                        let bet = (bot.balance.sqrt() * 0.35).min(bot.max_bet_cap);
+                        if bot.balance >= (bet + 0.02) {
+                            bot.balance -= bet + 0.02; bot.usd_in_bet += bet;
+                            bot.open_trades.push(Trade {
                                 id: format!("T-{}", rng.gen_range(1000..9999)),
-                                question: m.question, bet_amount: bet, entry_prob: m.prob,
-                                unrealized_pnl: 0.0, current_price: m.prob, slug: m.slug,
-                                start_time: Local::now().format("%H:%M").to_string(), is_moonshot,
+                                question: m.question.clone(), bet_amount: bet, entry_prob: m.prob,
+                                current_price: m.prob, is_moonshot: m.prob < 0.65,
+                                unrealized_pnl: 0.0, slug: m.slug.clone(),
                             });
                         }
                     }
                 }
-
-                let mut resolved_indices = Vec::new();
-                for (idx, trade) in s.open_trades.iter_mut().enumerate() {
-                    let delta = rng.gen_range(-0.03..0.03);
-                    trade.current_price = (trade.current_price + delta).max(0.01).min(0.99);
-                    trade.unrealized_pnl = trade.bet_amount * ((trade.current_price / trade.entry_prob) - 1.0);
-
-                    if trade.current_price < (trade.entry_prob * 0.8) {
-                        resolved_indices.push((idx, true)); 
-                    } else if rng.gen_bool(0.12) {
-                        resolved_indices.push((idx, false)); 
-                    }
+                let mut resolved = Vec::new();
+                for (idx, t) in bot.open_trades.iter_mut().enumerate() {
+                    t.current_price = (t.current_price + rng.gen_range(-0.02..0.025)).clamp(0.01, 0.99);
+                    let gain = t.current_price / t.entry_prob;
+                    t.unrealized_pnl = t.bet_amount * (gain - 1.0);
+                    if gain > 1.12 { resolved.push((idx, Some(1.12))); }
+                    else if gain < 0.90 { resolved.push((idx, Some(0.90))); }
+                    else if rng.gen_bool(0.05) { resolved.push((idx, None)); }
                 }
-
-                for (idx, was_stopped) in resolved_indices.into_iter().rev() {
-                    let trade = s.open_trades.remove(idx);
-                    s.usd_in_bet -= trade.bet_amount;
-                    let (won, pnl) = if was_stopped {
-                        (false, -trade.bet_amount * 0.20)
-                    } else {
-                        let won = rng.gen_bool(trade.entry_prob);
-                        let p = if won {
-                            let mult = (1.0 / trade.entry_prob).min(4.0);
-                            trade.bet_amount * (mult - 1.0) * 0.98
-                        } else { -trade.bet_amount };
-                        (won, p)
+                for (idx, mult) in resolved.into_iter().rev() {
+                    let t = bot.open_trades.remove(idx);
+                    bot.usd_in_bet -= t.bet_amount;
+                    let (won, p) = match mult {
+                        Some(m) => (m > 1.0, t.bet_amount * (m - 1.0) * 0.995),
+                        None => {
+                            let w = rng.gen_bool(t.entry_prob);
+                            let p = if w { t.bet_amount * ((1.0 / t.entry_prob).min(4.0) - 1.0) * 0.98 } else { -t.bet_amount * 0.5 };
+                            (w, p)
+                        }
                     };
-                    s.balance += trade.bet_amount + pnl; s.pnl_realized += pnl;
-                    if pnl > 0.0 { s.pnl_won += pnl; } else { s.pnl_lost += pnl; }
-                    s.history.insert(0, HistoryEntry {
-                        question: format!("{}{}", if trade.is_moonshot {"🚀 "} else {""}, trade.question),
-                        bet_amount: trade.bet_amount, pnl, won, was_stopped, slug: trade.slug,
-                        time: Local::now().format("%H:%M").to_string(),
+                    bot.balance += t.bet_amount + p - 0.02; bot.pnl_realized += p - 0.02;
+                    if p > 0.0 { bot.pnl_won += p; } else { bot.pnl_lost += p - 0.02; }
+                    bot.history.insert(0, HistoryEntry {
+                        question: t.question, bet_amount: t.bet_amount, pnl: p-0.02, won,
+                        was_stopped: mult.is_some(), time: Local::now().format("%H:%M").to_string(),
                     });
-                    if s.history.len() > 1000 { s.history.pop(); }
                 }
-
-                // FIX BORROW CHECKER for Charting
-                let time = s.last_sync.clone();
-                let wal = s.balance;
-                let unrealized_sum: f64 = s.open_trades.iter().map(|t| t.unrealized_pnl).sum();
-                let total = wal + s.usd_in_bet + unrealized_sum;
-                s.chart_history.push(HistoryPoint { time, wallet: wal, total });
-                if s.chart_history.len() > 200 { s.chart_history.remove(0); }
+                let total = bot.balance + bot.usd_in_bet + bot.open_trades.iter().map(|it| it.unrealized_pnl).sum::<f64>();
+                let time = bot.last_sync.clone();
+                bot.chart_history.push(HistoryPoint { time, wallet: bot.balance, total });
+                if bot.chart_history.len() > 100 { bot.chart_history.remove(0); }
             }
+            if let Ok(c) = serde_json::to_string_pretty(&*master) { let _ = std::fs::write(SAVE_FILE, c); }
         }
         sleep(Duration::from_secs(3)).await;
     }
-}
-
-#[tokio::main]
-async fn main() {
-    let state = Arc::new(Mutex::new(BotState {
-        balance: 100.0, pnl_realized: 0.0, pnl_won: 0.0, pnl_lost: 0.0,
-        usd_in_bet: 0.0, open_trades: vec![], history: vec![], current_markets: vec![],
-        chart_history: vec![HistoryPoint { time: "0".to_string(), wallet: 100.0, total: 100.0 }],
-        min_prob_threshold: 0.85, max_bet_cap: 25.0,
-        last_sync: "WAITING".to_string(), running: false,
-    }));
-    let bot_state = Arc::clone(&state);
-    tokio::spawn(async move { bot_worker(bot_state).await; });
-    let app = Router::new().route("/", get(get_dashboard)).route("/api/status", get(get_status)).route("/api/settings", post(update_settings)).route("/api/start", post(bot_start)).route("/api/stop", post(bot_stop)).with_state(state);
-    axum::Server::bind(&std::net::SocketAddr::from(([0,0,0,0], 8080))).serve(app.into_make_service()).await.unwrap();
 }
