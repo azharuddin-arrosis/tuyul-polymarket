@@ -113,8 +113,13 @@ const SAVE_FILE: &str = "storage/farm_state.json";
 
 fn load_state() -> MasterState {
     let _ = std::fs::create_dir_all("storage");
+    let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
     if let Ok(content) = std::fs::read_to_string(SAVE_FILE) {
-        if let Ok(state) = serde_json::from_str::<MasterState>(&content) {
+        if let Ok(mut state) = serde_json::from_str::<MasterState>(&content) {
+            // Force update names to match current codenames
+            for (i, bot) in state.bots.iter_mut().enumerate() {
+                if i < bot_names.len() { bot.id = bot_names[i].to_string(); }
+            }
             return state;
         }
     }
@@ -239,7 +244,15 @@ async fn bot_worker(state: SharedState, bot_id: String) {
     loop {
         {
             let mut master = state.lock().unwrap();
-            let bot = master.bots.iter_mut().find(|b| b.id == bot_id).unwrap();
+            let bot = match master.bots.iter_mut().find(|b| b.id == bot_id) {
+                Some(b) => b,
+                None => {
+                    eprintln!("⚠️ Warning: Bot {} not found in state!", bot_id);
+                    drop(master);
+                    sleep(Duration::from_secs(5)).await;
+                    continue;
+                }
+            };
             let mut rng = rand::thread_rng();
 
             let questions = ["BTC Bullish?", "ETH Pump?", "Trump Wins?", "Fed Pivot?", "Gold ATH?", "AI Peak?"];
