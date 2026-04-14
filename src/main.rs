@@ -10,7 +10,7 @@ use std::time::Duration;
 use tokio::time::sleep;
 use chrono::Local;
 use std::net::SocketAddr;
-use dotenv::dotenv;
+// use dotenv::dotenv;
 
 // --- CORE BOT TYPES ---
 
@@ -96,10 +96,13 @@ async fn main() {
         .route("/api/start", post(start_bot))
         .route("/api/stop", post(stop_bot))
         .route("/api/settings", post(update_settings))
+        .route("/api/reset_all", post(reset_all_bots))
+        .route("/api/start_all", post(start_all_bots))
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
-    println!("🚀 PolyBot Farm listening on {}", addr);
+    use colored::Colorize;
+    println!("{} {}", "🚀 PolyBot Farm listening on".bold().green(), addr.to_string().bold().yellow());
     axum::Server::bind(&addr).serve(app.into_make_service()).await.unwrap();
 }
 
@@ -115,18 +118,19 @@ fn load_state() -> MasterState {
         }
     }
     
+    let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
     let mut bots = vec![];
     for i in 0..10 {
         let prob = 0.50 + (i as f64 * 0.05);
         bots.push(BotState {
-            id: format!("BOT-{}", i + 1),
-            balance: 100.0,
+            id: bot_names[i].to_string(),
+            balance: 10.0,
             pnl_realized: 0.0, pnl_won: 0.0, pnl_lost: 0.0,
             usd_in_bet: 0.0, open_trades: vec![], history: vec![],
             current_markets: vec![],
             chart_history: vec![],
             min_prob_threshold: (prob * 100.0).round() / 100.0,
-            max_bet_cap: 25.0,
+            max_bet_cap: 2.5,
             last_sync: "INIT".to_string(), 
             running: false,
         });
@@ -169,6 +173,47 @@ async fn update_settings(State(state): State<SharedState>, Json(p): Json<Setting
             bot.pnl_realized = 0.0; bot.pnl_won = 0.0; bot.pnl_lost = 0.0;
             bot.history.clear(); bot.chart_history.clear(); bot.open_trades.clear();
         }
+    }
+    axum::http::StatusCode::OK
+}
+
+async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
+    let mut s = state.lock().unwrap();
+    let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
+    for i in 0..10 {
+        let prob = 0.50 + (i as f64 * 0.05);
+        s.bots[i] = BotState {
+            id: bot_names[i].to_string(),
+            balance: 10.0,
+            pnl_realized: 0.0, pnl_won: 0.0, pnl_lost: 0.0,
+            usd_in_bet: 0.0, open_trades: vec![], history: vec![],
+            current_markets: vec![],
+            chart_history: vec![],
+            min_prob_threshold: (prob * 100.0).round() / 100.0,
+            max_bet_cap: 2.5,
+            last_sync: "RESET".to_string(), 
+            running: false,
+        };
+    }
+    axum::http::StatusCode::OK
+}
+
+#[derive(Deserialize)]
+struct StartAllPayload {
+    initial_balance: f64,
+    min_prob: f64,
+}
+
+async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAllPayload>) -> impl IntoResponse {
+    let mut s = state.lock().unwrap();
+    for i in 0..s.bots.len() {
+        let bot = &mut s.bots[i];
+        bot.balance = p.initial_balance;
+        bot.min_prob_threshold = p.min_prob;
+        bot.pnl_realized = 0.0; bot.pnl_won = 0.0; bot.pnl_lost = 0.0;
+        bot.history.clear(); bot.chart_history.clear(); bot.open_trades.clear();
+        bot.running = true;
+        bot.last_sync = "START_ALL".to_string();
     }
     axum::http::StatusCode::OK
 }

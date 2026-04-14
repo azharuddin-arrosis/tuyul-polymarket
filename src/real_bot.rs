@@ -109,10 +109,12 @@ async fn main() {
         .route("/api/start", post(start_bot))
         .route("/api/stop", post(stop_bot))
         .route("/api/settings", post(update_settings))
+        .route("/api/reset", post(reset_bot))
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 9090));
-    println!("🔥 REAL POLYBOT SDK ACTIVE on http://localhost:9090");
+    use colored::Colorize;
+    println!("{} {}", "🔥 REAL POLYBOT SDK ACTIVE on".bold().green(), format!("http://localhost:{}", addr.port()).bold().yellow());
     axum::Server::bind(&addr).serve(app.into_make_service()).await.unwrap();
 }
 
@@ -128,6 +130,14 @@ async fn get_dashboard() -> Html<&'static str> { Html(include_str!("real_dashboa
 async fn get_status(State(state): State<SharedState>) -> impl IntoResponse { Json(state.lock().unwrap().clone()) }
 async fn start_bot(State(state): State<SharedState>) -> impl IntoResponse { state.lock().unwrap().running = true; axum::http::StatusCode::OK }
 async fn stop_bot(State(state): State<SharedState>) -> impl IntoResponse { state.lock().unwrap().running = false; axum::http::StatusCode::OK }
+
+async fn reset_bot(State(state): State<SharedState>) -> impl IntoResponse {
+    let mut s = state.lock().unwrap();
+    s.history.clear();
+    s.chart_history.clear();
+    s.pnl_realized = 0.0;
+    axum::http::StatusCode::OK
+}
 
 async fn worker_loop(state: SharedState) {
     let client = reqwest::Client::new();

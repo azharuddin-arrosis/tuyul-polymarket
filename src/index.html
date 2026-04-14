@@ -78,7 +78,7 @@
         <header class="flex flex-wrap justify-between items-center px-2 py-4 border-b border-white/5 mb-4">
             <div class="flex flex-wrap items-center gap-10">
                 <div class="flex items-center gap-4">
-                    <span class="font-black text-xl tracking-tighter">POLYBOT <span class="text-emerald-500 italic">FARM</span> v17</span>
+                    <span class="font-black text-xl tracking-tighter">POLYNEX <span class="text-emerald-500 italic">QUANTUM</span> GRID v21</span>
                     <div class="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded text-[9px] font-bold uppercase tracking-widest">10 Instances</div>
                 </div>
 
@@ -95,6 +95,11 @@
             </div>
 
             <div class="flex items-center gap-10">
+                <div class="flex items-center gap-2">
+                    <button onclick="showStartAllModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">START ALL BOTS</button>
+                    <button onclick="resetAll()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-rose-900/20 active:scale-95 transition-all">RESET ALL BOTS</button>
+                    <button onclick="location.reload()" class="bg-white/5 hover:bg-white/10 px-3 py-1 rounded font-black text-[9px] tracking-widest active:scale-95 transition-all border border-white/5">REFRESH UI</button>
+                </div>
                 <div onclick="toggleTheme()" id="themeToggle" class="text-xl hover:scale-110 transition-transform cursor-pointer">🌓</div>
                 <div class="text-right border-l border-white/10 pl-6">
                     <span class="stat-label">System Health</span>
@@ -102,6 +107,36 @@
                 </div>
             </div>
         </header>
+
+        <!-- START ALL MODAL -->
+        <div id="startAllModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-[#0f0f0f] border border-white/10 rounded-lg w-full max-w-sm overflow-hidden shadow-2xl">
+                <div class="bg-white/5 px-4 py-3 border-b border-white/5 flex justify-between items-center">
+                    <span class="font-black text-[10px] tracking-widest uppercase">Start All bots</span>
+                    <button onclick="hideStartAllModal()" class="opacity-40 hover:opacity-100 text-lg">&times;</button>
+                </div>
+                <div class="p-4 space-y-4">
+                    <div class="space-y-1">
+                        <label class="stat-label text-emerald-500">Initial Balance (per bot)</label>
+                        <input type="number" id="sa_balance" value="10" segment="initial_balance" class="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xl font-black mono outline-none focus:border-emerald-500 transition-colors">
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between">
+                            <label class="stat-label text-emerald-500">Minimum Odds (Threshold)</label>
+                            <span id="sa_odds_label" class="mono text-emerald-500 font-bold">80%</span>
+                        </div>
+                        <input type="range" id="sa_odds" min="50" max="95" value="80" oninput="document.getElementById('sa_odds_label').textContent = this.value + '%'" class="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                        <div class="flex justify-between text-[8px] opacity-40 font-bold tracking-widest">
+                            <span>50% (HIGH RISK)</span>
+                            <span>95% (SAFE)</span>
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <button onclick="executeStartAll()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded font-black text-[11px] tracking-widest transition-all shadow-xl shadow-emerald-500/10 active:scale-[0.98]">ACTIVATE ALL 10 INSTANCES</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- BOT LEADERBOARD / SELECTOR -->
         <div id="botGrid" class="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-2">
@@ -197,7 +232,7 @@
 
     <script>
         let MASTER_DATA = null;
-        let selectedBotId = "BOT-1";
+        let selectedBotId = "VORTEX";
         let equityChart = null;
         let historyPage = 0;
         const IDR_RATE = 16200;
@@ -210,7 +245,7 @@
                 MASTER_DATA = await res.json();
                 
                 const totalPnL = MASTER_DATA.bots.reduce((acc, b) => acc + b.pnl_realized, 0);
-                const initialTotal = MASTER_DATA.bots.length * 100;
+                const initialTotal = MASTER_DATA.bots.length * 10;
                 const totalRoi = (totalPnL / initialTotal * 100).toFixed(1);
 
                 const pnlEl = document.getElementById('totalFarmPnl');
@@ -232,7 +267,7 @@
             grid.innerHTML = MASTER_DATA.bots.map(bot => {
                 const isWinner = bot.pnl_realized >= 0;
                 const pnlIDR = Math.abs(bot.pnl_realized * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
-                const roi = (bot.pnl_realized / 100 * 100).toFixed(1); // Assuming 100 init balance
+                const roi = (bot.pnl_realized / 10 * 100).toFixed(1); // Assuming 10 init balance
                 return `
                     <div onclick="selectBot('${bot.id}')" class="bot-card p-2 rounded ${bot.id === selectedBotId ? 'active' : ''}">
                         <div class="flex justify-between items-start mb-1">
@@ -257,10 +292,10 @@
 
             const unrealized = bot.open_trades.reduce((acc, t) => acc + t.unrealized_pnl, 0);
             const equity = bot.balance + bot.usd_in_bet + unrealized;
-            const equityRoi = ((equity - 100) / 100 * 100).toFixed(1);
-            const realizedRoi = (bot.pnl_realized / 100 * 100).toFixed(1);
+            const equityRoi = ((equity - 10) / 10 * 100).toFixed(1);
+            const realizedRoi = (bot.pnl_realized / 10 * 100).toFixed(1);
             
-            document.getElementById('mTotal').innerHTML = `${fUSD(equity)} <span class="text-[10px] ${equity>=100?'win':'loss'} ml-2 font-bold">${equity>=100?'+':''}${equityRoi}%</span>`;
+            document.getElementById('mTotal').innerHTML = `${fUSD(equity)} <span class="text-[10px] ${equity>=10?'win':'loss'} ml-2 font-bold">${equity>=10?'+':''}${equityRoi}%</span>`;
             document.getElementById('mPnlR').innerHTML = `${fUSD(bot.pnl_realized)} <span class="text-[10px] ${bot.pnl_realized>=0?'win':'loss'} ml-2 font-bold">${bot.pnl_realized>=0?'+':''}${realizedRoi}%</span>`;
             document.getElementById('mThreshold').textContent = (bot.min_prob_threshold*100).toFixed(0) + "%";
             document.getElementById('mStatus').textContent = bot.running ? "ACTIVE" : "PAUSED";
@@ -321,7 +356,28 @@
         }
 
         async function toggleBot(id, action) { await fetch(`/api/${action}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id}) }); updateData(); }
-        async function resetBot(id) { await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id, min_prob: 0.8, max_bet: 25, reset_balance: 100 })}); updateData(); }
+        async function resetBot(id) { await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id, min_prob: 0.8, max_bet: 2.5, reset_balance: 10 })}); updateData(); }
+        async function resetAll() { if(confirm("Are you sure you want to RESET ALL BOTS? This will clear all history and balances and PAUSE everything.")) { await fetch('/api/reset_all', { method: 'POST' }); updateData(); } }
+
+        function showStartAllModal() { document.getElementById('startAllModal').classList.remove('hidden'); }
+        function hideStartAllModal() { document.getElementById('startAllModal').classList.add('hidden'); }
+
+        async function executeStartAll() {
+            const balance = parseFloat(document.getElementById('sa_balance').value);
+            const odds = parseFloat(document.getElementById('sa_odds').value) / 100;
+            
+            try {
+                const res = await fetch('/api/start_all', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ initial_balance: balance, min_prob: odds })
+                });
+                if(res.ok) {
+                    hideStartAllModal();
+                    updateData();
+                }
+            } catch(e) { alert("Failed to start all bots"); }
+        }
 
         function selectBot(id) { selectedBotId = id; renderBotDetail(); renderLeaderboard(); }
 
