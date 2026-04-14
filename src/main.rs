@@ -109,13 +109,24 @@ async fn main() {
 
                 let active_count = s.bots.iter().filter(|b| b.running).count();
                 let possible_bots = (total_equity / 10.0).floor() as usize;
+                
+                let mut needs_rebalance = false;
+                if active_count > 0 {
+                    for i in 0..10 {
+                        let b = &s.bots[i];
+                        if b.running {
+                            let b_equity = b.balance + b.usd_in_bet;
+                            if b_equity < 3.0 { needs_rebalance = true; break; }
+                        }
+                    }
+                }
 
-                if possible_bots > active_count && possible_bots <= 10 && active_count > 0 {
-                    println!("🚀 [SCALING] Profit target reached! Scaling from {} to {} bots.", active_count, possible_bots);
+                // Trigger if: can scale up OR needs rebalance to save a bot
+                if (possible_bots > active_count || (needs_rebalance && total_equity >= (active_count as f64 * 10.0))) && possible_bots <= 10 && active_count > 0 {
+                    println!("🚀 [AUTO-SCALE/BAILOUT] Triggered! Equity: ${:.2}, Active: {}, Target: {}", total_equity, active_count, possible_bots);
                     
-                    // Logic: Reset and Re-allocate
-                    let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
-                    let per_bot_bal = total_equity / (possible_bots as f64);
+                    let target_count = if possible_bots > active_count { possible_bots } else { active_count };
+                    let per_bot_bal = total_equity / (target_count as f64);
                     
                     for i in 0..10 {
                         let bot = &mut s.bots[i];
@@ -124,11 +135,11 @@ async fn main() {
                         bot.pnl_realized = 0.0; bot.pnl_won = 0.0; bot.pnl_lost = 0.0;
                         bot.usd_in_bet = 0.0;
                         
-                        if i < possible_bots {
+                        if i < target_count {
                             bot.balance = per_bot_bal;
                             bot.initial_balance = per_bot_bal;
                             bot.running = true;
-                            bot.last_sync = "SCALED".to_string();
+                            bot.last_sync = "REBALANCED".to_string();
                         } else {
                             bot.balance = 0.0;
                             bot.initial_balance = 0.0;
