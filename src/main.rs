@@ -169,18 +169,23 @@ async fn main() {
                         count: log_count,
                     });
                     
-                    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
-                    
+                    // 5. Save State
+                    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
+
+                    // 6. Final Notification
                     let msg = format!(
-                        "💸 *WITHDRAW BERHASIL & BOT RESTART*\n\n\
-                        💰 *Total Equity Closed:* ${:.2}\n\
-                        🎉 *Gajian Owner (80%):* ${:.2}\n\
-                        📈 *Modal Farm Baru:* ${:.2} (${:.2} per bot)\n\n\
-                        _Sistem otomatis berjalan kembali..._",
-                        total_equity, gajian, s.farm_capital, per_bot
+                        "💰 *QUANTUM FARM: GAJIAN BERHASIL!*\n\n\
+                        🏦 *Secured Profit Vault:* ${:.2}\n\
+                        🎉 *Gajian Masuk (80%):* ${:.2}\n\
+                        ---------------------------\n\
+                        📈 *Total Equity Closed:* ${:.2}\n\
+                        🛡️ *Pertumbuhan Modal (20%):* ${:.2}\n\
+                        🚀 *Modal Farm Baru:* ${:.2}\n\n\
+                        _Semua bot telah di-reset dan aktif kembali otomatis._",
+                        s.vault_balance, gajian, total_equity, bot_growth, s.farm_capital
                     );
                     let _ = send_telegram_msg(&msg).await;
-                    println!("✅ [WITHDRAW] Settlement complete. Notification sent.");
+                    println!("✅ [WITHDRAW] Settlement complete. Log #{} inserted. Vault: ${:.2}", log_count, s.vault_balance);
                 }
                 continue; // Jangan jalankan auto-scale jika sedang withdraw
             }
