@@ -433,11 +433,12 @@ async fn prepare_withdraw(State(state): State<SharedState>) -> impl IntoResponse
     let harvest_amount = surplus * 0.8;
 
     s.withdraw_pending = true;
+    let log_count = s.withdraw_logs.len() + 1;
     s.withdraw_logs.insert(0, WithdrawLog {
         time: Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
         amount: harvest_amount,
         total_equity,
-        count: s.withdraw_logs.len() + 1,
+        count: log_count,
     });
 
     if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
@@ -459,6 +460,7 @@ async fn bot_worker(state: SharedState, bot_id: String) {
     loop {
         {
             let mut master = state.lock().await;
+            let withdraw_pending = master.withdraw_pending;
             let bot = match master.bots.iter_mut().find(|b| b.id == bot_id) {
                 Some(b) => b,
                 None => {
@@ -482,7 +484,7 @@ async fn bot_worker(state: SharedState, bot_id: String) {
 
             if bot.running {
                 // Check if we should enter new trades
-                if !master.withdraw_pending {
+                if !withdraw_pending {
                     for m in &bot.current_markets {
                         if m.prob >= bot.min_prob_threshold && bot.open_trades.len() < 5 {
                             let bet = (bot.balance.sqrt() * 0.35).max(1.0).min(bot.max_bet_cap);
