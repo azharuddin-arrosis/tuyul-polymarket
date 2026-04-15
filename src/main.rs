@@ -622,22 +622,14 @@ async fn bot_worker(state: SharedState, bot_id: String) {
                             if prob >= 0.02 && prob <= 0.98 {
                                 let question = m["question"].as_str().unwrap_or("?").to_string();
                                 let lower_q = question.to_lowercase();
-                                if lower_q.contains("bitcoin") || lower_q.contains("btc") || 
-                                   lower_q.contains("crypto") || lower_q.contains("football") || 
-                                   lower_q.contains("soccer") || lower_q.contains("premier league") || 
-                                   lower_q.contains("world cup") {
-                                    real_markets.push(Market {
-                                        question,
-                                        category: if lower_q.contains("bitcoin") || lower_q.contains("btc") || lower_q.contains("crypto") {
-                                            "Crypto".to_string()
-                                        } else {
-                                            "Soccer".to_string()
-                                        },
-                                        prob,
-                                        slug: format!("https://polymarket.com/event/{}", m["slug"].as_str().unwrap_or("")),
-                                        token_id: Some(m["clobTokenIds"].as_str().unwrap_or("").to_string()),
-                                    });
-                                }
+                                // No filter - all events for testing
+                                real_markets.push(Market {
+                                    question: question.clone(),
+                                    category: "All".to_string(),
+                                    prob,
+                                    slug: format!("https://polymarket.com/event/{}", m["slug"].as_str().unwrap_or("")),
+                                    token_id: Some(m["clobTokenIds"].as_str().unwrap_or("").to_string()),
+                                });
                             }
                         }
                     }
@@ -661,10 +653,8 @@ async fn bot_worker(state: SharedState, bot_id: String) {
             if bot.running {
                 // Check if we should enter new trades
                 if !withdraw_pending {
-                    // Filter: Crypto (BTC) or Soccer only
-                    let valid_markets: Vec<_> = bot.current_markets.iter()
-                        .filter(|m| m.category == "Crypto" || m.category == "Soccer")
-                        .collect();
+                    // All markets - no category filter
+                    let valid_markets: Vec<_> = bot.current_markets.iter().collect();
                     
                     for m in valid_markets {
                         if m.prob >= bot.min_prob_threshold && bot.open_trades.len() < 3 {
