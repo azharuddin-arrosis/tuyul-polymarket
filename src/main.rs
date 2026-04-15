@@ -99,7 +99,6 @@ struct MasterState {
     #[serde(default)]
     withdraw_logs: Vec<WithdrawLog>,
     #[serde(default)]
-    #[serde(default)]
     farm_capital: f64,
     #[serde(default)]
     vault_balance: f64,
