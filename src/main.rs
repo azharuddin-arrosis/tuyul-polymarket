@@ -170,7 +170,7 @@ async fn main() {
                     });
                     
                     // 5. Save State
-                    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
+                    save_state(&s);
 
                     // 6. Final Notification
                     let idr_rate = 16200.0;
@@ -251,7 +251,7 @@ async fn main() {
                     
                     let deployed_capital = (target_count as f64) * s.scaling_interval;
                     s.unallocated_balance = (total_equity - deployed_capital).max(0.0);
-                    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                    save_state(&s);
                 } else if needs_bailout && active_count > 0 {
                     // --- SOFT BAILOUT / PROFIT REDISTRIBUTION ---
                     // Inject liquidity from winners to losers WITHOUT resetting their history/trades
@@ -271,7 +271,7 @@ async fn main() {
                             }
                         }
                     }
-                    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                    save_state(&s);
                 }
 
                 // --- NEW: HARVEST TELEGRAM NOTIFICATION (2:8 Strategy) ---
@@ -297,8 +297,7 @@ async fn main() {
                             total_equity, total_profit, owner_share, bot_growth
                         );
                         let _ = send_telegram_msg(&msg).await;
-                        // Always save state after sending notification to persist last_notified_equity
-                        if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                        save_state(&s);
                     }
 
                     // --- NEW: READY TO HARVEST (2X MODAL) NOTIFICATION ---
@@ -322,7 +321,7 @@ async fn main() {
                             );
                             let _ = send_telegram_msg(&msg).await;
                             println!("📢 [NOTIFY] Ready to harvest alert sent.");
-                            if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                            save_state(&s);
                         }
                     }
 
@@ -337,8 +336,7 @@ async fn main() {
                             s.farm_capital * 2.0, total_equity
                         );
                         let _ = send_telegram_msg(&msg).await;
-                        println!("🚀 [AUTO] Auto-harvest triggered at ${:.2}", total_equity);
-                        if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                        save_state(&s);
                     }
                 }
             }
@@ -367,17 +365,32 @@ async fn get_dashboard() -> Html<&'static str> { Html(include_str!("index.html")
 
 const SAVE_FILE: &str = "storage/farm_state.json";
 
+fn save_state(state: &MasterState) {
+    if let Ok(content) = serde_json::to_string_pretty(state) {
+        let temp_file = format!("{}.tmp", SAVE_FILE);
+        if std::fs::write(&temp_file, content).is_ok() {
+            let _ = std::fs::rename(temp_file, SAVE_FILE);
+        }
+    }
+}
+
+
 fn load_state() -> MasterState {
     let _ = std::fs::create_dir_all("storage");
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
     if let Ok(content) = std::fs::read_to_string(SAVE_FILE) {
         if let Ok(mut state) = serde_json::from_str::<MasterState>(&content) {
+            println!("📂 [SYSTEM] Farm state loaded successfully from disk.");
             // Force update names to match current codenames
             for (i, bot) in state.bots.iter_mut().enumerate() {
                 if i < bot_names.len() { bot.id = bot_names[i].to_string(); }
             }
             return state;
+        } else {
+            eprintln!("⚠️ [ERROR] Failed to parse farm_state.json. File might be corrupted.");
         }
+    } else {
+        println!("🆕 [SYSTEM] No existing farm state found. Initializing defaults.");
     }
     
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
@@ -484,7 +497,7 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
     s.vault_balance = 0.0;
     s.auto_harvest = false;
 
-    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
+    save_state(&s);
     println!("🧹 [RESET] All bots and farm metrics have been reset.");
     axum::http::StatusCode::OK
 }
@@ -547,7 +560,7 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
 async fn toggle_auto_harvest(State(state): State<SharedState>) -> impl IntoResponse {
     let mut s = state.lock().await;
     s.auto_harvest = !s.auto_harvest;
-    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
+    save_state(&s);
     Json(serde_json::json!({ "auto_harvest": s.auto_harvest }))
 }
 
@@ -556,8 +569,7 @@ async fn prepare_withdraw(State(state): State<SharedState>) -> impl IntoResponse
     
     s.withdraw_pending = true;
 
-    // Save early so the state is immediately applied
-    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
+    save_state(&s);
     
     let msg = format!(
         "📤 *PROSES WITHDRAW GAJIAN INITIATED*\n\n\
@@ -653,7 +665,7 @@ async fn bot_worker(state: SharedState, bot_id: String) {
                 bot.chart_history.push(HistoryPoint { time, wallet: bot.balance, total });
                 if bot.chart_history.len() > 100 { bot.chart_history.remove(0); }
             }
-            if let Ok(c) = serde_json::to_string_pretty(&*master) { let _ = std::fs::write(SAVE_FILE, c); }
+            // Removed frequent state save to prevent file corruption
         }
         sleep(Duration::from_secs(3)).await;
     }
