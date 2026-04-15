@@ -447,6 +447,7 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
     s.last_notified_equity = 100.0;
     s.unallocated_balance = 0.0;
     s.withdraw_pending = false;
+    s.withdraw_logs.clear();
 
     if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
     println!("🧹 [RESET] All bots and farm metrics have been reset.");
