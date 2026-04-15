@@ -85,21 +85,21 @@
 
             <div class="flex items-center gap-6">
                 <div class="flex items-center gap-2">
-                    <button onclick="showStartAllModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">START ALL BOTS</button>
-                    <button onclick="resetAll()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-rose-900/20 active:scale-95 transition-all">RESET ALL BOTS</button>
-                    <button onclick="location.reload()" class="bg-white/5 hover:bg-white/10 px-3 py-1 rounded font-black text-[9px] tracking-widest active:scale-95 transition-all border border-white/5">REFRESH UI</button>
+                    <button onclick="showStartAllModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">JALANKAN SEMUA BOT</button>
+                    <button onclick="resetAll()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-rose-900/20 active:scale-95 transition-all">RESET SEMUA BOT</button>
+                    <button onclick="location.reload()" class="bg-white/5 hover:bg-white/10 px-3 py-1 rounded font-black text-[9px] tracking-widest active:scale-95 transition-all border border-white/5">REFRESH DASHBOARD</button>
                 </div>
                 <div onclick="toggleTheme()" id="themeToggle" class="text-xl hover:scale-110 transition-transform cursor-pointer">🌓</div>
                 <div class="text-right border-l border-white/10 pl-6 flex items-center gap-4">
                     <div class="flex flex-col items-end">
-                        <span class="stat-label">Auto-Harvest</span>
+                        <span class="stat-label">Gajian Otomatis</span>
                         <div class="flex items-center gap-1 font-black text-[9px] text-emerald-500 uppercase tracking-tighter">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            ACTIVE ALWAYS
+                            SELALU AKTIF
                         </div>
                     </div>
                     <div>
-                        <span class="stat-label">System Health</span>
+                        <span class="stat-label">Kesehatan Sistem</span>
                         <div class="flex items-center gap-2 font-black text-[10px]">
                             <div id="withdrawStatusBadge"></div>
                             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span class="mono">STABLE</span>
@@ -119,12 +119,12 @@
                 <div class="p-4 space-y-4">
                     <div class="space-y-3">
                         <div>
-                            <label class="stat-label text-blue-400">Total Farm Liquidity (USDC)</label>
-                            <input type="number" id="sa_total_capital" value="0" oninput="previewScaling()" placeholder="e.g. 100" class="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xl font-black mono outline-none focus:border-blue-500 transition-colors">
+                            <label class="stat-label text-blue-400">Total Modal Farm (USDC)</label>
+                            <input type="number" id="sa_total_capital" value="0" oninput="previewScaling()" placeholder="cth: 100" class="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xl font-black mono outline-none focus:border-blue-500 transition-colors">
                         </div>
                         <div>
                             <label class="stat-label text-emerald-400">Min Modal Per Bot (USDC)</label>
-                            <input type="number" id="sa_min_per_bot" value="10" oninput="previewScaling()" placeholder="e.g. 10" class="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-lg font-black mono outline-none focus:border-emerald-500 transition-colors">
+                            <input type="number" id="sa_min_per_bot" value="10" oninput="previewScaling()" placeholder="cth: 10" class="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-lg font-black mono outline-none focus:border-emerald-500 transition-colors">
                         </div>
                         <div id="sa_preview" class="text-[9px] italic opacity-60 bg-black/20 p-2 rounded">Isi nilai di atas untuk preview.</div>
                     </div>
@@ -132,15 +132,15 @@
                     <div class="space-y-2">
                         <div class="flex items-center gap-2 bg-white/5 p-3 rounded border border-white/5">
                             <input type="checkbox" id="sa_autoscale" checked class="w-4 h-4 accent-emerald-500">
-                            <label for="sa_autoscale" class="text-[10px] font-black tracking-wider cursor-pointer italic text-emerald-300">ACTIVATE AUTO-COMPOUND SCALING</label>
+                            <label for="sa_autoscale" class="text-[10px] font-black tracking-wider cursor-pointer italic text-emerald-300">AKTIFKAN SKALASI AUTO-COMPOUND</label>
                         </div>
                         <div class="flex items-center gap-2 bg-emerald-500/5 p-2 rounded border border-emerald-500/20">
                             <input type="checkbox" id="sa_spread" checked class="w-2.5 h-2.5 accent-emerald-500">
-                            <label for="sa_spread" class="text-[8px] font-bold tracking-wider cursor-pointer opacity-60 uppercase">Distribute Odds Spreads Across Instances</label>
+                            <label for="sa_spread" class="text-[8px] font-bold tracking-wider cursor-pointer opacity-60 uppercase">Distribusikan Odds Spread ke Semua Bot</label>
                         </div>
                     </div>
                     <div class="pt-2">
-                        <button onclick="executeStartAll()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded font-black text-[11px] tracking-widest transition-all shadow-xl shadow-emerald-500/20 active:scale-[0.98]">INITIALIZE QUANTUM FARM</button>
+                        <button onclick="executeStartAll()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded font-black text-[11px] tracking-widest transition-all shadow-xl shadow-emerald-500/20 active:scale-[0.98]">INISIALISASI QUANTUM FARM</button>
                     </div>
                 </div>
             </div>
@@ -152,7 +152,7 @@
                 <div class="bg-amber-500/10 px-4 py-3 border-b border-amber-500/20 flex justify-between items-center">
                     <div class="flex items-center gap-2">
                         <span class="text-amber-500">🏦</span>
-                        <span class="font-black text-[10px] tracking-widest uppercase text-amber-500">Secured Profit Vault History</span>
+                        <span class="font-black text-[10px] tracking-widest uppercase text-amber-500">Riwayat Vault Keuntungan Aman</span>
                     </div>
                     <button onclick="hideVaultModal()" class="text-amber-500/60 hover:text-amber-500 text-2xl transition-colors">&times;</button>
                 </div>
@@ -161,21 +161,21 @@
                         <table class="excel-table mono text-[10px]">
                             <thead class="sticky top-0 bg-[#151515] z-10">
                                 <tr>
-                                    <th width="60" class="pl-4">INDEX</th>
-                                    <th>TIMESTAMP</th>
-                                    <th>TOTAL EQUITY</th>
-                                    <th class="text-right pr-4">HARVESTED (80%)</th>
+                                    <th width="60" class="pl-4">#</th>
+                                    <th>WAKTU</th>
+                                    <th>TOTAL EKUITAS</th>
+                                    <th class="text-right pr-4">HASIL PANEN (80%)</th>
                                 </tr>
                             </thead>
                             <tbody id="withdrawLogBody">
-                                <tr><td colspan="4" class="text-center py-10 opacity-20 italic">No withdrawal records found in the vault.</td></tr>
+                                <tr><td colspan="4" class="text-center py-10 opacity-20 italic">Belum ada catatan gajian di vault.</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
                 <div class="p-4 bg-white/2 border-t border-white/5 flex justify-between items-center">
-                    <div class="text-[9px] opacity-40 italic uppercase tracking-widest font-bold">Total Withdrawals: <span id="withdrawCount" class="text-amber-500">0</span></div>
-                    <button onclick="hideVaultModal()" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 px-4 py-1.5 rounded font-black text-[9px] tracking-widest uppercase transition-all">Close</button>
+                    <div class="text-[9px] opacity-40 italic uppercase tracking-widest font-bold">Total Gajian: <span id="withdrawCount" class="text-amber-500">0</span></div>
+                    <button onclick="hideVaultModal()" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 px-4 py-1.5 rounded font-black text-[9px] tracking-widest uppercase transition-all">Tutup</button>
                 </div>
             </div>
         </div>
@@ -189,21 +189,21 @@
                 <!-- PRIMARY FARM METRICS (Moved from Header) -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div class="compact-panel p-4 border-l-4 border-l-blue-500 bg-blue-500/5">
-                        <span class="stat-label">Farm Total Capital</span>
+                        <span class="stat-label">Total Modal Farm</span>
                         <div class="flex items-baseline gap-2">
                             <span id="totalFarmCapital" class="mono font-black text-2xl text-blue-400">$0.00</span>
                             <span id="totalFarmCapitalIDR" class="opacity-40 text-[11px]">Rp 0</span>
                         </div>
                     </div>
                     <div class="compact-panel p-4 border-l-4 border-l-emerald-500 bg-emerald-500/5">
-                        <span class="stat-label text-emerald-400">Farm Net Equity</span>
+                        <span class="stat-label text-emerald-400">Net Ekuitas Farm</span>
                         <div class="flex items-baseline gap-2">
                             <span id="totalFarmEquity" class="mono font-black text-2xl text-emerald-400">$0.00</span>
                             <span id="totalFarmEquityIDR" class="opacity-40 text-[11px]">Rp 0</span>
                         </div>
                     </div>
                     <div class="compact-panel p-4 border-l-4 border-l-amber-500 bg-amber-500/5">
-                        <span class="stat-label">Cumulative Farm PnL</span>
+                        <span class="stat-label">Akumulasi PnL Farm</span>
                         <div class="flex items-baseline gap-3">
                             <span id="totalFarmPnl" class="mono font-black text-2xl win">$0.00</span>
                             <div class="flex flex-col">
@@ -247,7 +247,7 @@
                                 <span id="v_bot_growth" class="text-2xl font-black mono text-white">$0.00</span>
                                 <span id="v_bot_growth_idr" class="text-xs opacity-50 font-bold">Rp 0</span>
                             </div>
-                            <div class="text-[9px] opacity-40 mt-1 italic">Dana penguat modal bot</div>
+                            <div class="text-[9px] opacity-40 mt-1 italic">Dana penguat modal bot dan riset</div>
                         </div>
                         <div class="text-right">
                             <div class="stat-label text-[9px] opacity-40 uppercase tracking-widest">Buffer</div>
@@ -262,8 +262,8 @@
                     <div>
                         <div class="flex items-center gap-2 mb-1">
                             <span class="text-amber-500 text-xs">🏦</span>
-                            <span class="stat-label text-amber-500 font-black tracking-widest uppercase">Secured Profit Vault</span>
-                            <button class="text-[8px] bg-amber-500 text-black px-2 py-0.5 rounded font-black hover:bg-amber-400 transition-colors uppercase">View List History</button>
+                            <span class="stat-label text-amber-500 font-black tracking-widest uppercase">Vault Keuntungan Aman</span>
+                            <button class="text-[8px] bg-amber-500 text-black px-2 py-0.5 rounded font-black hover:bg-amber-400 transition-colors uppercase">LIHAT RIWAYAT</button>
                         </div>
                         <div class="flex items-baseline gap-2">
                             <span id="vaultBalance" class="text-3xl font-black mono text-amber-500">$0.00</span>
@@ -272,9 +272,9 @@
                         <div class="text-[9px] text-amber-500/50 mt-1 italic font-bold">Total Keuntungan yang Telah Diamankan</div>
                     </div>
                     <div class="text-right flex flex-col items-end">
-                        <div class="stat-label text-[9px] opacity-40 uppercase tracking-widest">Vault Status</div>
+                        <div class="stat-label text-[9px] opacity-40 uppercase tracking-widest">Status Vault</div>
                         <div class="flex items-center gap-2">
-                            <span class="text-xl font-black text-amber-500/40">80% SECURED</span>
+                            <span class="text-xl font-black text-amber-500/40">80% TERKUNCI</span>
                             <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
                         </div>
                     </div>
@@ -296,30 +296,30 @@
                 <!-- SECONDARY AGGREGATE METRICS -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                     <div class="compact-panel p-3 bg-white/2">
-                        <span class="stat-label win">Total Gains</span>
+                        <span class="stat-label win">Total Profit</span>
                         <div class="flex items-baseline gap-2">
                             <div id="totalFarmGains" class="mono font-bold text-lg win">$0.00</div>
                             <div id="totalFarmGainsIDR" class="text-[9px] win opacity-40">Rp 0</div>
                         </div>
-                        <div class="text-[8px] opacity-20">Sum of Win Trades</div>
+                        <div class="text-[8px] opacity-20">Jumlah Trade Menang</div>
                     </div>
                     <div class="compact-panel p-3 bg-white/2">
-                        <span class="stat-label loss">Total Losses</span>
+                        <span class="stat-label loss">Total Loss</span>
                         <div class="flex items-baseline gap-2">
                             <div id="totalFarmLosses" class="mono font-bold text-lg loss">$0.00</div>
                             <div id="totalFarmLossesIDR" class="text-[9px] loss opacity-40">Rp 0</div>
                         </div>
-                        <div class="text-[8px] opacity-20">Sum of Lose Trades</div>
+                        <div class="text-[8px] opacity-20">Jumlah Trade Kalah</div>
                     </div>
                     <div class="compact-panel p-3 bg-white/2">
-                        <span class="stat-label text-emerald-500">Winners</span>
-                        <div id="winningBotCount" class="mono font-bold text-lg text-emerald-500">0 Bots</div>
+                        <span class="stat-label text-emerald-500">Bot Menang</span>
+                        <div id="winningBotCount" class="mono font-bold text-lg text-emerald-500">0 Bot</div>
                         <div class="text-[8px] opacity-20">Realized PnL > 0</div>
                     </div>
                     <div class="compact-panel p-3 bg-white/2">
-                        <span class="stat-label text-blue-400">Scaling</span>
-                        <div id="scalingStatus" class="mono font-bold text-lg text-blue-400 italic">INACTIVE</div>
-                        <div id="scalingNext" class="text-[8px] opacity-20">No active compound target</div>
+                        <span class="stat-label text-blue-400">Skalasi</span>
+                        <div id="scalingStatus" class="mono font-bold text-lg text-blue-400 italic">TIDAK AKTIF</div>
+                        <div id="scalingNext" class="text-[8px] opacity-20">Tidak ada target aktif</div>
                     </div>
                 </div>
 
@@ -327,13 +327,13 @@
                 <div class="compact-panel p-4 border-t-2 border-t-blue-500 bg-blue-500/5">
                     <div class="flex justify-between items-center mb-3">
                         <div class="flex items-center gap-3">
-                            <span class="text-[10px] font-black tracking-[0.2em] text-blue-400 uppercase">Farm Performance Analysis</span>
+                            <span class="text-[10px] font-black tracking-[0.2em] text-blue-400 uppercase">Analisis Performa Farm</span>
                             <div class="h-px w-20 bg-blue-500/20"></div>
                         </div>
                         <div class="flex gap-6 text-[8px] font-black tracking-widest uppercase">
-                            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-[#10b981] rounded-full shadow-[0_0_8px_#10b981]"></span> PnL Realized</span>
+                            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-[#10b981] rounded-full shadow-[0_0_8px_#10b981]"></span> PnL Terelasasi</span>
                             <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-[#ef4444] rounded-full shadow-[0_0_8px_#ef4444]"></span> PnL Loss</span>
-                            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-[#3b82f6] rounded-full shadow-[0_0_8px_#3b82f6]"></span> Balance All</span>
+                            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-[#3b82f6] rounded-full shadow-[0_0_8px_#3b82f6]"></span> Saldo Total</span>
                         </div>
                     </div>
                     <div class="h-[180px] w-full mt-2">
@@ -345,7 +345,7 @@
             <!-- RIGHT: LIVE RANKING -->
             <div class="xl:col-span-3 compact-panel p-4 border-t-2 border-t-amber-500 bg-amber-500/5 flex flex-col h-full">
                 <div class="flex items-center gap-2 mb-3">
-                    <span class="text-[10px] font-black tracking-widest text-amber-500 uppercase">Top Performers</span>
+                    <span class="text-[10px] font-black tracking-widest text-amber-500 uppercase">Peringkat Teratas</span>
                     <div class="h-px flex-1 bg-amber-500/20"></div>
                 </div>
                 <div id="rankingList" class="space-y-1 overflow-y-auto pr-1 custom-scrollbar flex-1 min-h-0">
@@ -367,7 +367,7 @@
             <div class="xl:col-span-9 space-y-3">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                     <div class="compact-panel p-3 border-l-4 border-l-emerald-500">
-                        <span class="stat-label">Net Equity</span>
+                        <span class="stat-label">Net Ekuitas</span>
                         <div class="flex items-baseline gap-2">
                             <div id="mTotal" class="text-xl font-black mono">$0.00</div>
                             <div id="mTotalIDR" class="text-[9px] opacity-40">Rp 0</div>
@@ -375,17 +375,17 @@
                         <div id="mWinRate" class="text-[10px] win font-bold">0% Win Rate</div>
                     </div>
                     <div class="compact-panel p-3">
-                        <span class="stat-label">Pnl Realized</span>
+                        <span class="stat-label">PnL Terealisasi</span>
                         <div class="flex items-baseline gap-2">
                             <div id="mPnlR" class="text-xl font-black mono">$0.00</div>
                             <div id="mPnlRIDR" class="text-[9px] opacity-40">Rp 0</div>
                         </div>
-                        <div id="mTrades" class="text-[10px] opacity-40">0 Trades</div>
+                        <div id="mTrades" class="text-[10px] opacity-40">0 Eksekusi</div>
                     </div>
                     <div class="compact-panel p-3">
-                        <span class="stat-label">Threshold</span>
+                        <span class="stat-label">Ambang Prob</span>
                         <div id="mThreshold" class="text-xl font-black mono">0%</div>
-                        <div class="text-[10px] opacity-40">Min. Probability</div>
+                        <div class="text-[10px] opacity-40">Probabilitas Min.</div>
                     </div>
                     <div class="compact-panel p-3">
                         <span class="stat-label">Status</span>
@@ -396,28 +396,28 @@
                 <!-- SECONDARY STATS ROW -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                     <div class="compact-panel p-3">
-                        <span class="stat-label">Initial Modal</span>
+                        <span class="stat-label">Modal Awal</span>
                         <div class="flex items-baseline gap-2">
                             <div id="mInitial" class="text-xl font-black mono opacity-40">$0.00</div>
                             <div id="mInitialIDR" class="text-[9px] opacity-20">Rp 0</div>
                         </div>
                     </div>
                     <div class="compact-panel p-3">
-                        <span class="stat-label">Wins Sum</span>
+                        <span class="stat-label">Total Profit</span>
                         <div class="flex items-baseline gap-2">
                             <div id="mGains" class="text-xl font-black mono win">$0.00</div>
                             <div id="mGainsIDR" class="text-[9px] win opacity-40">Rp 0</div>
                         </div>
                     </div>
                     <div class="compact-panel p-3">
-                        <span class="stat-label">Losses Sum</span>
+                        <span class="stat-label">Total Loss</span>
                         <div class="flex items-baseline gap-2">
                             <div id="mLosses" class="text-xl font-black mono loss">$0.00</div>
                             <div id="mLossesIDR" class="text-[9px] loss opacity-40">Rp 0</div>
                         </div>
                     </div>
                     <div class="compact-panel p-3 border-l-4 border-l-blue-500 bg-blue-500/5">
-                        <span class="stat-label text-blue-400">Wallet Balance</span>
+                        <span class="stat-label text-blue-400">Saldo Wallet</span>
                         <div class="flex items-baseline gap-2">
                             <div id="mWallet" class="text-xl font-black mono text-blue-400">$0.00</div>
                             <div id="mWalletIDR" class="text-[9px] text-blue-400 opacity-40">Rp 0</div>
@@ -433,7 +433,7 @@
                 <!-- TABLES -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div class="compact-panel overflow-hidden">
-                        <div class="bg-white/5 px-2 py-1 stat-label text-white">Active Positions</div>
+                        <div class="bg-white/5 px-2 py-1 stat-label text-white">Posisi Aktif</div>
                         <table class="excel-table mono">
                             <thead><tr><th>ID</th><th>Market</th><th>Stake</th><th>PnL</th></tr></thead>
                             <tbody id="openTableBody"></tbody>
@@ -441,11 +441,11 @@
                     </div>
                     <div class="compact-panel overflow-hidden">
                         <div class="bg-white/5 px-2 py-1 flex flex-wrap gap-2 items-center justify-between">
-                            <span class="stat-label text-white">Execution History</span>
+                            <span class="stat-label text-white">Riwayat Eksekusi</span>
                             <div class="flex gap-2">
-                                <input type="text" id="histSearch" placeholder="Search..." class="w-20 h-4 text-[9px]" oninput="historyPage=0;renderBotDetail()">
+                                <input type="text" id="histSearch" placeholder="Cari..." class="w-20 h-4 text-[9px]" oninput="historyPage=0;renderBotDetail()">
                                 <select id="histFilter" class="h-4 text-[9px]" onchange="historyPage=0;renderBotDetail()">
-                                    <option value="all">ALL</option>
+                                    <option value="all">SEMUA</option>
                                     <option value="win">WINS</option>
                                     <option value="loss">LOSSES</option>
                                 </select>
@@ -457,7 +457,7 @@
                             </div>
                         </div>
                         <table class="excel-table mono">
-                            <thead><tr><th width="40">Res</th><th>Market</th><th width="80">Outcome</th></tr></thead>
+                            <thead><tr><th width="40">Res</th><th>Market</th><th width="80">Hasil</th></tr></thead>
                             <tbody id="historyTableBody" class="text-[10px]"></tbody>
                         </table>
                     </div>
@@ -765,7 +765,7 @@
                     else if(rank > prev) diff = `<span class="text-rose-500 font-bold">▼${rank-prev}</span>`;
                     else diff = `<span class="opacity-20">-</span>`;
                 } else {
-                    diff = `<span class="text-[7px] bg-blue-500/20 text-blue-400 px-1 rounded">NEW</span>`;
+                    diff = `<span class="text-[7px] bg-blue-500/20 text-blue-400 px-1 rounded">BARU</span>`;
                 }
                 lastRanks[bot.id] = rank;
 
@@ -794,7 +794,7 @@
 
         async function toggleBot(id, action) { await fetch(`/api/${action}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id}) }); updateData(); }
         async function resetBot(id) { await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id, min_prob: 0.8, max_bet: 3.0, reset_balance: 10 })}); updateData(); }
-        async function resetAll() { if(confirm("Are you sure you want to RESET ALL BOTS? This will clear all history and balances and PAUSE everything.")) { await fetch('/api/reset_all', { method: 'POST' }); updateData(); } }
+        async function resetAll() { if(confirm("Anda yakin ingin RESET SEMUA BOT? Ini akan menghapus riwayat, saldo, dan memberhentikan semua aktivitas bot.")) { await fetch('/api/reset_all', { method: 'POST' }); updateData(); } }
         async function prepareWithdraw() { 
             if(confirm("Apakah Anda yakin ingin memproses WITHDRAW GAJIAN?\n\nSistem tidak akan buka posisi baru dan akan menunggu semua aset tersettle (ditutup murni). Lalu otomatis transfer & reset sistem...")) { 
                 await fetch('/api/prepare_withdraw', { method: 'POST' }); 
@@ -843,7 +843,7 @@
             const minPerBot = parseFloat(document.getElementById('sa_min_per_bot').value) || 10;
             const auto_scale = document.getElementById('sa_autoscale').checked;
 
-            if (balance <= 0) { alert('Masukkan Total Farm Liquidity!'); return; }
+            if (balance <= 0) { alert('Masukkan Total Modal Farm!'); return; }
             if (minPerBot <= 0) { alert('Min Modal Per Bot harus > 0!'); return; }
             
             try {

@@ -599,7 +599,7 @@ async fn bot_worker(state: SharedState, bot_id: String) {
             };
             let mut rng = rand::thread_rng();
 
-            let questions = ["BTC Bullish?", "ETH Pump?", "Trump Wins?", "Fed Pivot?", "Gold ATH?", "AI Peak?"];
+            let questions = ["BTC Bullish?", "ETH Bakal Naik?", "Trump Menang?", "Fed Pivot?", "Emas ATH?", "AI Peak?"];
             bot.current_markets = (0..500).map(|i| {
                 let prob = if rng.gen_bool(0.7) { rng.gen_range(0.40..0.98) } else { rng.gen_range(0.10..0.40) };
                 Market {
