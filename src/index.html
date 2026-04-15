@@ -86,13 +86,17 @@
             <div class="flex items-center gap-6">
                 <div class="flex items-center gap-2">
                     <button onclick="showStartAllModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">START ALL BOTS</button>
+                    <button onclick="prepareWithdraw()" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-amber-900/20 active:scale-95 transition-all">PREPARE WITHDRAW</button>
                     <button onclick="resetAll()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-rose-900/20 active:scale-95 transition-all">RESET ALL BOTS</button>
                     <button onclick="location.reload()" class="bg-white/5 hover:bg-white/10 px-3 py-1 rounded font-black text-[9px] tracking-widest active:scale-95 transition-all border border-white/5">REFRESH UI</button>
                 </div>
                 <div onclick="toggleTheme()" id="themeToggle" class="text-xl hover:scale-110 transition-transform cursor-pointer">🌓</div>
                 <div class="text-right border-l border-white/10 pl-6">
                     <span class="stat-label">System Health</span>
-                    <div class="flex items-center gap-2 font-black text-[10px]"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span class="mono">STABLE</span></div>
+                    <div class="flex items-center gap-2 font-black text-[10px]">
+                        <div id="withdrawStatusBadge"></div>
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span class="mono">STABLE</span>
+                    </div>
                 </div>
             </div>
         </header>
@@ -205,6 +209,29 @@
                             <div class="stat-label text-[9px] opacity-40 uppercase tracking-widest">Buffer</div>
                             <div class="text-xl font-black text-blue-500/40">20%</div>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- WITHDRAW LOGS -->
+                <div class="compact-panel overflow-hidden mt-3">
+                    <div class="bg-white/5 px-2 py-1 flex justify-between items-center">
+                        <span class="stat-label text-white">Withdrawal History (Log Gajian)</span>
+                        <span class="text-[8px] opacity-40 uppercase tracking-widest">Total Previous: <span id="withdrawCount">0</span></span>
+                    </div>
+                    <div class="max-h-[120px] overflow-y-auto">
+                        <table class="excel-table mono text-[10px]">
+                            <thead>
+                                <tr>
+                                    <th width="40">#</th>
+                                    <th>Time</th>
+                                    <th>Total Equity</th>
+                                    <th class="text-right">Harvest Amount (80%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="withdrawLogBody">
+                                <tr><td colspan="4" class="text-center py-4 opacity-20">No withdrawal records yet.</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -511,7 +538,29 @@
 
                 updateFarmChart();
                 updateRanking();
-            } catch(e) {}
+                
+                // Withdraw Updates
+                const wLogs = MASTER_DATA.withdraw_logs || [];
+                document.getElementById('withdrawCount').textContent = wLogs.length;
+                if (wLogs.length > 0) {
+                    document.getElementById('withdrawLogBody').innerHTML = wLogs.map(log => `
+                        <tr class="hover:bg-white/5 transition-colors">
+                            <td class="opacity-40">#${log.count}</td>
+                            <td>${log.time}</td>
+                            <td class="mono">${fUSD(log.total_equity)}</td>
+                            <td class="text-right font-black text-emerald-500">${fUSD(log.amount)}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                const wStatus = document.getElementById('withdrawStatusBadge');
+                if (MASTER_DATA.withdraw_pending) {
+                    wStatus.innerHTML = '<span class="px-2 py-0.5 bg-rose-600/20 text-rose-500 border border-rose-500/30 rounded text-[8px] font-black animate-pulse mr-2 uppercase tracking-tighter">Withdraw Pending</span>';
+                } else {
+                    wStatus.innerHTML = '';
+                }
+
+            } catch(e) { console.error(e); }
         }
 
         function renderLeaderboard() {
@@ -672,6 +721,12 @@
         async function toggleBot(id, action) { await fetch(`/api/${action}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id}) }); updateData(); }
         async function resetBot(id) { await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id, min_prob: 0.8, max_bet: 3.0, reset_balance: 10 })}); updateData(); }
         async function resetAll() { if(confirm("Are you sure you want to RESET ALL BOTS? This will clear all history and balances and PAUSE everything.")) { await fetch('/api/reset_all', { method: 'POST' }); updateData(); } }
+        async function prepareWithdraw() { 
+            if(confirm("Apakah Anda yakin ingin melakukan WITHDRAW GAJI?\n\nSemua bot akan dinonaktifkan satu-persatu setelah trade yang sedang berjalan selesai.")) { 
+                await fetch('/api/prepare_withdraw', { method: 'POST' }); 
+                updateData(); 
+            } 
+        }
 
         function showStartAllModal() { document.getElementById('startAllModal').classList.remove('hidden'); }
         function hideStartAllModal() { document.getElementById('startAllModal').classList.add('hidden'); }

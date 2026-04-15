@@ -55,6 +55,14 @@ struct HistoryPoint {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+struct WithdrawLog {
+    time: String,
+    amount: f64,
+    total_equity: f64,
+    count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct BotState {
     id: String,
     balance: f64,
@@ -86,6 +94,10 @@ struct MasterState {
     last_notified_equity: f64,
     #[serde(default)]
     unallocated_balance: f64,
+    #[serde(default)]
+    withdraw_pending: bool,
+    #[serde(default)]
+    withdraw_logs: Vec<WithdrawLog>,
 }
 fn default_scaling() -> f64 { 10.0 }
 
@@ -230,6 +242,7 @@ async fn main() {
         .route("/api/settings", post(update_settings))
         .route("/api/reset_all", post(reset_all_bots))
         .route("/api/start_all", post(start_all_bots))
+        .route("/api/prepare_withdraw", post(prepare_withdraw))
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
@@ -274,7 +287,16 @@ fn load_state() -> MasterState {
             running: false,
         });
     }
-    MasterState { bots, auto_scale: false, target_capital: 0.0, scaling_interval: 10.0, last_notified_equity: 0.0, unallocated_balance: 0.0 }
+    MasterState { 
+        bots, 
+        auto_scale: false, 
+        target_capital: 0.0, 
+        scaling_interval: 10.0, 
+        last_notified_equity: 0.0, 
+        unallocated_balance: 0.0,
+        withdraw_pending: false,
+        withdraw_logs: vec![],
+    }
 }
 
 async fn get_status(State(state): State<SharedState>) -> impl IntoResponse { Json(state.lock().await.clone()) }
@@ -354,6 +376,7 @@ struct StartAllPayload {
 
 async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAllPayload>) -> impl IntoResponse {
     let mut s = state.lock().await;
+    s.withdraw_pending = false; // Reset withdraw flag when starting all
     s.auto_scale = p.auto_scale;
     s.target_capital = p.total_capital;
     s.scaling_interval = p.scaling_interval;
@@ -392,6 +415,45 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
     axum::http::StatusCode::OK
 }
 
+async fn prepare_withdraw(State(state): State<SharedState>) -> impl IntoResponse {
+    let mut s = state.lock().await;
+    
+    // 1. Calculate and Log
+    let mut total_equity: f64 = s.bots.iter().map(|b| {
+        let unrealized: f64 = b.open_trades.iter().map(|t| t.unrealized_pnl).sum();
+        b.balance + b.usd_in_bet + unrealized
+    }).sum();
+    total_equity += s.unallocated_balance;
+
+    let active_count = s.bots.iter().filter(|b| b.running).count();
+    let interval = s.scaling_interval;
+    let total_capital = (active_count as f64) * interval;
+    
+    let surplus = if active_count >= 10 { (total_equity - total_capital).max(0.0) } else { 0.0 };
+    let harvest_amount = surplus * 0.8;
+
+    s.withdraw_pending = true;
+    s.withdraw_logs.insert(0, WithdrawLog {
+        time: Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        amount: harvest_amount,
+        total_equity,
+        count: s.withdraw_logs.len() + 1,
+    });
+
+    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
+    
+    let msg = format!(
+        "📤 *PREPARE WITHDRAW INITIATED*\n\n\
+        💰 *Estimated Harvest:* ${:.2}\n\
+        📉 *Total Equity:* ${:.2}\n\
+        🤖 *Status:* All bots will stop after current trades finish.",
+        harvest_amount, total_equity
+    );
+    let _ = send_telegram_msg(&msg).await;
+
+    axum::http::StatusCode::OK
+}
+
 async fn bot_worker(state: SharedState, bot_id: String) {
     use rand::Rng;
     loop {
@@ -419,18 +481,27 @@ async fn bot_worker(state: SharedState, bot_id: String) {
             bot.last_sync = Local::now().format("%H:%M:%S").to_string();
 
             if bot.running {
-                for m in &bot.current_markets {
-                    if m.prob >= bot.min_prob_threshold && bot.open_trades.len() < 5 {
-                        let bet = (bot.balance.sqrt() * 0.35).max(1.0).min(bot.max_bet_cap);
-                        if bot.balance >= (bet + 0.02) {
-                            bot.balance -= bet + 0.02; bot.usd_in_bet += bet;
-                            bot.open_trades.push(Trade {
-                                id: format!("T-{}", rng.gen_range(1000..9999)),
-                                question: m.question.clone(), bet_amount: bet, entry_prob: m.prob,
-                                current_price: m.prob, is_moonshot: m.prob < 0.65,
-                                unrealized_pnl: 0.0, slug: m.slug.clone(),
-                            });
+                // Check if we should enter new trades
+                if !master.withdraw_pending {
+                    for m in &bot.current_markets {
+                        if m.prob >= bot.min_prob_threshold && bot.open_trades.len() < 5 {
+                            let bet = (bot.balance.sqrt() * 0.35).max(1.0).min(bot.max_bet_cap);
+                            if bot.balance >= (bet + 0.02) {
+                                bot.balance -= bet + 0.02; bot.usd_in_bet += bet;
+                                bot.open_trades.push(Trade {
+                                    id: format!("T-{}", rng.gen_range(1000..9999)),
+                                    question: m.question.clone(), bet_amount: bet, entry_prob: m.prob,
+                                    current_price: m.prob, is_moonshot: m.prob < 0.65,
+                                    unrealized_pnl: 0.0, slug: m.slug.clone(),
+                                });
+                            }
                         }
+                    }
+                } else {
+                    // Withdraw is pending, if no open trades, stop the bot
+                    if bot.open_trades.is_empty() {
+                        bot.running = false;
+                        println!("🛑 [WITHDRAW] Bot {} gracefully stopped.", bot.id);
                     }
                 }
                 let mut resolved = Vec::new();
