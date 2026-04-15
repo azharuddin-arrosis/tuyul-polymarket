@@ -110,19 +110,7 @@
                         <input type="number" id="sa_total_capital" value="23" oninput="previewScaling()" class="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xl font-black mono outline-none focus:border-blue-500 transition-colors">
                         <div id="sa_preview" class="text-[9px] italic opacity-60 mt-1">Ready to deploy 2 bots + $3 reserve.</div>
                     </div>
-                    <div class="space-y-1">
-                        <label class="stat-label text-emerald-500 italic">Core Risk Parameters (Odds Range)</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="space-y-1">
-                                <span class="text-[8px] opacity-40 font-bold uppercase tracking-widest pl-1">Min Odds %</span>
-                                <input type="number" id="sa_odds_min" value="50" class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm font-black mono outline-none focus:border-emerald-500 transition-colors">
-                            </div>
-                            <div class="space-y-1">
-                                <span class="text-[8px] opacity-40 font-bold uppercase tracking-widest pl-1">Max Odds %</span>
-                                <input type="number" id="sa_odds_max" value="80" class="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-sm font-black mono outline-none focus:border-emerald-500 transition-colors">
-                            </div>
-                        </div>
-                    </div>
+
                     <div class="space-y-2">
                         <div class="flex items-center gap-2 bg-white/5 p-3 rounded border border-white/5">
                             <input type="checkbox" id="sa_autoscale" checked class="w-4 h-4 accent-emerald-500">
@@ -410,7 +398,7 @@
                 if(MASTER_DATA.auto_scale) {
                     const activeCount = MASTER_DATA.bots.filter(b => b.running).length;
                     const nextThreshold = (activeCount + 1) * 10;
-                    scalingEl.textContent = `LEVEL ${activeCount}`;
+                    scalingEl.textContent = `LEVEL ${activeCount} (${fUSD(totalCapital)})`;
                     scalingNextEl.textContent = `Next bot at ${fUSD(nextThreshold)} (Need ${fUSD(nextThreshold - totalEquity)})`;
                 } else {
                     scalingEl.textContent = "INACTIVE";
@@ -604,9 +592,6 @@
 
         async function executeStartAll() {
             const total_capital = parseFloat(document.getElementById('sa_total_capital').value);
-            const min_odds = parseFloat(document.getElementById('sa_odds_min').value) / 100;
-            const max_odds = parseFloat(document.getElementById('sa_odds_max').value) / 100;
-            const spread = document.getElementById('sa_spread').checked;
             const auto_scale = document.getElementById('sa_autoscale').checked;
             
             try {
@@ -615,9 +600,9 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ 
                         total_capital, 
-                        min_prob: min_odds, 
-                        max_prob: max_odds, 
-                        spread: spread,
+                        min_prob: 0.50, 
+                        max_prob: 0.70, 
+                        spread: true,
                         auto_scale: auto_scale
                     })
                 });

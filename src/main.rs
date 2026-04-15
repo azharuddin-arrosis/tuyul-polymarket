@@ -215,7 +215,8 @@ fn load_state() -> MasterState {
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
     let mut bots = vec![];
     for i in 0..10 {
-        let prob = 0.50 + (i as f64 * 0.05);
+        let pair_idx = (i / 2) as f64;
+        let prob = (0.50 + (pair_idx * 0.05)).min(0.70);
         bots.push(BotState {
             id: bot_names[i].to_string(),
             balance: 10.0,
@@ -277,7 +278,8 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
     let mut s = state.lock().await;
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
     for i in 0..10 {
-        let prob = 0.50 + (i as f64 * 0.05);
+        let pair_idx = (i / 2) as f64;
+        let prob = (0.50 + (pair_idx * 0.05)).min(0.70);
         s.bots[i] = BotState {
             id: bot_names[i].to_string(),
             balance: 10.0,
@@ -326,15 +328,11 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
             bot.initial_balance = per_bot_bal;
             bot.running = true;
             
-            let threshold = if p.spread {
-                let pair_idx = (i / 2) as f64;
-                let range = p.max_prob - p.min_prob;
-                let step = if range > 0.0 { range / 4.0 } else { 0.0 };
-                (p.min_prob + (pair_idx * step)).min(0.98)
-            } else {
-                p.min_prob
-            };
-            bot.min_prob_threshold = (threshold * 100.0).round() / 100.0;
+            // Fixed Distribution: 50, 55, 60, 65, 70 (paired)
+            let pair_idx = (i / 2) as f64;
+            let threshold = 0.50 + (pair_idx * 0.05);
+            bot.min_prob_threshold = (threshold.min(0.70) * 100.0).round() / 100.0;
+            
             bot.last_sync = "START_ALL".to_string();
         } else {
             bot.balance = 0.0;
