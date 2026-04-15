@@ -99,7 +99,12 @@ struct MasterState {
     #[serde(default)]
     withdraw_logs: Vec<WithdrawLog>,
     #[serde(default)]
+    #[serde(default)]
     farm_capital: f64,
+    #[serde(default)]
+    vault_balance: f64,
+    #[serde(default)]
+    auto_harvest: bool,
 }
 fn default_scaling() -> f64 { 10.0 }
 
@@ -155,6 +160,7 @@ async fn main() {
                     }
                     s.unallocated_balance = 0.0;
                     s.withdraw_pending = false;
+                    s.vault_balance += gajian;
 
                     let log_count = s.withdraw_logs.len() + 1;
                     s.withdraw_logs.insert(0, WithdrawLog {
@@ -310,6 +316,21 @@ async fn main() {
                             if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
                         }
                     }
+
+                    // --- NEW: AUTO-HARVEST TRIGGER ---
+                    if s.auto_harvest && total_equity >= s.farm_capital * 2.0 && !s.withdraw_pending {
+                        s.withdraw_pending = true;
+                        let msg = format!(
+                            "🤖 *AUTO-HARVEST TRIGGERED!*\n\n\
+                            🎯 Target 2x modal tercapai (${:.2})\n\
+                            💰 Total Equity saat ini: ${:.2}\n\n\
+                            _Sistem otomatis mengamankan keuntungan ke Vault..._",
+                            s.farm_capital * 2.0, total_equity
+                        );
+                        let _ = send_telegram_msg(&msg).await;
+                        println!("🚀 [AUTO] Auto-harvest triggered at ${:.2}", total_equity);
+                        if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                    }
                 }
             }
         }
@@ -323,6 +344,7 @@ async fn main() {
         .route("/api/settings", post(update_settings))
         .route("/api/reset_all", post(reset_all_bots))
         .route("/api/start_all", post(start_all_bots))
+        .route("/api/toggle_auto_harvest", post(toggle_auto_harvest))
         .route("/api/prepare_withdraw", post(prepare_withdraw))
         .with_state(state);
 
@@ -378,6 +400,8 @@ fn load_state() -> MasterState {
         withdraw_pending: false,
         withdraw_logs: vec![],
         farm_capital: 100.0,
+        vault_balance: 0.0,
+        auto_harvest: false,
     }
 }
 
@@ -448,6 +472,8 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
     s.unallocated_balance = 0.0;
     s.withdraw_pending = false;
     s.withdraw_logs.clear();
+    s.vault_balance = 0.0;
+    s.auto_harvest = false;
 
     if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
     println!("🧹 [RESET] All bots and farm metrics have been reset.");
@@ -507,6 +533,13 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
         }
     }
     axum::http::StatusCode::OK
+}
+
+async fn toggle_auto_harvest(State(state): State<SharedState>) -> impl IntoResponse {
+    let mut s = state.lock().await;
+    s.auto_harvest = !s.auto_harvest;
+    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
+    Json(serde_json::json!({ "auto_harvest": s.auto_harvest }))
 }
 
 async fn prepare_withdraw(State(state): State<SharedState>) -> impl IntoResponse {

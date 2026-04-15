@@ -91,11 +91,22 @@
                     <button onclick="location.reload()" class="bg-white/5 hover:bg-white/10 px-3 py-1 rounded font-black text-[9px] tracking-widest active:scale-95 transition-all border border-white/5">REFRESH UI</button>
                 </div>
                 <div onclick="toggleTheme()" id="themeToggle" class="text-xl hover:scale-110 transition-transform cursor-pointer">🌓</div>
-                <div class="text-right border-l border-white/10 pl-6">
-                    <span class="stat-label">System Health</span>
-                    <div class="flex items-center gap-2 font-black text-[10px]">
-                        <div id="withdrawStatusBadge"></div>
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span class="mono">STABLE</span>
+                <div class="text-right border-l border-white/10 pl-6 flex items-center gap-4">
+                    <div class="flex flex-col items-end">
+                        <span class="stat-label">Auto-Harvest</span>
+                        <div class="flex items-center gap-2">
+                             <label class="relative inline-flex items-center cursor-pointer scale-75 origin-right">
+                                <input type="checkbox" id="toggleAutoHarvest" onchange="toggleAutoHarvest()" class="sr-only peer">
+                                <div class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="stat-label">System Health</span>
+                        <div class="flex items-center gap-2 font-black text-[10px]">
+                            <div id="withdrawStatusBadge"></div>
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span class="mono">STABLE</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -208,6 +219,27 @@
                         <div class="text-right">
                             <div class="stat-label text-[9px] opacity-40 uppercase tracking-widest">Buffer</div>
                             <div class="text-xl font-black text-blue-500/40">20%</div>
+                        </div>
+                    </div>
+
+                    <!-- SECURED PROFIT VAULT -->
+                    <div class="bg-amber-500/10 border-2 border-amber-500/30 rounded-lg p-4 flex justify-between items-center relative overflow-hidden group hover:border-amber-500/60 transition-all cursor-pointer shadow-xl shadow-amber-900/10" onclick="showSimulationModal()">
+                        <div class="absolute -right-4 -bottom-4 text-6xl opacity-[0.03] group-hover:rotate-12 transition-transform">💰</div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-amber-500 text-xs">🏦</span>
+                                <span class="stat-label text-amber-500 font-black tracking-widest uppercase">Secured Profit Vault</span>
+                                <span class="text-[8px] bg-amber-500 text-black px-1 rounded font-bold">LOCKED</span>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <span id="vaultBalance" class="text-3xl font-black mono text-amber-500">$0.00</span>
+                                <span id="vaultBalanceIDR" class="text-xs opacity-50 font-bold text-amber-200">Rp 0</span>
+                            </div>
+                            <div class="text-[9px] text-amber-500/50 mt-1 italic font-bold">Total Keuntungan yang Telah Diamankan</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="stat-label text-[9px] opacity-40">Plan Status</div>
+                            <div class="text-[9px] font-black text-amber-500 underline decoration-dotted">View Simulation Plan</div>
                         </div>
                     </div>
                 </div>
@@ -434,6 +466,44 @@
         </div>
     </div>
 
+    <!-- SIMULATION PLAN MODAL -->
+    <div id="simulationModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4" onclick="hideSimulationModal(event)">
+        <div class="bg-[#0a0a0a] border border-white/10 rounded-xl w-full max-w-4xl overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
+            <div class="bg-amber-500/10 px-6 py-4 border-b border-amber-500/20 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">📈</span>
+                    <span class="font-black text-lg tracking-tighter text-amber-400">QUANTUM 10-CYCLE GROWTH SIMULATION (8:2)</span>
+                </div>
+                <button onclick="hideSimulationModal()" class="text-white/40 hover:text-white text-3xl transition-colors">&times;</button>
+            </div>
+            <div class="p-6 overflow-x-auto">
+                <div class="bg-amber-500/5 border border-amber-500/10 p-4 rounded-lg mb-6 text-[10px] sm:text-xs leading-relaxed text-amber-200/70">
+                    <p class="font-bold text-amber-400 mb-2">MASTER STRATEGY:</p>
+                    Setiap kali Total Equity mencapai <span class="text-white font-bold">2x Modal</span>, sistem akan <span class="text-white font-bold">Auto-Withdraw 80%</span> dari profit ke Vault dan <span class="text-white font-bold">Re-invest 20%</span> sisanya sebagai tambahan modal trading (Compounding).
+                </div>
+                <table class="w-full text-left border-collapse text-[10px] sm:text-sm">
+                    <thead>
+                        <tr class="bg-white/5 text-zinc-400 uppercase tracking-widest text-[9px] font-bold">
+                            <th class="p-3 border-b border-white/10">Cycle</th>
+                            <th class="p-3 border-b border-white/10">Modal</th>
+                            <th class="p-3 border-b border-white/10">Target (2x)</th>
+                            <th class="p-3 border-b border-white/10">WD (80%)</th>
+                            <th class="p-3 border-b border-white/10">Comp (20%)</th>
+                            <th class="p-3 border-b border-white/10">Next Modal</th>
+                            <th class="p-3 border-b border-white/10 text-right">Total Vault</th>
+                        </tr>
+                    </thead>
+                    <tbody id="simTableBody" class="mono">
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="bg-white/5 p-4 text-center border-t border-white/5">
+                <p class="text-[10px] opacity-40 italic">Angka di atas adalah simulasi matematis ideal berdasarkan target profit 100% per siklus.</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         let MASTER_DATA = null;
         let selectedBotId = "VORTEX";
@@ -575,6 +645,13 @@
                 } else {
                     wStatus.innerHTML = '';
                 }
+
+                // Vault & Auto-Harvest UI
+                document.getElementById('vaultBalance').textContent = fUSD(MASTER_DATA.vault_balance || 0);
+                document.getElementById('vaultBalanceIDR').textContent = 'Rp ' + ((MASTER_DATA.vault_balance || 0) * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+                
+                const toggleAH = document.getElementById('toggleAutoHarvest');
+                if (toggleAH) toggleAH.checked = MASTER_DATA.auto_harvest;
 
             } catch(e) { console.error(e); }
         }
@@ -878,6 +955,50 @@
                     }
                 }
             });
+        }
+
+        async function toggleAutoHarvest() {
+            try {
+                const res = await fetch('/api/toggle_auto_harvest', { method: 'POST' });
+                const data = await res.json();
+                console.log("Auto Harvest set to:", data.auto_harvest);
+            } catch(e) { console.error(e); }
+        }
+
+        function showSimulationModal() {
+            const body = document.getElementById('simTableBody');
+            let capital = 100;
+            let totalVault = 0;
+            let rows = "";
+
+            for(let i=1; i<=10; i++) {
+                let target = capital * 2;
+                let profit = capital;
+                let wd = profit * 0.8;
+                let comp = profit * 0.2;
+                totalVault += wd;
+                
+                rows += `
+                    <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                        <td class="p-3 text-zinc-500 font-bold">#${i}</td>
+                        <td class="p-3 text-blue-400">${fUSD(capital)}</td>
+                        <td class="p-3 text-emerald-400 font-bold">${fUSD(target)}</td>
+                        <td class="p-3 text-amber-500 font-black">${fUSD(wd)}</td>
+                        <td class="p-3 text-blue-300">${fUSD(comp)}</td>
+                        <td class="p-3 text-white font-bold">${fUSD(capital + comp)}</td>
+                        <td class="p-3 text-right text-amber-400 font-black">${fUSD(totalVault)}</td>
+                    </tr>
+                `;
+                capital = capital + comp;
+            }
+            body.innerHTML = rows;
+            document.getElementById('simulationModal').classList.remove('hidden');
+        }
+
+        function hideSimulationModal(e) { 
+            if(!e || e.target === document.getElementById('simulationModal')) {
+                document.getElementById('simulationModal').classList.add('hidden');
+            }
         }
 
         if(localStorage.getItem('bot_theme') === 'light') document.body.classList.add('light-mode');
