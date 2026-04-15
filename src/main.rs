@@ -396,8 +396,6 @@ fn load_state() -> MasterState {
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
     let mut bots = vec![];
     for i in 0..10 {
-        let pair_idx = (i / 2) as f64;
-        let prob = (0.50 + (pair_idx * 0.05)).min(0.70);
         bots.push(BotState {
             id: bot_names[i].to_string(),
             balance: 0.0,
@@ -406,7 +404,7 @@ fn load_state() -> MasterState {
             usd_in_bet: 0.0, open_trades: vec![], history: vec![],
             current_markets: vec![],
             chart_history: vec![],
-            min_prob_threshold: (prob * 100.0).round() / 100.0,
+            min_prob_threshold: 0.52,
             max_bet_cap: 3.0,
             last_sync: "INIT".to_string(), 
             running: false,
@@ -471,8 +469,6 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
     let mut s = state.lock().await;
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
     for i in 0..10 {
-        let pair_idx = (i / 2) as f64;
-        let prob = (0.50 + (pair_idx * 0.05)).min(0.70);
         s.bots[i] = BotState {
             id: bot_names[i].to_string(),
             balance: 0.0,
@@ -481,7 +477,7 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
             usd_in_bet: 0.0, open_trades: vec![], history: vec![],
             current_markets: vec![],
             chart_history: vec![],
-            min_prob_threshold: (prob * 100.0).round() / 100.0,
+            min_prob_threshold: 0.52,
             max_bet_cap: 3.0,
             last_sync: "RESET".to_string(), 
             running: false,
@@ -542,8 +538,8 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
             bot.initial_balance = per_bot_bal;
             bot.running = true;
             
-            // Threshold: 52% for bots 0-4, 55% for bots 5-9
-            bot.min_prob_threshold = if i < 5 { 0.52 } else { 0.55 };
+            // Threshold: 52% all bots
+            bot.min_prob_threshold = 0.52;
             bot.max_bet_cap = 2.0;
             
             bot.last_sync = "START_ALL".to_string();
