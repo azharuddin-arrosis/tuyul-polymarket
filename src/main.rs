@@ -356,8 +356,8 @@ fn load_state() -> MasterState {
         let prob = (0.50 + (pair_idx * 0.05)).min(0.70);
         bots.push(BotState {
             id: bot_names[i].to_string(),
-            balance: 10.0,
-            initial_balance: 10.0,
+            balance: 0.0,
+            initial_balance: 0.0,
             pnl_realized: 0.0, pnl_won: 0.0, pnl_lost: 0.0,
             usd_in_bet: 0.0, open_trades: vec![], history: vec![],
             current_markets: vec![],
@@ -429,8 +429,8 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
         let prob = (0.50 + (pair_idx * 0.05)).min(0.70);
         s.bots[i] = BotState {
             id: bot_names[i].to_string(),
-            balance: 10.0,
-            initial_balance: 10.0,
+            balance: 0.0,
+            initial_balance: 0.0,
             pnl_realized: 0.0, pnl_won: 0.0, pnl_lost: 0.0,
             usd_in_bet: 0.0, open_trades: vec![], history: vec![],
             current_markets: vec![],
@@ -442,9 +442,9 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
         };
     }
     s.auto_scale = false;
-    s.target_capital = 100.0;
-    s.farm_capital = 100.0;
-    s.last_notified_equity = 100.0;
+    s.target_capital = 0.0;
+    s.farm_capital = 0.0;
+    s.last_notified_equity = 0.0;
     s.unallocated_balance = 0.0;
     s.withdraw_pending = false;
     s.withdraw_logs.clear();
