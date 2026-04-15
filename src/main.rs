@@ -75,9 +75,18 @@ struct BotState {
 #[derive(Serialize, Deserialize, Clone)]
 struct MasterState {
     bots: Vec<BotState>,
+    #[serde(default)]
     auto_scale: bool,
+    #[serde(default)]
     target_capital: f64,
+    #[serde(default = "default_scaling")]
+    scaling_interval: f64,
+    #[serde(default)]
+    last_notified_equity: f64,
+    #[serde(default)]
+    unallocated_balance: f64,
 }
+fn default_scaling() -> f64 { 10.0 }
 
 type SharedState = Arc<Mutex<MasterState>>;
 
@@ -103,13 +112,14 @@ async fn main() {
             let mut s = monitor_state.lock().await;
             if s.auto_scale {
                 // 1. Calculate Farm Metrics
-                let total_equity: f64 = s.bots.iter().map(|b| {
+                let mut total_equity: f64 = s.bots.iter().map(|b| {
                     let unrealized: f64 = b.open_trades.iter().map(|t| t.unrealized_pnl).sum();
                     b.balance + b.usd_in_bet + unrealized
                 }).sum();
+                total_equity += s.unallocated_balance;
 
                 let active_count = s.bots.iter().filter(|b| b.running).count();
-                let possible_bots = (total_equity / 10.0).floor() as usize;
+                let possible_bots = (total_equity / s.scaling_interval).floor() as usize;
                 let possible_bots = possible_bots.clamp(1, 10);
                 
                 // 2. Identify Bailout Needs
@@ -131,7 +141,7 @@ async fn main() {
                     println!("🚀 [AUTO-SCALE] Leveling Up! Equity: ${:.2}, Active: {}, Next Target: {} Bots", total_equity, active_count, possible_bots);
                     
                     let target_count = possible_bots;
-                    let per_bot_bal = total_equity / (target_count as f64);
+                    let per_bot_bal = s.scaling_interval;
                     
                     for i in 0..10 {
                         let bot = &mut s.bots[i];
@@ -153,6 +163,10 @@ async fn main() {
                             bot.running = false;
                         }
                     }
+                    
+                    let deployed_capital = (target_count as f64) * s.scaling_interval;
+                    s.unallocated_balance = (total_equity - deployed_capital).max(0.0);
+
                     if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
                 } 
                 else if needs_bailout && active_count > 0 {
@@ -160,8 +174,9 @@ async fn main() {
                     // Inject liquidity from winners to losers WITHOUT resetting their history/trades
                     println!("💸 [BAILOUT] Emergency Liquidity Injection! Redistributing profit to save struggling bots...");
                     
-                    let total_liquid: f64 = s.bots.iter().filter(|b| b.running).map(|b| b.balance).sum();
+                    let total_liquid: f64 = s.bots.iter().filter(|b| b.running).map(|b| b.balance).sum::<f64>() + s.unallocated_balance;
                     let per_bot_liquid = total_liquid / (active_count as f64);
+                    s.unallocated_balance = 0.0;
                     
                     for i in 0..10 {
                         if s.bots[i].running {
@@ -231,7 +246,7 @@ fn load_state() -> MasterState {
             running: false,
         });
     }
-    MasterState { bots, auto_scale: false, target_capital: 0.0 }
+    MasterState { bots, auto_scale: false, target_capital: 0.0, scaling_interval: 10.0, last_notified_equity: 0.0, unallocated_balance: 0.0 }
 }
 
 async fn get_status(State(state): State<SharedState>) -> impl IntoResponse { Json(state.lock().await.clone()) }
@@ -298,23 +313,29 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct StartAllPayload {
     total_capital: f64,
     min_prob: f64,
     max_prob: f64,
     spread: bool,
     auto_scale: bool,
+    #[serde(default = "default_scaling")]
+    scaling_interval: f64,
 }
 
 async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAllPayload>) -> impl IntoResponse {
     let mut s = state.lock().await;
     s.auto_scale = p.auto_scale;
     s.target_capital = p.total_capital;
+    s.scaling_interval = p.scaling_interval;
 
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
-    let num_bots = (p.total_capital / 10.0).floor() as usize;
+    let num_bots = (p.total_capital / p.scaling_interval).floor() as usize;
     let num_bots = num_bots.clamp(1, 10);
-    let per_bot_bal = p.total_capital / (num_bots as f64);
+    let per_bot_bal = p.scaling_interval;
+    
+    s.unallocated_balance = p.total_capital - ((num_bots as f64) * p.scaling_interval);
 
     for i in 0..s.bots.len() {
         let bot = &mut s.bots[i];

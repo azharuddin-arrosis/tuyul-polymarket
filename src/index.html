@@ -105,10 +105,16 @@
                     <button onclick="hideStartAllModal()" class="opacity-40 hover:opacity-100 text-lg">&times;</button>
                 </div>
                 <div class="p-4 space-y-4">
-                    <div class="space-y-1">
-                        <label class="stat-label text-blue-400">Total Farm Liquidity (USDC)</label>
-                        <input type="number" id="sa_total_capital" value="23" oninput="previewScaling()" class="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xl font-black mono outline-none focus:border-blue-500 transition-colors">
-                        <div id="sa_preview" class="text-[9px] italic opacity-60 mt-1">Ready to deploy 2 bots + $3 reserve.</div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="stat-label text-blue-400">Total Farm Liquidity (USDC)</label>
+                            <input type="number" id="sa_total_capital" value="0" oninput="previewScaling()" placeholder="e.g. 100" class="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xl font-black mono outline-none focus:border-blue-500 transition-colors">
+                        </div>
+                        <div>
+                            <label class="stat-label text-emerald-400">Min Modal Per Bot (USDC)</label>
+                            <input type="number" id="sa_min_per_bot" value="10" oninput="previewScaling()" placeholder="e.g. 10" class="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-lg font-black mono outline-none focus:border-emerald-500 transition-colors">
+                        </div>
+                        <div id="sa_preview" class="text-[9px] italic opacity-60 bg-black/20 p-2 rounded">Isi nilai di atas untuk preview.</div>
                     </div>
 
                     <div class="space-y-2">
@@ -160,6 +166,57 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- HARVEST VAULT (GAJIAN 2:8) - ONLY ACTIVATE AT 10 BOTS -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 flex justify-between items-center">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-emerald-500 text-xs">🚀</span>
+                                <span class="stat-label text-emerald-400 font-black tracking-widest uppercase">Harvest Vault (Gajian 80%)</span>
+                                <span id="harvestStatusBadge" class="text-[9px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold uppercase tracking-tighter">Scaling Phase</span>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <span id="v_owner_share" class="text-3xl font-black mono text-white">$0.00</span>
+                                <span id="v_owner_share_idr" class="text-xs opacity-50 font-bold">Rp 0</span>
+                            </div>
+                            <div id="harvestHint" class="text-[9px] opacity-40 mt-1 italic">Aktif otomatis setelah 10 bot jalan</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="stat-label text-[9px] opacity-40 uppercase tracking-widest">Share</div>
+                            <div class="text-xl font-black text-emerald-500/40">80%</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 flex justify-between items-center">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-blue-500 text-xs">🛡️</span>
+                                <span class="stat-label text-blue-400 font-black tracking-widest uppercase">Growth Reserve (20%)</span>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <span id="v_bot_growth" class="text-2xl font-black mono text-white">$0.00</span>
+                                <span id="v_bot_growth_idr" class="text-xs opacity-50 font-bold">Rp 0</span>
+                            </div>
+                            <div class="text-[9px] opacity-40 mt-1 italic">Dana penguat modal bot</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="stat-label text-[9px] opacity-40 uppercase tracking-widest">Buffer</div>
+                            <div class="text-xl font-black text-blue-500/40">20%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IDLE / UNALLOCATED RESERVES -->
+                <div class="flex items-center justify-between px-4 py-2 bg-white/5 border border-white/10 rounded-md">
+                    <div class="flex items-center gap-2">
+                        <span class="text-amber-500 italic">⛽</span>
+                        <span class="stat-label text-zinc-400 uppercase tracking-tighter font-bold">Unallocated Reserve (Sisa Dana):</span>
+                        <span id="totalFarmIdle" class="mono font-black text-amber-500 ml-2">$0.00</span>
+                        <span id="totalFarmIdleIDR" class="text-[9px] opacity-40 italic ml-2">Rp 0</span>
+                    </div>
+                    <div class="text-[9px] opacity-30 italic">Dana nganggur untuk bot selanjutnya</div>
                 </div>
 
                 <!-- SECONDARY AGGREGATE METRICS -->
@@ -367,11 +424,17 @@
                 MASTER_DATA = await res.json();
                 
                 const totalPnL = MASTER_DATA.bots.reduce((acc, b) => acc + b.pnl_realized, 0);
-                const totalCapital = MASTER_DATA.bots.reduce((acc, b) => acc + (b.initial_balance || 0), 0);
-                const totalEquity = MASTER_DATA.bots.reduce((acc, b) => {
-                    const unrealized = b.open_trades.reduce((u, t) => u + t.unrealized_pnl, 0);
-                    return acc + b.balance + b.usd_in_bet + unrealized;
-                }, 0);
+                
+                let totalEquity = 0;
+                MASTER_DATA.bots.forEach(bot => {
+                    const unrealized = bot.open_trades.reduce((acc, t) => acc + t.unrealized_pnl, 0);
+                    const equity = bot.balance + bot.usd_in_bet + unrealized;
+                    totalEquity += equity;
+                });
+                
+                const activeCount = MASTER_DATA.bots.filter(b => b.running).length;
+                const interval = MASTER_DATA.scaling_interval || 10;
+                const totalCapital = activeCount * interval;
                 const totalGains = MASTER_DATA.bots.reduce((acc, b) => acc + b.pnl_won, 0);
                 const totalLosses = MASTER_DATA.bots.reduce((acc, b) => acc + Math.abs(b.pnl_lost), 0);
                 const winningCount = MASTER_DATA.bots.filter(b => b.pnl_realized > 0).length;
@@ -416,6 +479,35 @@
 
                 renderLeaderboard();
                 renderBotDetail();
+
+                // --- CALC HARVEST VAULT (2:8 STRATEGY) ---
+                const isHarvestPhase = (activeCount >= 10);
+                const surplus = isHarvestPhase ? Math.max(0, totalEquity - totalCapital) : 0;
+                const ownerShare = surplus * 0.8;
+                const botGrowth = surplus * 0.2;
+
+                document.getElementById('v_owner_share').textContent = fUSD(ownerShare);
+                document.getElementById('v_owner_share_idr').textContent = 'Rp ' + (ownerShare * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+                document.getElementById('v_bot_growth').textContent = fUSD(botGrowth);
+                document.getElementById('v_bot_growth_idr').textContent = 'Rp ' + (botGrowth * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+
+                const badge = document.getElementById('harvestStatusBadge');
+                const hint = document.getElementById('harvestHint');
+                if (isHarvestPhase) {
+                    badge.textContent = "HARVEST PHASE ACTIVE";
+                    badge.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold uppercase tracking-tighter";
+                    hint.textContent = "Profit sharing 80/20 aktif!";
+                } else {
+                    badge.textContent = "SCALING PHASE";
+                    badge.className = "text-[9px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold uppercase tracking-tighter";
+                    hint.textContent = "Menunggu 10 Bot jalan untuk mulai bagi hasil.";
+                }
+
+                // Calculate Idle (Sisa Dana yang belum kepakai bot)
+                const farmIdle = Math.max(0, totalEquity - totalCapital - (isHarvestPhase ? surplus : 0));
+                document.getElementById('totalFarmIdle').textContent = fUSD(farmIdle);
+                document.getElementById('totalFarmIdleIDR').textContent = 'Rp ' + (farmIdle * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+
                 updateFarmChart();
                 updateRanking();
             } catch(e) {}
@@ -584,22 +676,50 @@
         function hideStartAllModal() { document.getElementById('startAllModal').classList.add('hidden'); }
 
         function previewScaling() {
-            const val = parseFloat(document.getElementById('sa_total_capital').value) || 0;
-            const bots = Math.floor(val / 10);
-            const reserve = val % 10;
-            document.getElementById('sa_preview').textContent = `Ready to deploy ${bots} bots + ${fUSD(reserve)} reserve.`;
+            const balance = parseFloat(document.getElementById('sa_total_capital').value) || 0;
+            const minPerBot = parseFloat(document.getElementById('sa_min_per_bot').value) || 10;
+            const previewEl = document.getElementById('sa_preview');
+
+            if (balance <= 0) {
+                previewEl.innerHTML = '<div class="opacity-50 italic">Isi nilai di atas untuk preview.</div>';
+                return;
+            }
+
+            // Hitung jumlah bot dari balance / min_per_bot
+            const numBots = Math.min(Math.max(Math.floor(balance / minPerBot), 1), 10);
+            const totalToDeploy = numBots * minPerBot; 
+            const idleReserve = balance - totalToDeploy; 
+            const nextScaleAt = (numBots + 1) * minPerBot;
+
+            previewEl.innerHTML = `
+                <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                    <div class="opacity-40">Bot Aktif:</div>
+                    <div class="font-black text-emerald-400">${numBots} Bot</div>
+                    <div class="opacity-40">Modal Terpakai:</div>
+                    <div class="font-bold mono text-blue-400">${fUSD(totalToDeploy)}</div>
+                    <div class="opacity-40 text-amber-500 font-bold">Idle / Sisa:</div>
+                    <div class="font-bold mono text-amber-500">${fUSD(idleReserve)}</div>
+                    <div class="opacity-40 mt-1">Next Scale-up:</div>
+                    <div class="font-bold mono text-zinc-400 mt-1">${fUSD(nextScaleAt)}</div>
+                </div>
+            `;
         }
 
         async function executeStartAll() {
-            const total_capital = parseFloat(document.getElementById('sa_total_capital').value);
+            const balance = parseFloat(document.getElementById('sa_total_capital').value) || 0;
+            const minPerBot = parseFloat(document.getElementById('sa_min_per_bot').value) || 10;
             const auto_scale = document.getElementById('sa_autoscale').checked;
+
+            if (balance <= 0) { alert('Masukkan Total Farm Liquidity!'); return; }
+            if (minPerBot <= 0) { alert('Min Modal Per Bot harus > 0!'); return; }
             
             try {
                 const res = await fetch('/api/start_all', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ 
-                        total_capital, 
+                        total_capital: balance, 
+                        scaling_interval: minPerBot,
                         min_prob: 0.50, 
                         max_prob: 0.70, 
                         spread: true,
