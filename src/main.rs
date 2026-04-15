@@ -542,8 +542,8 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
             bot.initial_balance = per_bot_bal;
             bot.running = true;
             
-            // Threshold: 52% for bots 0-4, 57% for bots 5-9
-            bot.min_prob_threshold = if i < 5 { 0.52 } else { 0.57 };
+            // Threshold: 52% for bots 0-4, 55% for bots 5-9
+            bot.min_prob_threshold = if i < 5 { 0.52 } else { 0.55 };
             bot.max_bet_cap = 2.0;
             
             bot.last_sync = "START_ALL".to_string();
@@ -619,11 +619,10 @@ async fn bot_worker(state: SharedState, bot_id: String) {
                                 .filter_map(|s| s.trim().trim_matches('"').parse::<f64>().ok())
                                 .collect();
                             let prob = prices.get(0).copied().unwrap_or(0.5);
+                            // All markets for testing
                             if prob >= 0.02 && prob <= 0.98 {
-                                let question = m["question"].as_str().unwrap_or("?").to_string();
-                                // No filter - all events for testing
                                 real_markets.push(Market {
-                                    question: question.clone(),
+                                    question: m["question"].as_str().unwrap_or("?").to_string(),
                                     category: "All".to_string(),
                                     prob,
                                     slug: format!("https://polymarket.com/event/{}", m["slug"].as_str().unwrap_or("")),
@@ -652,7 +651,7 @@ async fn bot_worker(state: SharedState, bot_id: String) {
             if bot.running {
                 // Check if we should enter new trades
                 if !withdraw_pending {
-                    // All markets - no category filter
+                    // All markets for testing
                     let valid_markets: Vec<_> = bot.current_markets.iter().collect();
                     
                     for m in valid_markets {
