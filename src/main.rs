@@ -173,16 +173,21 @@ async fn main() {
                     if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
 
                     // 6. Final Notification
+                    let idr_rate = 16200.0;
                     let msg = format!(
                         "💰 *QUANTUM FARM: GAJIAN BERHASIL!*\n\n\
-                        🏦 *Secured Profit Vault:* ${:.2}\n\
-                        🎉 *Gajian Masuk (80%):* ${:.2}\n\
+                        🏦 *Secured Profit Vault:* ${:.2} (Rp {:.*})\n\
+                        🎉 *Gajian Masuk (80%):* ${:.2} (Rp {:.*})\n\
                         ---------------------------\n\
-                        📈 *Total Equity Closed:* ${:.2}\n\
-                        🛡️ *Pertumbuhan Modal (20%):* ${:.2}\n\
-                        🚀 *Modal Farm Baru:* ${:.2}\n\n\
+                        📈 *Total Equity Closed:* ${:.2} (Rp {:.*})\n\
+                        🛡️ *Pertumbuhan Modal (20%):* ${:.2} (Rp {:.*})\n\
+                        🚀 *Modal Farm Baru:* ${:.2} (Rp {:.*})\n\n\
                         _Semua bot telah di-reset dan aktif kembali otomatis._",
-                        s.vault_balance, gajian, total_equity, bot_growth, s.farm_capital
+                        s.vault_balance, 0, (s.vault_balance * idr_rate) as i64,
+                        gajian, 0, (gajian * idr_rate) as i64,
+                        total_equity, 0, (total_equity * idr_rate) as i64,
+                        bot_growth, 0, (bot_growth * idr_rate) as i64,
+                        s.farm_capital, 0, (s.farm_capital * idr_rate) as i64
                     );
                     let _ = send_telegram_msg(&msg).await;
                     println!("✅ [WITHDRAW] Settlement complete. Log #{} inserted. Vault: ${:.2}", log_count, s.vault_balance);

@@ -625,14 +625,23 @@
                 const wLogs = MASTER_DATA.withdraw_logs || [];
                 document.getElementById('withdrawCount').textContent = wLogs.length;
                 if (wLogs.length > 0) {
-                    document.getElementById('withdrawLogBody').innerHTML = wLogs.map(log => `
+                    document.getElementById('withdrawLogBody').innerHTML = wLogs.map(log => {
+                        const amountIDR = (log.amount * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+                        const equityIDR = (log.total_equity * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+                        return `
                         <tr class="hover:bg-white/5 transition-colors">
-                            <td class="opacity-40">#${log.count}</td>
+                            <td class="opacity-40 pl-4">#${log.count}</td>
                             <td>${log.time}</td>
-                            <td class="mono">${fUSD(log.total_equity)}</td>
-                            <td class="text-right font-black text-emerald-500">${fUSD(log.amount)}</td>
+                            <td class="mono">
+                                <div>${fUSD(log.total_equity)}</div>
+                                <div class="text-[8px] opacity-30 italic">Rp ${equityIDR}</div>
+                            </td>
+                            <td class="text-right pr-4">
+                                <div class="font-black text-emerald-500">${fUSD(log.amount)}</div>
+                                <div class="text-[8px] text-emerald-500/40 italic">Rp ${amountIDR}</div>
+                            </td>
                         </tr>
-                    `).join('');
+                    `}).join('');
                 }
 
                 const wStatus = document.getElementById('withdrawStatusBadge');
