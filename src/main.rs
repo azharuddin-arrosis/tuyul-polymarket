@@ -98,6 +98,8 @@ struct MasterState {
     withdraw_pending: bool,
     #[serde(default)]
     withdraw_logs: Vec<WithdrawLog>,
+    #[serde(default)]
+    farm_capital: f64,
 }
 fn default_scaling() -> f64 { 10.0 }
 
@@ -124,6 +126,59 @@ async fn main() {
         loop {
             sleep(Duration::from_secs(10)).await;
             let mut s = monitor_state.lock().await;
+
+            if s.withdraw_pending {
+                // Background Monitor Phase 2: Wait until all trades close
+                let all_empty = s.bots.iter().all(|b| b.open_trades.is_empty());
+                
+                if all_empty {
+                    // Kalkulasi Aktual (Settlement)
+                    let total_equity: f64 = s.bots.iter().map(|b| b.balance + b.usd_in_bet).sum::<f64>() + s.unallocated_balance;
+                    
+                    let base_capital = if s.farm_capital > 0.0 { s.farm_capital } else { 100.0 };
+                    let profit = (total_equity - base_capital).max(0.0);
+                    
+                    let gajian = profit * 0.8;
+                    let bot_growth = profit * 0.2;
+                    
+                    s.farm_capital = base_capital + bot_growth;
+                    let per_bot = s.farm_capital / 10.0;
+                    
+                    for i in 0..10 {
+                        s.bots[i].balance = per_bot;
+                        s.bots[i].initial_balance = per_bot;
+                        s.bots[i].pnl_realized = 0.0;
+                        s.bots[i].pnl_won = 0.0;
+                        s.bots[i].pnl_lost = 0.0;
+                        s.bots[i].history.clear();
+                        s.bots[i].running = true; // RESTART
+                    }
+                    s.unallocated_balance = 0.0;
+                    s.withdraw_pending = false;
+
+                    let log_count = s.withdraw_logs.len() + 1;
+                    s.withdraw_logs.insert(0, WithdrawLog {
+                        time: Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                        amount: gajian,
+                        total_equity,
+                        count: log_count,
+                    });
+                    
+                    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                    
+                    let msg = format!(
+                        "💸 *WITHDRAW BERHASIL & BOT RESTART*\n\n\
+                        💰 *Total Equity Closed:* ${:.2}\n\
+                        🎉 *Gajian Owner (80%):* ${:.2}\n\
+                        📈 *Modal Farm Baru:* ${:.2} (${:.2} per bot)\n\n\
+                        _Sistem otomatis berjalan kembali..._",
+                        total_equity, gajian, s.farm_capital, per_bot
+                    );
+                    let _ = send_telegram_msg(&msg).await;
+                }
+                continue; // Jangan jalankan auto-scale jika sedang withdraw
+            }
+
             if s.auto_scale {
                 // 1. Calculate Farm Metrics
                 let mut total_equity: f64 = s.bots.iter().map(|b| {
@@ -296,6 +351,7 @@ fn load_state() -> MasterState {
         unallocated_balance: 0.0,
         withdraw_pending: false,
         withdraw_logs: vec![],
+        farm_capital: 100.0,
     }
 }
 
@@ -379,6 +435,7 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
     s.withdraw_pending = false; // Reset withdraw flag when starting all
     s.auto_scale = p.auto_scale;
     s.target_capital = p.total_capital;
+    s.farm_capital = p.total_capital; // Initialize current expected farm capital
     s.scaling_interval = p.scaling_interval;
 
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
@@ -418,37 +475,15 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
 async fn prepare_withdraw(State(state): State<SharedState>) -> impl IntoResponse {
     let mut s = state.lock().await;
     
-    // 1. Calculate and Log
-    let mut total_equity: f64 = s.bots.iter().map(|b| {
-        let unrealized: f64 = b.open_trades.iter().map(|t| t.unrealized_pnl).sum();
-        b.balance + b.usd_in_bet + unrealized
-    }).sum();
-    total_equity += s.unallocated_balance;
-
-    let active_count = s.bots.iter().filter(|b| b.running).count();
-    let interval = s.scaling_interval;
-    let total_capital = (active_count as f64) * interval;
-    
-    let surplus = if active_count >= 10 { (total_equity - total_capital).max(0.0) } else { 0.0 };
-    let harvest_amount = surplus * 0.8;
-
     s.withdraw_pending = true;
-    let log_count = s.withdraw_logs.len() + 1;
-    s.withdraw_logs.insert(0, WithdrawLog {
-        time: Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-        amount: harvest_amount,
-        total_equity,
-        count: log_count,
-    });
 
+    // Save early so the state is immediately applied
     if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
     
     let msg = format!(
-        "📤 *PREPARE WITHDRAW INITIATED*\n\n\
-        💰 *Estimated Harvest:* ${:.2}\n\
-        📉 *Total Equity:* ${:.2}\n\
-        🤖 *Status:* All bots will stop after current trades finish.",
-        harvest_amount, total_equity
+        "📤 *PROSES WITHDRAW GAJIAN INITIATED*\n\n\
+        🤖 *Status:* Semua bot berhenti ambil posisi baru.\n\
+        Menunggu semua open trades diclose secara natural..."
     );
     let _ = send_telegram_msg(&msg).await;
 

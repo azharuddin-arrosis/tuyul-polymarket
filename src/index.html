@@ -86,7 +86,7 @@
             <div class="flex items-center gap-6">
                 <div class="flex items-center gap-2">
                     <button onclick="showStartAllModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">START ALL BOTS</button>
-                    <button onclick="prepareWithdraw()" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-amber-900/20 active:scale-95 transition-all">PREPARE WITHDRAW</button>
+                    <button id="btnWithdraw" onclick="prepareWithdraw()" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-amber-900/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>PROSES WITHDRAW GAJIAN</button>
                     <button onclick="resetAll()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-rose-900/20 active:scale-95 transition-all">RESET ALL BOTS</button>
                     <button onclick="location.reload()" class="bg-white/5 hover:bg-white/10 px-3 py-1 rounded font-black text-[9px] tracking-widest active:scale-95 transition-all border border-white/5">REFRESH UI</button>
                 </div>
@@ -462,16 +462,19 @@
                 
                 const activeCount = MASTER_DATA.bots.filter(b => b.running).length;
                 const interval = MASTER_DATA.scaling_interval || 10;
-                const totalCapital = activeCount * interval;
+                
+                // Track Dynamic Farm Capital
+                const farmCapital = MASTER_DATA.farm_capital && MASTER_DATA.farm_capital > 0 ? MASTER_DATA.farm_capital : (activeCount * interval);
+                
                 const totalGains = MASTER_DATA.bots.reduce((acc, b) => acc + b.pnl_won, 0);
                 const totalLosses = MASTER_DATA.bots.reduce((acc, b) => acc + Math.abs(b.pnl_lost), 0);
                 const winningCount = MASTER_DATA.bots.filter(b => b.pnl_realized > 0).length;
                 const losingCount = MASTER_DATA.bots.filter(b => b.pnl_realized < 0).length;
                 
-                const totalRoi = totalCapital > 0 ? (totalPnL / totalCapital * 100).toFixed(1) : 0;
+                const totalRoi = farmCapital > 0 ? (totalPnL / farmCapital * 100).toFixed(1) : 0;
 
-                document.getElementById('totalFarmCapital').textContent = fUSD(totalCapital);
-                document.getElementById('totalFarmCapitalIDR').textContent = 'Rp ' + (totalCapital * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
+                document.getElementById('totalFarmCapital').textContent = fUSD(farmCapital);
+                document.getElementById('totalFarmCapitalIDR').textContent = 'Rp ' + (farmCapital * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
 
                 document.getElementById('totalFarmEquity').textContent = fUSD(totalEquity);
                 document.getElementById('totalFarmEquityIDR').textContent = 'Rp ' + (totalEquity * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
@@ -489,7 +492,7 @@
                 if(MASTER_DATA.auto_scale) {
                     const activeCount = MASTER_DATA.bots.filter(b => b.running).length;
                     const nextThreshold = (activeCount + 1) * 10;
-                    scalingEl.textContent = `LEVEL ${activeCount} (${fUSD(totalCapital)})`;
+                    scalingEl.textContent = `LEVEL ${activeCount} (${fUSD(farmCapital)})`;
                     scalingNextEl.textContent = `Next bot at ${fUSD(nextThreshold)} (Need ${fUSD(nextThreshold - totalEquity)})`;
                 } else {
                     scalingEl.textContent = "INACTIVE";
@@ -510,7 +513,7 @@
 
                 // --- CALC HARVEST VAULT (2:8 STRATEGY) ---
                 const isHarvestPhase = (activeCount >= 10);
-                const surplus = isHarvestPhase ? Math.max(0, totalEquity - totalCapital) : 0;
+                const surplus = Math.max(0, totalEquity - farmCapital);
                 const ownerShare = surplus * 0.8;
                 const botGrowth = surplus * 0.2;
 
@@ -521,14 +524,27 @@
 
                 const badge = document.getElementById('harvestStatusBadge');
                 const hint = document.getElementById('harvestHint');
+                
+                // --- WITHDRAW LOGIC UI ---
+                const btnWithdraw = document.getElementById('btnWithdraw');
+                
                 if (isHarvestPhase) {
-                    badge.textContent = "HARVEST PHASE ACTIVE";
-                    badge.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold uppercase tracking-tighter";
-                    hint.textContent = "Profit sharing 80/20 aktif!";
+                    if (totalEquity >= farmCapital * 2) {
+                        badge.textContent = "HARVEST READY (2X EQUITY)";
+                        badge.className = "text-[9px] px-2 py-0.5 rounded bg-amber-500 text-black font-black uppercase tracking-tighter animate-pulse shadow-[0_0_15px_#f59e0b]";
+                        hint.textContent = "Anda sudah bisa memproses gajian bulan ini!";
+                        if (btnWithdraw && !MASTER_DATA.withdraw_pending) btnWithdraw.disabled = false;
+                    } else {
+                        badge.textContent = "COMPOUNDING PHASE";
+                        badge.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold uppercase tracking-tighter";
+                        hint.textContent = `Tombol gajian aktif saat Total Equity menyentuh ${fUSD(farmCapital * 2)}`;
+                        if (btnWithdraw) btnWithdraw.disabled = true;
+                    }
                 } else {
                     badge.textContent = "SCALING PHASE";
-                    badge.className = "text-[9px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold uppercase tracking-tighter";
-                    hint.textContent = "Menunggu 10 Bot jalan untuk mulai bagi hasil.";
+                    badge.className = "text-[9px] px-2 py-0.5 rounded bg-zinc-500/20 text-zinc-400 font-bold uppercase tracking-tighter";
+                    hint.textContent = "Menunggu 10 Bot jalan untuk mulai fase compound.";
+                    if (btnWithdraw) btnWithdraw.disabled = true;
                 }
 
                 // Pull Idle Reserve natively from backend state
@@ -722,7 +738,7 @@
         async function resetBot(id) { await fetch('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id, min_prob: 0.8, max_bet: 3.0, reset_balance: 10 })}); updateData(); }
         async function resetAll() { if(confirm("Are you sure you want to RESET ALL BOTS? This will clear all history and balances and PAUSE everything.")) { await fetch('/api/reset_all', { method: 'POST' }); updateData(); } }
         async function prepareWithdraw() { 
-            if(confirm("Apakah Anda yakin ingin melakukan WITHDRAW GAJI?\n\nSemua bot akan dinonaktifkan satu-persatu setelah trade yang sedang berjalan selesai.")) { 
+            if(confirm("Apakah Anda yakin ingin memproses WITHDRAW GAJIAN?\n\nSistem tidak akan buka posisi baru dan akan menunggu semua aset tersettle (ditutup murni). Lalu otomatis transfer & reset sistem...")) { 
                 await fetch('/api/prepare_withdraw', { method: 'POST' }); 
                 updateData(); 
             } 
