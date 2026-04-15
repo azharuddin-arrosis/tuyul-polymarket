@@ -2,45 +2,301 @@
   "bots": [
     {
       "id": "VORTEX",
-      "balance": 7.569816024049589,
+      "balance": 4.702875333096581,
       "initial_balance": 10.0,
-      "pnl_realized": 0.8666666666666665,
-      "pnl_won": 0.8866666666666665,
-      "pnl_lost": 0.0,
-      "usd_in_bet": 3.1768506426170764,
+      "pnl_realized": 6.088897459657216,
+      "pnl_won": 12.686251635489116,
+      "pnl_lost": -6.197354175831899,
+      "usd_in_bet": 3.0,
       "open_trades": [
         {
-          "id": "T-1888",
+          "id": "T-4025",
           "question": "Russia-Ukraine Ceasefire before GTA VI?",
-          "bet_amount": 1.1067971810589328,
+          "bet_amount": 1.0,
           "entry_prob": 0.545,
-          "unrealized_pnl": 0.06766959594328134,
-          "current_price": 0.5783213080230322,
+          "unrealized_pnl": 0.0662568328791524,
+          "current_price": 0.5811099739191381,
           "slug": "https://polymarket.com/event/russia-ukraine-ceasefire-before-gta-vi-554",
           "is_moonshot": true
         },
         {
-          "id": "T-4578",
-          "question": "New Rihanna Album before GTA VI?",
-          "bet_amount": 1.0419896090270193,
+          "id": "T-9974",
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
           "entry_prob": 0.545,
-          "unrealized_pnl": 0.004543683576759321,
-          "current_price": 0.5473765184680164,
-          "slug": "https://polymarket.com/event/new-rhianna-album-before-gta-vi-926",
+          "unrealized_pnl": 0.05661410228979902,
+          "current_price": 0.5758546857479405,
+          "slug": "https://polymarket.com/event/russia-ukraine-ceasefire-before-gta-vi-554",
           "is_moonshot": true
         },
         {
-          "id": "T-1484",
+          "id": "T-4884",
           "question": "Russia-Ukraine Ceasefire before GTA VI?",
-          "bet_amount": 1.0280638525311243,
+          "bet_amount": 1.0,
           "entry_prob": 0.545,
-          "unrealized_pnl": 0.008248933796159343,
-          "current_price": 0.5493729471742814,
+          "unrealized_pnl": -0.021267938171888323,
+          "current_price": 0.5334089736963209,
           "slug": "https://polymarket.com/event/russia-ukraine-ceasefire-before-gta-vi-554",
           "is_moonshot": true
         }
       ],
       "history": [
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": 0.0994000000000001,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:37"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": 0.0994000000000001,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:37"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": 0.7981651376146788,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:37"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": -0.11949999999999998,
+          "won": false,
+          "was_stopped": true,
+          "time": "21:36"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": -0.52,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:36"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": -0.52,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:36"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": -0.52,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:36"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": -0.52,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:36"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.308183878978351,
+          "pnl": 0.13619715515001526,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:36"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": -0.11949999999999998,
+          "won": false,
+          "was_stopped": true,
+          "time": "21:34"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": -0.52,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:34"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": 0.7981651376146788,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:33"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": -0.52,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:33"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": -0.52,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:33"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.260870207011841,
+          "pnl": 0.13054790271721395,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:33"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1687542074890047,
+          "pnl": 0.9362339470079764,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:32"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.266731135315072,
+          "pnl": 1.016395253645854,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:32"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.214177681526857,
+          "pnl": 0.9733978498950924,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:31"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1563056235464082,
+          "pnl": 0.926048949613474,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:31"
+        },
+        {
+          "question": "New Rihanna Album before GTA VI?",
+          "bet_amount": 1.2023968584042934,
+          "pnl": -0.6211984292021467,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:31"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.112338878819156,
+          "pnl": 0.11281326213100736,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:31"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1909579193809252,
+          "pnl": 0.954400250003586,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:31"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1539473376827651,
+          "pnl": -0.5969736688413826,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:30"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.051833495166349,
+          "pnl": 0.8405734963205045,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:30"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0626689672754144,
+          "pnl": 0.8494387018497379,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:30"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.097021637459793,
+          "pnl": 0.8775448589785717,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:30"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.082759372147832,
+          "pnl": -0.561379686073916,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:29"
+        },
+        {
+          "question": "New Rihanna Album before GTA VI?",
+          "bet_amount": 1.041989609027019,
+          "pnl": 0.8325195718626566,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:29"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0474531626143857,
+          "pnl": 0.10506590761615774,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:28"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0376047834289086,
+          "pnl": -0.5388023917144543,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:28"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0280638525311243,
+          "pnl": 0.8211260033828041,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:28"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1067971810589328,
+          "pnl": 0.11215158341843667,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:28"
+        },
         {
           "question": "New Playboi Carti Album before GTA VI?",
           "bet_amount": 1.0,
@@ -124,7 +380,7 @@
         {
           "question": "Will Harvey Weinstein be sentenced to between 10 and 20 years in prison?",
           "category": "All",
-          "prob": 0.2455,
+          "prob": 0.246,
           "slug": "https://polymarket.com/event/will-harvey-weinstein-be-sentenced-to-between-10-and-20-years-in-prison",
           "token_id": "[\"15540133404064485946536607974212890170021691204987131841181394872998839987451\", \"63603874958591978684257718702104189214159397118281244112857573557732401361881\"]"
         },
@@ -173,14 +429,14 @@
         {
           "question": "Will the Vegas Golden Knights win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0645,
+          "prob": 0.0635,
           "slug": "https://polymarket.com/event/will-the-vegas-golden-knights-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"68803485030073596962715540294172682212192134248970512695855620898253368033218\", \"58534831224432332845742394199681128700782343287162911891204466367752298448751\"]"
         },
         {
           "question": "Will the Tampa Bay Lightning win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.129,
+          "prob": 0.1295,
           "slug": "https://polymarket.com/event/will-the-tampa-bay-lightning-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"35573117698117780238142713946749692621043319879346349609080985768472429209643\", \"76626937605855383085159195963889428951048025160807952406004049979161449392204\"]"
         },
@@ -208,7 +464,7 @@
         {
           "question": "Will the Montreal Canadiens win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.054,
+          "prob": 0.0555,
           "slug": "https://polymarket.com/event/will-the-montreal-canadiens-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"114248353339288476395516704859280406139740194553592209059241667781908210476009\", \"85705323099460694144578384076010167420188174879039498210125410497783582291911\"]"
         },
@@ -229,7 +485,7 @@
         {
           "question": "Will the Pittsburgh Penguins win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0295,
+          "prob": 0.029,
           "slug": "https://polymarket.com/event/will-the-pittsburgh-penguins-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"8851645587670338204652278122922654341568030658294043049798551516787478126093\", \"105159591365972907779164323332625661203129821196625530161327324705373588468320\"]"
         },
@@ -292,7 +548,7 @@
         {
           "question": "MegaETH market cap (FDV) >$6B one day after launch?",
           "category": "All",
-          "prob": 0.0245,
+          "prob": 0.024,
           "slug": "https://polymarket.com/event/megaeth-market-cap-fdv-6b-one-day-after-launch-365-559-334-815-776-488-224-766",
           "token_id": "[\"78059086946243166298250434231742381590921423205138738331803802527161013528631\", \"70438891017239169523888340706940482203786228582885836666142245799578935372711\"]"
         },
@@ -320,14 +576,14 @@
         {
           "question": "Will France win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.1635,
+          "prob": 0.1645,
           "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
           "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
         },
         {
           "question": "Will Brazil win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.085,
+          "prob": 0.0855,
           "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
           "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
         },
@@ -369,51 +625,703 @@
       ],
       "chart_history": [
         {
-          "time": "21:27:33",
-          "wallet": 6.761213209914048,
-          "total": 9.92918504214373
+          "time": "21:32:03",
+          "wallet": 14.736968040570432,
+          "total": 17.270235950360952
         },
         {
-          "time": "21:27:36",
-          "wallet": 6.761213209914048,
-          "total": 9.928369981607892
+          "time": "21:32:06",
+          "wallet": 6.4009459140098075,
+          "total": 9.94880199640535
         },
         {
-          "time": "21:27:39",
-          "wallet": 6.761213209914048,
-          "total": 9.94080077330284
+          "time": "21:32:10",
+          "wallet": 6.4009459140098075,
+          "total": 9.903440467108828
         },
         {
-          "time": "21:27:43",
-          "wallet": 8.627879876580714,
-          "total": 10.738994726745327
+          "time": "21:32:13",
+          "wallet": 6.4009459140098075,
+          "total": 9.896336908516869
         },
         {
-          "time": "21:27:46",
-          "wallet": 7.569816024049589,
-          "total": 10.753453617866725
+          "time": "21:32:16",
+          "wallet": 6.4009459140098075,
+          "total": 9.90640087091801
         },
         {
-          "time": "21:27:49",
-          "wallet": 7.569816024049589,
-          "total": 10.827128879982865
+          "time": "21:32:20",
+          "wallet": 6.4009459140098075,
+          "total": 9.890022418032393
+        },
+        {
+          "time": "21:32:23",
+          "wallet": 6.4009459140098075,
+          "total": 9.90421979492032
+        },
+        {
+          "time": "21:32:26",
+          "wallet": 6.4009459140098075,
+          "total": 9.98187491423224
+        },
+        {
+          "time": "21:32:30",
+          "wallet": 6.4009459140098075,
+          "total": 10.016975164898382
+        },
+        {
+          "time": "21:32:33",
+          "wallet": 6.4009459140098075,
+          "total": 10.07331217792132
+        },
+        {
+          "time": "21:32:37",
+          "wallet": 6.4009459140098075,
+          "total": 10.084794019765589
+        },
+        {
+          "time": "21:32:40",
+          "wallet": 6.4009459140098075,
+          "total": 10.097243662474062
+        },
+        {
+          "time": "21:32:43",
+          "wallet": 6.4009459140098075,
+          "total": 10.216412988219323
+        },
+        {
+          "time": "21:32:47",
+          "wallet": 6.4009459140098075,
+          "total": 10.234395560239069
+        },
+        {
+          "time": "21:32:51",
+          "wallet": 6.4009459140098075,
+          "total": 10.134820200208768
+        },
+        {
+          "time": "21:32:54",
+          "wallet": 6.4009459140098075,
+          "total": 10.117370715743425
+        },
+        {
+          "time": "21:32:57",
+          "wallet": 6.4009459140098075,
+          "total": 10.143295691466864
+        },
+        {
+          "time": "21:33:01",
+          "wallet": 7.7923640237388625,
+          "total": 10.09928244202899
+        },
+        {
+          "time": "21:33:04",
+          "wallet": 6.762364023738862,
+          "total": 10.068942851720635
+        },
+        {
+          "time": "21:33:07",
+          "wallet": 6.762364023738862,
+          "total": 10.04025441199436
+        },
+        {
+          "time": "21:33:11",
+          "wallet": 6.762364023738862,
+          "total": 10.094987341862584
+        },
+        {
+          "time": "21:33:14",
+          "wallet": 6.762364023738862,
+          "total": 10.061514320445916
+        },
+        {
+          "time": "21:33:17",
+          "wallet": 6.762364023738862,
+          "total": 10.136919345987115
+        },
+        {
+          "time": "21:33:20",
+          "wallet": 7.242364023738862,
+          "total": 9.563545001534912
+        },
+        {
+          "time": "21:33:24",
+          "wallet": 6.2123640237388615,
+          "total": 9.503692228648612
+        },
+        {
+          "time": "21:33:27",
+          "wallet": 6.2123640237388615,
+          "total": 9.448922281456598
+        },
+        {
+          "time": "21:33:30",
+          "wallet": 6.2123640237388615,
+          "total": 9.467476341974136
+        },
+        {
+          "time": "21:33:34",
+          "wallet": 6.2123640237388615,
+          "total": 9.512686373600369
+        },
+        {
+          "time": "21:33:37",
+          "wallet": 6.2123640237388615,
+          "total": 9.54057787937168
+        },
+        {
+          "time": "21:33:40",
+          "wallet": 6.2123640237388615,
+          "total": 9.502940209011298
+        },
+        {
+          "time": "21:33:44",
+          "wallet": 6.692364023738861,
+          "total": 8.970299262517894
+        },
+        {
+          "time": "21:33:47",
+          "wallet": 5.662364023738861,
+          "total": 8.947902020823369
+        },
+        {
+          "time": "21:33:50",
+          "wallet": 7.46052916135354,
+          "total": 9.796995078075993
+        },
+        {
+          "time": "21:33:55",
+          "wallet": 6.430529161353539,
+          "total": 9.806940103116997
+        },
+        {
+          "time": "21:33:59",
+          "wallet": 6.430529161353539,
+          "total": 9.843438634246615
+        },
+        {
+          "time": "21:34:02",
+          "wallet": 6.910529161353539,
+          "total": 9.263683959804776
+        },
+        {
+          "time": "21:34:05",
+          "wallet": 5.880529161353539,
+          "total": 9.287593390035935
+        },
+        {
+          "time": "21:34:08",
+          "wallet": 5.880529161353539,
+          "total": 9.288778162534888
+        },
+        {
+          "time": "21:34:12",
+          "wallet": 5.880529161353539,
+          "total": 9.253948169593002
+        },
+        {
+          "time": "21:34:15",
+          "wallet": 5.880529161353539,
+          "total": 9.28244918255064
+        },
+        {
+          "time": "21:34:18",
+          "wallet": 5.880529161353539,
+          "total": 9.25794821246699
+        },
+        {
+          "time": "21:34:21",
+          "wallet": 6.761029161353539,
+          "total": 9.19595247133466
+        },
+        {
+          "time": "21:34:25",
+          "wallet": 5.731029161353539,
+          "total": 9.104120198733249
+        },
+        {
+          "time": "21:34:28",
+          "wallet": 5.731029161353539,
+          "total": 9.096118160548183
+        },
+        {
+          "time": "21:34:41",
+          "wallet": 5.731029161353539,
+          "total": 9.047605006355711
+        },
+        {
+          "time": "21:34:44",
+          "wallet": 5.731029161353539,
+          "total": 9.064032799203726
+        },
+        {
+          "time": "21:34:47",
+          "wallet": 5.731029161353539,
+          "total": 9.035260946626865
+        },
+        {
+          "time": "21:34:51",
+          "wallet": 5.731029161353539,
+          "total": 9.097186437560282
+        },
+        {
+          "time": "21:34:54",
+          "wallet": 5.731029161353539,
+          "total": 9.121289572722807
+        },
+        {
+          "time": "21:34:57",
+          "wallet": 5.731029161353539,
+          "total": 9.152263793027885
+        },
+        {
+          "time": "21:35:01",
+          "wallet": 5.731029161353539,
+          "total": 9.205097000781308
+        },
+        {
+          "time": "21:35:47",
+          "wallet": 5.731029161353539,
+          "total": 9.245130734460316
+        },
+        {
+          "time": "21:35:51",
+          "wallet": 5.731029161353539,
+          "total": 9.238135085919053
+        },
+        {
+          "time": "21:35:54",
+          "wallet": 5.731029161353539,
+          "total": 9.229359949053471
+        },
+        {
+          "time": "21:35:57",
+          "wallet": 5.731029161353539,
+          "total": 9.257044032177516
+        },
+        {
+          "time": "21:36:01",
+          "wallet": 5.731029161353539,
+          "total": 9.304180336524114
+        },
+        {
+          "time": "21:36:04",
+          "wallet": 7.175410195481906,
+          "total": 9.316688374790212
+        },
+        {
+          "time": "21:36:07",
+          "wallet": 6.145410195481905,
+          "total": 9.328506675829848
+        },
+        {
+          "time": "21:36:11",
+          "wallet": 6.145410195481905,
+          "total": 9.279985572891045
+        },
+        {
+          "time": "21:36:14",
+          "wallet": 6.625410195481905,
+          "total": 8.634215770270202
+        },
+        {
+          "time": "21:36:17",
+          "wallet": 5.595410195481905,
+          "total": 8.631568302399266
+        },
+        {
+          "time": "21:36:20",
+          "wallet": 5.595410195481905,
+          "total": 8.658108234064905
+        },
+        {
+          "time": "21:36:24",
+          "wallet": 5.595410195481905,
+          "total": 8.656107710119905
+        },
+        {
+          "time": "21:36:27",
+          "wallet": 5.595410195481905,
+          "total": 8.627596868785806
+        },
+        {
+          "time": "21:36:30",
+          "wallet": 5.595410195481905,
+          "total": 8.559162493618476
+        },
+        {
+          "time": "21:36:34",
+          "wallet": 6.075410195481904,
+          "total": 8.008948536108637
+        },
+        {
+          "time": "21:36:37",
+          "wallet": 5.045410195481904,
+          "total": 7.9817108261706045
+        },
+        {
+          "time": "21:36:40",
+          "wallet": 5.5254101954819035,
+          "total": 7.401848183622188
+        },
+        {
+          "time": "21:36:44",
+          "wallet": 4.495410195481903,
+          "total": 7.3196401268915405
+        },
+        {
+          "time": "21:36:47",
+          "wallet": 4.495410195481903,
+          "total": 7.328482369802903
+        },
+        {
+          "time": "21:36:50",
+          "wallet": 4.975410195481903,
+          "total": 6.877529774162904
+        },
+        {
+          "time": "21:36:53",
+          "wallet": 3.9454101954819025,
+          "total": 6.790387616521064
+        },
+        {
+          "time": "21:36:57",
+          "wallet": 4.825910195481903,
+          "total": 6.733400188564589
+        },
+        {
+          "time": "21:37:00",
+          "wallet": 5.594075333096582,
+          "total": 7.554027620346047
+        },
+        {
+          "time": "21:37:03",
+          "wallet": 4.564075333096581,
+          "total": 7.545762868166707
+        },
+        {
+          "time": "21:37:07",
+          "wallet": 4.564075333096581,
+          "total": 7.568633315528664
+        },
+        {
+          "time": "21:37:10",
+          "wallet": 4.564075333096581,
+          "total": 7.618595314174982
+        },
+        {
+          "time": "21:37:13",
+          "wallet": 4.564075333096581,
+          "total": 7.6128416288696465
+        },
+        {
+          "time": "21:37:17",
+          "wallet": 4.564075333096581,
+          "total": 7.595985319498461
+        },
+        {
+          "time": "21:37:20",
+          "wallet": 4.564075333096581,
+          "total": 7.613495261721729
+        },
+        {
+          "time": "21:37:23",
+          "wallet": 4.564075333096581,
+          "total": 7.57610030801968
+        },
+        {
+          "time": "21:37:26",
+          "wallet": 4.564075333096581,
+          "total": 7.613249410289859
+        },
+        {
+          "time": "21:37:30",
+          "wallet": 4.564075333096581,
+          "total": 7.641075208424609
+        },
+        {
+          "time": "21:37:33",
+          "wallet": 4.564075333096581,
+          "total": 7.739256022653212
+        },
+        {
+          "time": "21:37:36",
+          "wallet": 5.6634753330965815,
+          "total": 7.7492822486502115
+        },
+        {
+          "time": "21:37:40",
+          "wallet": 5.732875333096581,
+          "total": 7.76881125229067
+        },
+        {
+          "time": "21:37:43",
+          "wallet": 4.702875333096581,
+          "total": 7.754935292449245
+        },
+        {
+          "time": "21:37:47",
+          "wallet": 4.702875333096581,
+          "total": 7.773359665932683
+        },
+        {
+          "time": "21:37:50",
+          "wallet": 4.702875333096581,
+          "total": 7.794027994910846
+        },
+        {
+          "time": "21:37:53",
+          "wallet": 4.702875333096581,
+          "total": 7.8090238164865635
+        },
+        {
+          "time": "21:37:57",
+          "wallet": 4.702875333096581,
+          "total": 7.8115375780630485
+        },
+        {
+          "time": "21:38:00",
+          "wallet": 4.702875333096581,
+          "total": 7.813292022567905
+        },
+        {
+          "time": "21:38:03",
+          "wallet": 4.702875333096581,
+          "total": 7.784728631761904
+        },
+        {
+          "time": "21:38:06",
+          "wallet": 4.702875333096581,
+          "total": 7.710292789995831
+        },
+        {
+          "time": "21:38:10",
+          "wallet": 4.702875333096581,
+          "total": 7.709856095400267
+        },
+        {
+          "time": "21:38:13",
+          "wallet": 4.702875333096581,
+          "total": 7.724167824622696
+        },
+        {
+          "time": "21:38:16",
+          "wallet": 4.702875333096581,
+          "total": 7.722871042796688
+        },
+        {
+          "time": "21:38:19",
+          "wallet": 4.702875333096581,
+          "total": 7.6940833245399345
+        },
+        {
+          "time": "21:38:23",
+          "wallet": 4.702875333096581,
+          "total": 7.795912934582442
+        },
+        {
+          "time": "21:38:26",
+          "wallet": 4.702875333096581,
+          "total": 7.8044783300936444
         }
       ],
       "min_prob_threshold": 0.52,
       "max_bet_cap": 2.0,
-      "last_sync": "21:27:49",
+      "last_sync": "21:38:26",
       "running": true
     },
     {
       "id": "PHANTOM",
-      "balance": 0.0,
-      "initial_balance": 0.0,
-      "pnl_realized": 0.0,
-      "pnl_won": 0.0,
-      "pnl_lost": 0.0,
-      "usd_in_bet": 0.0,
-      "open_trades": [],
-      "history": [],
+      "balance": 12.979808521717416,
+      "initial_balance": 10.0,
+      "pnl_realized": 6.151829415617659,
+      "pnl_won": 8.329409714740107,
+      "pnl_lost": -1.857580299122449,
+      "usd_in_bet": 2.5120208939002406,
+      "open_trades": [
+        {
+          "id": "T-3412",
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.2560519780745851,
+          "entry_prob": 0.545,
+          "unrealized_pnl": -0.014413488860038546,
+          "current_price": 0.5387459981228145,
+          "slug": "https://polymarket.com/event/russia-ukraine-ceasefire-before-gta-vi-554",
+          "is_moonshot": true
+        },
+        {
+          "id": "T-3561",
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.255968915825655,
+          "entry_prob": 0.545,
+          "unrealized_pnl": -0.017464479802326058,
+          "current_price": 0.5374216743166684,
+          "slug": "https://polymarket.com/event/russia-ukraine-ceasefire-before-gta-vi-554",
+          "is_moonshot": true
+        }
+      ],
+      "history": [
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.2583258420418704,
+          "pnl": 0.13024410553979948,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:38"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1255585785389317,
+          "pnl": 0.11439169427754854,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:38"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.2084368844784934,
+          "pnl": 0.12428736400673222,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:38"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.2190149584241532,
+          "pnl": 0.9773555412134491,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:37"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1764581338096194,
+          "pnl": -0.1370575843140571,
+          "won": false,
+          "was_stopped": true,
+          "time": "21:37"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1322688964059053,
+          "pnl": 0.906382937444758,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:36"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1083110223302859,
+          "pnl": 0.8867814401047236,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:36"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1606557880255473,
+          "pnl": 0.11858230109025046,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:36"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.11127493026132,
+          "pnl": -0.57563746513066,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:36"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1424213922265516,
+          "pnl": 0.9146893555849895,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:35"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0827356393108447,
+          "pnl": 0.10927863533371497,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:35"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1314009036686332,
+          "pnl": -0.5857004518343166,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:34"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0960823563303128,
+          "pnl": 0.8767763719040118,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:34"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0783695956868304,
+          "pnl": -0.5591847978434152,
+          "won": false,
+          "was_stopped": false,
+          "time": "21:34"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.1067971810589328,
+          "pnl": 0.8855428679526203,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:34"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0768214400843217,
+          "pnl": 0.10857247994606813,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:33"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0309619036935571,
+          "pnl": 0.10309685130101082,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:33"
+        },
+        {
+          "question": "Russia-Ukraine Ceasefire before GTA VI?",
+          "bet_amount": 1.0285309878041866,
+          "pnl": 0.8215081971777738,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:33"
+        },
+        {
+          "question": "New Playboi Carti Album before GTA VI?",
+          "bet_amount": 1.0,
+          "pnl": 0.0994000000000001,
+          "won": true,
+          "was_stopped": true,
+          "time": "21:32"
+        },
+        {
+          "question": "New Rihanna Album before GTA VI?",
+          "bet_amount": 1.041989609027019,
+          "pnl": 0.8325195718626566,
+          "won": true,
+          "was_stopped": false,
+          "time": "21:32"
+        }
+      ],
       "current_markets": [
         {
           "question": "Russia-Ukraine Ceasefire before GTA VI?",
@@ -488,7 +1396,7 @@
         {
           "question": "Will Harvey Weinstein be sentenced to between 10 and 20 years in prison?",
           "category": "All",
-          "prob": 0.2455,
+          "prob": 0.246,
           "slug": "https://polymarket.com/event/will-harvey-weinstein-be-sentenced-to-between-10-and-20-years-in-prison",
           "token_id": "[\"15540133404064485946536607974212890170021691204987131841181394872998839987451\", \"63603874958591978684257718702104189214159397118281244112857573557732401361881\"]"
         },
@@ -537,14 +1445,14 @@
         {
           "question": "Will the Vegas Golden Knights win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0645,
+          "prob": 0.0635,
           "slug": "https://polymarket.com/event/will-the-vegas-golden-knights-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"68803485030073596962715540294172682212192134248970512695855620898253368033218\", \"58534831224432332845742394199681128700782343287162911891204466367752298448751\"]"
         },
         {
           "question": "Will the Tampa Bay Lightning win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.129,
+          "prob": 0.1295,
           "slug": "https://polymarket.com/event/will-the-tampa-bay-lightning-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"35573117698117780238142713946749692621043319879346349609080985768472429209643\", \"76626937605855383085159195963889428951048025160807952406004049979161449392204\"]"
         },
@@ -572,7 +1480,7 @@
         {
           "question": "Will the Montreal Canadiens win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.054,
+          "prob": 0.0555,
           "slug": "https://polymarket.com/event/will-the-montreal-canadiens-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"114248353339288476395516704859280406139740194553592209059241667781908210476009\", \"85705323099460694144578384076010167420188174879039498210125410497783582291911\"]"
         },
@@ -593,7 +1501,7 @@
         {
           "question": "Will the Pittsburgh Penguins win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0295,
+          "prob": 0.029,
           "slug": "https://polymarket.com/event/will-the-pittsburgh-penguins-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"8851645587670338204652278122922654341568030658294043049798551516787478126093\", \"105159591365972907779164323332625661203129821196625530161327324705373588468320\"]"
         },
@@ -656,7 +1564,7 @@
         {
           "question": "MegaETH market cap (FDV) >$6B one day after launch?",
           "category": "All",
-          "prob": 0.0245,
+          "prob": 0.024,
           "slug": "https://polymarket.com/event/megaeth-market-cap-fdv-6b-one-day-after-launch-365-559-334-815-776-488-224-766",
           "token_id": "[\"78059086946243166298250434231742381590921423205138738331803802527161013528631\", \"70438891017239169523888340706940482203786228582885836666142245799578935372711\"]"
         },
@@ -684,14 +1592,14 @@
         {
           "question": "Will France win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.1635,
+          "prob": 0.1645,
           "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
           "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
         },
         {
           "question": "Will Brazil win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.085,
+          "prob": 0.0855,
           "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
           "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
         },
@@ -731,11 +1639,497 @@
           "token_id": "[\"60447443643099453130956385288904175887233107411078568881602330835010340506057\", \"111538579557239934343870815626480092245052857494675784434731223739153238373070\"]"
         }
       ],
-      "chart_history": [],
+      "chart_history": [
+        {
+          "time": "21:32:07",
+          "wallet": 6.761213209914048,
+          "total": 9.866209014098452
+        },
+        {
+          "time": "21:32:10",
+          "wallet": 6.761213209914048,
+          "total": 9.870095675029626
+        },
+        {
+          "time": "21:32:13",
+          "wallet": 6.761213209914048,
+          "total": 9.936530919938788
+        },
+        {
+          "time": "21:32:17",
+          "wallet": 6.761213209914048,
+          "total": 9.992825013013586
+        },
+        {
+          "time": "21:32:20",
+          "wallet": 6.761213209914048,
+          "total": 9.94780636547885
+        },
+        {
+          "time": "21:32:23",
+          "wallet": 6.761213209914048,
+          "total": 9.956360420296177
+        },
+        {
+          "time": "21:32:27",
+          "wallet": 6.761213209914048,
+          "total": 9.886032285003337
+        },
+        {
+          "time": "21:32:30",
+          "wallet": 6.761213209914048,
+          "total": 9.882848145685182
+        },
+        {
+          "time": "21:32:34",
+          "wallet": 8.635722390803723,
+          "total": 10.83829616725808
+        },
+        {
+          "time": "21:32:37",
+          "wallet": 7.577191402999537,
+          "total": 10.817076443664472
+        },
+        {
+          "time": "21:32:40",
+          "wallet": 7.577191402999537,
+          "total": 10.827063829378131
+        },
+        {
+          "time": "21:32:44",
+          "wallet": 7.577191402999537,
+          "total": 10.784409097877411
+        },
+        {
+          "time": "21:32:48",
+          "wallet": 8.676591402999538,
+          "total": 10.740424557453007
+        },
+        {
+          "time": "21:32:51",
+          "wallet": 7.615629499305981,
+          "total": 10.787278629258044
+        },
+        {
+          "time": "21:32:54",
+          "wallet": 7.615629499305981,
+          "total": 10.766635695382652
+        },
+        {
+          "time": "21:32:58",
+          "wallet": 7.615629499305981,
+          "total": 10.790163784226088
+        },
+        {
+          "time": "21:33:01",
+          "wallet": 7.615629499305981,
+          "total": 10.80634235540846
+        },
+        {
+          "time": "21:33:04",
+          "wallet": 7.615629499305981,
+          "total": 10.80834185183885
+        },
+        {
+          "time": "21:33:08",
+          "wallet": 7.615629499305981,
+          "total": 10.832667015020297
+        },
+        {
+          "time": "21:33:11",
+          "wallet": 9.46566868428794,
+          "total": 11.655638982720374
+        },
+        {
+          "time": "21:33:14",
+          "wallet": 8.35884724420362,
+          "total": 11.670951461062844
+        },
+        {
+          "time": "21:33:17",
+          "wallet": 9.492905999198188,
+          "total": 11.672770550504303
+        },
+        {
+          "time": "21:33:21",
+          "wallet": 8.384536403511357,
+          "total": 11.60677560197126
+        },
+        {
+          "time": "21:33:24",
+          "wallet": 8.384536403511357,
+          "total": 11.579856144792828
+        },
+        {
+          "time": "21:33:27",
+          "wallet": 8.384536403511357,
+          "total": 11.653588313658132
+        },
+        {
+          "time": "21:33:31",
+          "wallet": 8.384536403511357,
+          "total": 11.6954892434857
+        },
+        {
+          "time": "21:33:34",
+          "wallet": 8.384536403511357,
+          "total": 11.699546633185667
+        },
+        {
+          "time": "21:33:38",
+          "wallet": 8.384536403511357,
+          "total": 11.687934009951851
+        },
+        {
+          "time": "21:33:41",
+          "wallet": 9.569930323541746,
+          "total": 11.731796178973603
+        },
+        {
+          "time": "21:33:44",
+          "wallet": 8.4571946842309,
+          "total": 11.696611603748767
+        },
+        {
+          "time": "21:33:47",
+          "wallet": 8.4571946842309,
+          "total": 11.769088565041807
+        },
+        {
+          "time": "21:33:51",
+          "wallet": 8.4571946842309,
+          "total": 11.795675039529131
+        },
+        {
+          "time": "21:33:56",
+          "wallet": 8.4571946842309,
+          "total": 11.822920736152362
+        },
+        {
+          "time": "21:33:59",
+          "wallet": 8.4571946842309,
+          "total": 11.7862305097693
+        },
+        {
+          "time": "21:34:02",
+          "wallet": 8.4571946842309,
+          "total": 11.811009052974333
+        },
+        {
+          "time": "21:34:05",
+          "wallet": 8.4571946842309,
+          "total": 11.823597084456551
+        },
+        {
+          "time": "21:34:09",
+          "wallet": 8.4571946842309,
+          "total": 11.879118744293876
+        },
+        {
+          "time": "21:34:12",
+          "wallet": 8.4571946842309,
+          "total": 11.941775581153331
+        },
+        {
+          "time": "21:34:15",
+          "wallet": 8.4571946842309,
+          "total": 11.920651328838757
+        },
+        {
+          "time": "21:34:19",
+          "wallet": 8.4571946842309,
+          "total": 11.904829093046938
+        },
+        {
+          "time": "21:34:22",
+          "wallet": 8.4571946842309,
+          "total": 11.911268901122869
+        },
+        {
+          "time": "21:34:25",
+          "wallet": 10.449534733242452,
+          "total": 12.737662842623443
+        },
+        {
+          "time": "21:34:43",
+          "wallet": 9.807318627417233,
+          "total": 12.158839825102467
+        },
+        {
+          "time": "21:34:46",
+          "wallet": 10.654094999321245,
+          "total": 13.001475554234668
+        },
+        {
+          "time": "21:34:49",
+          "wallet": 9.481673607094693,
+          "total": 13.061658415182647
+        },
+        {
+          "time": "21:34:52",
+          "wallet": 10.02737405892901,
+          "total": 12.357802554717887
+        },
+        {
+          "time": "21:34:55",
+          "wallet": 8.889063036598724,
+          "total": 12.372141176516601
+        },
+        {
+          "time": "21:34:59",
+          "wallet": 8.889063036598724,
+          "total": 12.331636566683734
+        },
+        {
+          "time": "21:35:02",
+          "wallet": 8.889063036598724,
+          "total": 12.327308659385357
+        },
+        {
+          "time": "21:35:49",
+          "wallet": 10.081077311243284,
+          "total": 12.261827615501689
+        },
+        {
+          "time": "21:35:52",
+          "wallet": 8.939802380981964,
+          "total": 12.160365400922622
+        },
+        {
+          "time": "21:35:56",
+          "wallet": 8.939802380981964,
+          "total": 12.253598546724328
+        },
+        {
+          "time": "21:35:59",
+          "wallet": 10.996913128793505,
+          "total": 13.193092094302937
+        },
+        {
+          "time": "21:36:02",
+          "wallet": 9.806257340767958,
+          "total": 13.178725604509388
+        },
+        {
+          "time": "21:36:05",
+          "wallet": 9.806257340767958,
+          "total": 13.208320762030834
+        },
+        {
+          "time": "21:36:09",
+          "wallet": 10.341894805898619,
+          "total": 12.523656451372
+        },
+        {
+          "time": "21:36:12",
+          "wallet": 9.186336227359687,
+          "total": 12.483617750150836
+        },
+        {
+          "time": "21:36:15",
+          "wallet": 9.186336227359687,
+          "total": 12.480067834158897
+        },
+        {
+          "time": "21:36:19",
+          "wallet": 9.186336227359687,
+          "total": 12.510304756325926
+        },
+        {
+          "time": "21:36:22",
+          "wallet": 9.186336227359687,
+          "total": 12.54061635600953
+        },
+        {
+          "time": "21:36:25",
+          "wallet": 9.186336227359687,
+          "total": 12.636966413534873
+        },
+        {
+          "time": "21:36:28",
+          "wallet": 9.186336227359687,
+          "total": 12.670885020741611
+        },
+        {
+          "time": "21:36:32",
+          "wallet": 10.465574316475486,
+          "total": 12.740524950983161
+        },
+        {
+          "time": "21:36:35",
+          "wallet": 9.30330542006958,
+          "total": 12.70053171506637
+        },
+        {
+          "time": "21:36:38",
+          "wallet": 9.30330542006958,
+          "total": 12.676061349164836
+        },
+        {
+          "time": "21:36:42",
+          "wallet": 11.29839788250459,
+          "total": 13.636271476311338
+        },
+        {
+          "time": "21:36:45",
+          "wallet": 12.130591582545634,
+          "total": 14.49274097054549
+        },
+        {
+          "time": "21:36:48",
+          "wallet": 10.88157662412148,
+          "total": 14.514995809534291
+        },
+        {
+          "time": "21:36:52",
+          "wallet": 10.88157662412148,
+          "total": 14.473859359756384
+        },
+        {
+          "time": "21:36:55",
+          "wallet": 10.88157662412148,
+          "total": 14.511020079279428
+        },
+        {
+          "time": "21:36:59",
+          "wallet": 10.88157662412148,
+          "total": 14.488849515575357
+        },
+        {
+          "time": "21:37:02",
+          "wallet": 10.88157662412148,
+          "total": 14.479805016555952
+        },
+        {
+          "time": "21:37:06",
+          "wallet": 10.88157662412148,
+          "total": 14.437988750090884
+        },
+        {
+          "time": "21:37:09",
+          "wallet": 10.88157662412148,
+          "total": 14.405535221671432
+        },
+        {
+          "time": "21:37:12",
+          "wallet": 10.88157662412148,
+          "total": 14.440309536232327
+        },
+        {
+          "time": "21:37:15",
+          "wallet": 10.88157662412148,
+          "total": 14.467019275124546
+        },
+        {
+          "time": "21:37:19",
+          "wallet": 10.88157662412148,
+          "total": 14.548792897197107
+        },
+        {
+          "time": "21:37:22",
+          "wallet": 10.88157662412148,
+          "total": 14.575981586210505
+        },
+        {
+          "time": "21:37:25",
+          "wallet": 10.88157662412148,
+          "total": 14.51125323179757
+        },
+        {
+          "time": "21:37:28",
+          "wallet": 10.88157662412148,
+          "total": 14.488425275590496
+        },
+        {
+          "time": "21:37:32",
+          "wallet": 11.920977173617043,
+          "total": 14.464709364472307
+        },
+        {
+          "time": "21:37:35",
+          "wallet": 10.682540289138549,
+          "total": 14.4248986965811
+        },
+        {
+          "time": "21:37:38",
+          "wallet": 10.682540289138549,
+          "total": 14.449304048709385
+        },
+        {
+          "time": "21:37:41",
+          "wallet": 10.682540289138549,
+          "total": 14.461749455927578
+        },
+        {
+          "time": "21:37:45",
+          "wallet": 12.878910788776151,
+          "total": 15.381037875679617
+        },
+        {
+          "time": "21:37:48",
+          "wallet": 11.592858810701566,
+          "total": 15.358105202425104
+        },
+        {
+          "time": "21:37:52",
+          "wallet": 11.592858810701566,
+          "total": 15.337078114803756
+        },
+        {
+          "time": "21:37:55",
+          "wallet": 11.592858810701566,
+          "total": 15.378137489074565
+        },
+        {
+          "time": "21:37:58",
+          "wallet": 11.592858810701566,
+          "total": 15.336733113042426
+        },
+        {
+          "time": "21:38:01",
+          "wallet": 11.592858810701566,
+          "total": 15.409023974226988
+        },
+        {
+          "time": "21:38:05",
+          "wallet": 11.592858810701566,
+          "total": 15.336053651073863
+        },
+        {
+          "time": "21:38:08",
+          "wallet": 12.925583059186792,
+          "total": 15.333504213584575
+        },
+        {
+          "time": "21:38:11",
+          "wallet": 11.63725721714492,
+          "total": 15.335984420757173
+        },
+        {
+          "time": "21:38:15",
+          "wallet": 11.63725721714492,
+          "total": 15.39920368634584
+        },
+        {
+          "time": "21:38:18",
+          "wallet": 12.877207489961402,
+          "total": 15.447151128856815
+        },
+        {
+          "time": "21:38:21",
+          "wallet": 11.591238574135746,
+          "total": 15.400777750083883
+        },
+        {
+          "time": "21:38:24",
+          "wallet": 12.979808521717416,
+          "total": 15.459951446955293
+        }
+      ],
       "min_prob_threshold": 0.5,
       "max_bet_cap": 3.0,
-      "last_sync": "21:27:46",
-      "running": false
+      "last_sync": "21:38:24",
+      "running": true
     },
     {
       "id": "TITAN",
@@ -821,7 +2215,7 @@
         {
           "question": "Will Harvey Weinstein be sentenced to between 10 and 20 years in prison?",
           "category": "All",
-          "prob": 0.2455,
+          "prob": 0.246,
           "slug": "https://polymarket.com/event/will-harvey-weinstein-be-sentenced-to-between-10-and-20-years-in-prison",
           "token_id": "[\"15540133404064485946536607974212890170021691204987131841181394872998839987451\", \"63603874958591978684257718702104189214159397118281244112857573557732401361881\"]"
         },
@@ -870,14 +2264,14 @@
         {
           "question": "Will the Vegas Golden Knights win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0645,
+          "prob": 0.0635,
           "slug": "https://polymarket.com/event/will-the-vegas-golden-knights-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"68803485030073596962715540294172682212192134248970512695855620898253368033218\", \"58534831224432332845742394199681128700782343287162911891204466367752298448751\"]"
         },
         {
           "question": "Will the Tampa Bay Lightning win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.129,
+          "prob": 0.1295,
           "slug": "https://polymarket.com/event/will-the-tampa-bay-lightning-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"35573117698117780238142713946749692621043319879346349609080985768472429209643\", \"76626937605855383085159195963889428951048025160807952406004049979161449392204\"]"
         },
@@ -905,7 +2299,7 @@
         {
           "question": "Will the Montreal Canadiens win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.054,
+          "prob": 0.0555,
           "slug": "https://polymarket.com/event/will-the-montreal-canadiens-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"114248353339288476395516704859280406139740194553592209059241667781908210476009\", \"85705323099460694144578384076010167420188174879039498210125410497783582291911\"]"
         },
@@ -926,7 +2320,7 @@
         {
           "question": "Will the Pittsburgh Penguins win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0295,
+          "prob": 0.029,
           "slug": "https://polymarket.com/event/will-the-pittsburgh-penguins-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"8851645587670338204652278122922654341568030658294043049798551516787478126093\", \"105159591365972907779164323332625661203129821196625530161327324705373588468320\"]"
         },
@@ -989,7 +2383,7 @@
         {
           "question": "MegaETH market cap (FDV) >$6B one day after launch?",
           "category": "All",
-          "prob": 0.0245,
+          "prob": 0.024,
           "slug": "https://polymarket.com/event/megaeth-market-cap-fdv-6b-one-day-after-launch-365-559-334-815-776-488-224-766",
           "token_id": "[\"78059086946243166298250434231742381590921423205138738331803802527161013528631\", \"70438891017239169523888340706940482203786228582885836666142245799578935372711\"]"
         },
@@ -1017,14 +2411,14 @@
         {
           "question": "Will France win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.1635,
+          "prob": 0.1645,
           "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
           "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
         },
         {
           "question": "Will Brazil win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.085,
+          "prob": 0.0855,
           "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
           "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
         },
@@ -1067,7 +2461,7 @@
       "chart_history": [],
       "min_prob_threshold": 0.55,
       "max_bet_cap": 3.0,
-      "last_sync": "21:27:48",
+      "last_sync": "21:38:25",
       "running": false
     },
     {
@@ -1154,7 +2548,7 @@
         {
           "question": "Will Harvey Weinstein be sentenced to between 10 and 20 years in prison?",
           "category": "All",
-          "prob": 0.2455,
+          "prob": 0.246,
           "slug": "https://polymarket.com/event/will-harvey-weinstein-be-sentenced-to-between-10-and-20-years-in-prison",
           "token_id": "[\"15540133404064485946536607974212890170021691204987131841181394872998839987451\", \"63603874958591978684257718702104189214159397118281244112857573557732401361881\"]"
         },
@@ -1203,14 +2597,14 @@
         {
           "question": "Will the Vegas Golden Knights win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0645,
+          "prob": 0.0635,
           "slug": "https://polymarket.com/event/will-the-vegas-golden-knights-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"68803485030073596962715540294172682212192134248970512695855620898253368033218\", \"58534831224432332845742394199681128700782343287162911891204466367752298448751\"]"
         },
         {
           "question": "Will the Tampa Bay Lightning win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.129,
+          "prob": 0.1295,
           "slug": "https://polymarket.com/event/will-the-tampa-bay-lightning-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"35573117698117780238142713946749692621043319879346349609080985768472429209643\", \"76626937605855383085159195963889428951048025160807952406004049979161449392204\"]"
         },
@@ -1238,7 +2632,7 @@
         {
           "question": "Will the Montreal Canadiens win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.054,
+          "prob": 0.0555,
           "slug": "https://polymarket.com/event/will-the-montreal-canadiens-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"114248353339288476395516704859280406139740194553592209059241667781908210476009\", \"85705323099460694144578384076010167420188174879039498210125410497783582291911\"]"
         },
@@ -1259,7 +2653,7 @@
         {
           "question": "Will the Pittsburgh Penguins win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0295,
+          "prob": 0.029,
           "slug": "https://polymarket.com/event/will-the-pittsburgh-penguins-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"8851645587670338204652278122922654341568030658294043049798551516787478126093\", \"105159591365972907779164323332625661203129821196625530161327324705373588468320\"]"
         },
@@ -1322,7 +2716,7 @@
         {
           "question": "MegaETH market cap (FDV) >$6B one day after launch?",
           "category": "All",
-          "prob": 0.0245,
+          "prob": 0.024,
           "slug": "https://polymarket.com/event/megaeth-market-cap-fdv-6b-one-day-after-launch-365-559-334-815-776-488-224-766",
           "token_id": "[\"78059086946243166298250434231742381590921423205138738331803802527161013528631\", \"70438891017239169523888340706940482203786228582885836666142245799578935372711\"]"
         },
@@ -1350,14 +2744,14 @@
         {
           "question": "Will France win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.1635,
+          "prob": 0.1645,
           "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
           "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
         },
         {
           "question": "Will Brazil win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.085,
+          "prob": 0.0855,
           "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
           "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
         },
@@ -1400,7 +2794,7 @@
       "chart_history": [],
       "min_prob_threshold": 0.55,
       "max_bet_cap": 3.0,
-      "last_sync": "21:27:49",
+      "last_sync": "21:38:24",
       "running": false
     },
     {
@@ -1487,7 +2881,7 @@
         {
           "question": "Will Harvey Weinstein be sentenced to between 10 and 20 years in prison?",
           "category": "All",
-          "prob": 0.2455,
+          "prob": 0.246,
           "slug": "https://polymarket.com/event/will-harvey-weinstein-be-sentenced-to-between-10-and-20-years-in-prison",
           "token_id": "[\"15540133404064485946536607974212890170021691204987131841181394872998839987451\", \"63603874958591978684257718702104189214159397118281244112857573557732401361881\"]"
         },
@@ -1536,14 +2930,14 @@
         {
           "question": "Will the Vegas Golden Knights win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0645,
+          "prob": 0.0635,
           "slug": "https://polymarket.com/event/will-the-vegas-golden-knights-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"68803485030073596962715540294172682212192134248970512695855620898253368033218\", \"58534831224432332845742394199681128700782343287162911891204466367752298448751\"]"
         },
         {
           "question": "Will the Tampa Bay Lightning win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.129,
+          "prob": 0.1295,
           "slug": "https://polymarket.com/event/will-the-tampa-bay-lightning-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"35573117698117780238142713946749692621043319879346349609080985768472429209643\", \"76626937605855383085159195963889428951048025160807952406004049979161449392204\"]"
         },
@@ -1571,7 +2965,7 @@
         {
           "question": "Will the Montreal Canadiens win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.054,
+          "prob": 0.0555,
           "slug": "https://polymarket.com/event/will-the-montreal-canadiens-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"114248353339288476395516704859280406139740194553592209059241667781908210476009\", \"85705323099460694144578384076010167420188174879039498210125410497783582291911\"]"
         },
@@ -1592,7 +2986,7 @@
         {
           "question": "Will the Pittsburgh Penguins win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0295,
+          "prob": 0.029,
           "slug": "https://polymarket.com/event/will-the-pittsburgh-penguins-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"8851645587670338204652278122922654341568030658294043049798551516787478126093\", \"105159591365972907779164323332625661203129821196625530161327324705373588468320\"]"
         },
@@ -1655,7 +3049,7 @@
         {
           "question": "MegaETH market cap (FDV) >$6B one day after launch?",
           "category": "All",
-          "prob": 0.0245,
+          "prob": 0.024,
           "slug": "https://polymarket.com/event/megaeth-market-cap-fdv-6b-one-day-after-launch-365-559-334-815-776-488-224-766",
           "token_id": "[\"78059086946243166298250434231742381590921423205138738331803802527161013528631\", \"70438891017239169523888340706940482203786228582885836666142245799578935372711\"]"
         },
@@ -1683,14 +3077,14 @@
         {
           "question": "Will France win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.1635,
+          "prob": 0.1645,
           "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
           "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
         },
         {
           "question": "Will Brazil win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.085,
+          "prob": 0.0855,
           "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
           "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
         },
@@ -1733,7 +3127,7 @@
       "chart_history": [],
       "min_prob_threshold": 0.6,
       "max_bet_cap": 3.0,
-      "last_sync": "21:27:48",
+      "last_sync": "21:38:25",
       "running": false
     },
     {
@@ -1820,7 +3214,7 @@
         {
           "question": "Will Harvey Weinstein be sentenced to between 10 and 20 years in prison?",
           "category": "All",
-          "prob": 0.2455,
+          "prob": 0.246,
           "slug": "https://polymarket.com/event/will-harvey-weinstein-be-sentenced-to-between-10-and-20-years-in-prison",
           "token_id": "[\"15540133404064485946536607974212890170021691204987131841181394872998839987451\", \"63603874958591978684257718702104189214159397118281244112857573557732401361881\"]"
         },
@@ -1869,14 +3263,14 @@
         {
           "question": "Will the Vegas Golden Knights win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0645,
+          "prob": 0.0635,
           "slug": "https://polymarket.com/event/will-the-vegas-golden-knights-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"68803485030073596962715540294172682212192134248970512695855620898253368033218\", \"58534831224432332845742394199681128700782343287162911891204466367752298448751\"]"
         },
         {
           "question": "Will the Tampa Bay Lightning win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.129,
+          "prob": 0.1295,
           "slug": "https://polymarket.com/event/will-the-tampa-bay-lightning-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"35573117698117780238142713946749692621043319879346349609080985768472429209643\", \"76626937605855383085159195963889428951048025160807952406004049979161449392204\"]"
         },
@@ -1904,7 +3298,7 @@
         {
           "question": "Will the Montreal Canadiens win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.054,
+          "prob": 0.0555,
           "slug": "https://polymarket.com/event/will-the-montreal-canadiens-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"114248353339288476395516704859280406139740194553592209059241667781908210476009\", \"85705323099460694144578384076010167420188174879039498210125410497783582291911\"]"
         },
@@ -1925,7 +3319,7 @@
         {
           "question": "Will the Pittsburgh Penguins win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0295,
+          "prob": 0.029,
           "slug": "https://polymarket.com/event/will-the-pittsburgh-penguins-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"8851645587670338204652278122922654341568030658294043049798551516787478126093\", \"105159591365972907779164323332625661203129821196625530161327324705373588468320\"]"
         },
@@ -1988,7 +3382,7 @@
         {
           "question": "MegaETH market cap (FDV) >$6B one day after launch?",
           "category": "All",
-          "prob": 0.0245,
+          "prob": 0.024,
           "slug": "https://polymarket.com/event/megaeth-market-cap-fdv-6b-one-day-after-launch-365-559-334-815-776-488-224-766",
           "token_id": "[\"78059086946243166298250434231742381590921423205138738331803802527161013528631\", \"70438891017239169523888340706940482203786228582885836666142245799578935372711\"]"
         },
@@ -2016,14 +3410,14 @@
         {
           "question": "Will France win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.1635,
+          "prob": 0.1645,
           "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
           "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
         },
         {
           "question": "Will Brazil win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.085,
+          "prob": 0.0855,
           "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
           "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
         },
@@ -2066,7 +3460,7 @@
       "chart_history": [],
       "min_prob_threshold": 0.6,
       "max_bet_cap": 3.0,
-      "last_sync": "21:27:47",
+      "last_sync": "21:38:23",
       "running": false
     },
     {
@@ -2153,7 +3547,7 @@
         {
           "question": "Will Harvey Weinstein be sentenced to between 10 and 20 years in prison?",
           "category": "All",
-          "prob": 0.2455,
+          "prob": 0.246,
           "slug": "https://polymarket.com/event/will-harvey-weinstein-be-sentenced-to-between-10-and-20-years-in-prison",
           "token_id": "[\"15540133404064485946536607974212890170021691204987131841181394872998839987451\", \"63603874958591978684257718702104189214159397118281244112857573557732401361881\"]"
         },
@@ -2202,14 +3596,14 @@
         {
           "question": "Will the Vegas Golden Knights win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0645,
+          "prob": 0.0635,
           "slug": "https://polymarket.com/event/will-the-vegas-golden-knights-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"68803485030073596962715540294172682212192134248970512695855620898253368033218\", \"58534831224432332845742394199681128700782343287162911891204466367752298448751\"]"
         },
         {
           "question": "Will the Tampa Bay Lightning win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.129,
+          "prob": 0.1295,
           "slug": "https://polymarket.com/event/will-the-tampa-bay-lightning-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"35573117698117780238142713946749692621043319879346349609080985768472429209643\", \"76626937605855383085159195963889428951048025160807952406004049979161449392204\"]"
         },
@@ -2237,7 +3631,7 @@
         {
           "question": "Will the Montreal Canadiens win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.054,
+          "prob": 0.0555,
           "slug": "https://polymarket.com/event/will-the-montreal-canadiens-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"114248353339288476395516704859280406139740194553592209059241667781908210476009\", \"85705323099460694144578384076010167420188174879039498210125410497783582291911\"]"
         },
@@ -2258,7 +3652,7 @@
         {
           "question": "Will the Pittsburgh Penguins win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0295,
+          "prob": 0.029,
           "slug": "https://polymarket.com/event/will-the-pittsburgh-penguins-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"8851645587670338204652278122922654341568030658294043049798551516787478126093\", \"105159591365972907779164323332625661203129821196625530161327324705373588468320\"]"
         },
@@ -2321,7 +3715,7 @@
         {
           "question": "MegaETH market cap (FDV) >$6B one day after launch?",
           "category": "All",
-          "prob": 0.0245,
+          "prob": 0.024,
           "slug": "https://polymarket.com/event/megaeth-market-cap-fdv-6b-one-day-after-launch-365-559-334-815-776-488-224-766",
           "token_id": "[\"78059086946243166298250434231742381590921423205138738331803802527161013528631\", \"70438891017239169523888340706940482203786228582885836666142245799578935372711\"]"
         },
@@ -2349,14 +3743,14 @@
         {
           "question": "Will France win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.1635,
+          "prob": 0.1645,
           "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
           "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
         },
         {
           "question": "Will Brazil win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.085,
+          "prob": 0.0855,
           "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
           "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
         },
@@ -2399,7 +3793,7 @@
       "chart_history": [],
       "min_prob_threshold": 0.65,
       "max_bet_cap": 3.0,
-      "last_sync": "21:27:47",
+      "last_sync": "21:38:25",
       "running": false
     },
     {
@@ -2486,7 +3880,7 @@
         {
           "question": "Will Harvey Weinstein be sentenced to between 10 and 20 years in prison?",
           "category": "All",
-          "prob": 0.2455,
+          "prob": 0.246,
           "slug": "https://polymarket.com/event/will-harvey-weinstein-be-sentenced-to-between-10-and-20-years-in-prison",
           "token_id": "[\"15540133404064485946536607974212890170021691204987131841181394872998839987451\", \"63603874958591978684257718702104189214159397118281244112857573557732401361881\"]"
         },
@@ -2535,14 +3929,14 @@
         {
           "question": "Will the Vegas Golden Knights win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0645,
+          "prob": 0.0635,
           "slug": "https://polymarket.com/event/will-the-vegas-golden-knights-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"68803485030073596962715540294172682212192134248970512695855620898253368033218\", \"58534831224432332845742394199681128700782343287162911891204466367752298448751\"]"
         },
         {
           "question": "Will the Tampa Bay Lightning win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.129,
+          "prob": 0.1295,
           "slug": "https://polymarket.com/event/will-the-tampa-bay-lightning-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"35573117698117780238142713946749692621043319879346349609080985768472429209643\", \"76626937605855383085159195963889428951048025160807952406004049979161449392204\"]"
         },
@@ -2570,7 +3964,7 @@
         {
           "question": "Will the Montreal Canadiens win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.054,
+          "prob": 0.0555,
           "slug": "https://polymarket.com/event/will-the-montreal-canadiens-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"114248353339288476395516704859280406139740194553592209059241667781908210476009\", \"85705323099460694144578384076010167420188174879039498210125410497783582291911\"]"
         },
@@ -2591,7 +3985,7 @@
         {
           "question": "Will the Pittsburgh Penguins win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0295,
+          "prob": 0.029,
           "slug": "https://polymarket.com/event/will-the-pittsburgh-penguins-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"8851645587670338204652278122922654341568030658294043049798551516787478126093\", \"105159591365972907779164323332625661203129821196625530161327324705373588468320\"]"
         },
@@ -2654,7 +4048,7 @@
         {
           "question": "MegaETH market cap (FDV) >$6B one day after launch?",
           "category": "All",
-          "prob": 0.0245,
+          "prob": 0.024,
           "slug": "https://polymarket.com/event/megaeth-market-cap-fdv-6b-one-day-after-launch-365-559-334-815-776-488-224-766",
           "token_id": "[\"78059086946243166298250434231742381590921423205138738331803802527161013528631\", \"70438891017239169523888340706940482203786228582885836666142245799578935372711\"]"
         },
@@ -2682,14 +4076,14 @@
         {
           "question": "Will France win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.1635,
+          "prob": 0.1645,
           "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
           "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
         },
         {
           "question": "Will Brazil win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.085,
+          "prob": 0.0855,
           "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
           "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
         },
@@ -2732,7 +4126,7 @@
       "chart_history": [],
       "min_prob_threshold": 0.65,
       "max_bet_cap": 3.0,
-      "last_sync": "21:27:47",
+      "last_sync": "21:38:23",
       "running": false
     },
     {
@@ -2819,7 +4213,7 @@
         {
           "question": "Will Harvey Weinstein be sentenced to between 10 and 20 years in prison?",
           "category": "All",
-          "prob": 0.2455,
+          "prob": 0.246,
           "slug": "https://polymarket.com/event/will-harvey-weinstein-be-sentenced-to-between-10-and-20-years-in-prison",
           "token_id": "[\"15540133404064485946536607974212890170021691204987131841181394872998839987451\", \"63603874958591978684257718702104189214159397118281244112857573557732401361881\"]"
         },
@@ -2868,14 +4262,14 @@
         {
           "question": "Will the Vegas Golden Knights win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0645,
+          "prob": 0.0635,
           "slug": "https://polymarket.com/event/will-the-vegas-golden-knights-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"68803485030073596962715540294172682212192134248970512695855620898253368033218\", \"58534831224432332845742394199681128700782343287162911891204466367752298448751\"]"
         },
         {
           "question": "Will the Tampa Bay Lightning win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.129,
+          "prob": 0.1295,
           "slug": "https://polymarket.com/event/will-the-tampa-bay-lightning-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"35573117698117780238142713946749692621043319879346349609080985768472429209643\", \"76626937605855383085159195963889428951048025160807952406004049979161449392204\"]"
         },
@@ -2903,7 +4297,7 @@
         {
           "question": "Will the Montreal Canadiens win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.054,
+          "prob": 0.0555,
           "slug": "https://polymarket.com/event/will-the-montreal-canadiens-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"114248353339288476395516704859280406139740194553592209059241667781908210476009\", \"85705323099460694144578384076010167420188174879039498210125410497783582291911\"]"
         },
@@ -2924,7 +4318,7 @@
         {
           "question": "Will the Pittsburgh Penguins win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0295,
+          "prob": 0.029,
           "slug": "https://polymarket.com/event/will-the-pittsburgh-penguins-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"8851645587670338204652278122922654341568030658294043049798551516787478126093\", \"105159591365972907779164323332625661203129821196625530161327324705373588468320\"]"
         },
@@ -2987,7 +4381,7 @@
         {
           "question": "MegaETH market cap (FDV) >$6B one day after launch?",
           "category": "All",
-          "prob": 0.0245,
+          "prob": 0.024,
           "slug": "https://polymarket.com/event/megaeth-market-cap-fdv-6b-one-day-after-launch-365-559-334-815-776-488-224-766",
           "token_id": "[\"78059086946243166298250434231742381590921423205138738331803802527161013528631\", \"70438891017239169523888340706940482203786228582885836666142245799578935372711\"]"
         },
@@ -3015,14 +4409,14 @@
         {
           "question": "Will France win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.1635,
+          "prob": 0.1645,
           "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
           "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
         },
         {
           "question": "Will Brazil win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.085,
+          "prob": 0.0855,
           "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
           "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
         },
@@ -3065,7 +4459,7 @@
       "chart_history": [],
       "min_prob_threshold": 0.7,
       "max_bet_cap": 3.0,
-      "last_sync": "21:27:48",
+      "last_sync": "21:38:24",
       "running": false
     },
     {
@@ -3152,7 +4546,7 @@
         {
           "question": "Will Harvey Weinstein be sentenced to between 10 and 20 years in prison?",
           "category": "All",
-          "prob": 0.2455,
+          "prob": 0.246,
           "slug": "https://polymarket.com/event/will-harvey-weinstein-be-sentenced-to-between-10-and-20-years-in-prison",
           "token_id": "[\"15540133404064485946536607974212890170021691204987131841181394872998839987451\", \"63603874958591978684257718702104189214159397118281244112857573557732401361881\"]"
         },
@@ -3201,14 +4595,14 @@
         {
           "question": "Will the Vegas Golden Knights win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0645,
+          "prob": 0.0635,
           "slug": "https://polymarket.com/event/will-the-vegas-golden-knights-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"68803485030073596962715540294172682212192134248970512695855620898253368033218\", \"58534831224432332845742394199681128700782343287162911891204466367752298448751\"]"
         },
         {
           "question": "Will the Tampa Bay Lightning win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.129,
+          "prob": 0.1295,
           "slug": "https://polymarket.com/event/will-the-tampa-bay-lightning-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"35573117698117780238142713946749692621043319879346349609080985768472429209643\", \"76626937605855383085159195963889428951048025160807952406004049979161449392204\"]"
         },
@@ -3236,7 +4630,7 @@
         {
           "question": "Will the Montreal Canadiens win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.054,
+          "prob": 0.0555,
           "slug": "https://polymarket.com/event/will-the-montreal-canadiens-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"114248353339288476395516704859280406139740194553592209059241667781908210476009\", \"85705323099460694144578384076010167420188174879039498210125410497783582291911\"]"
         },
@@ -3257,7 +4651,7 @@
         {
           "question": "Will the Pittsburgh Penguins win the 2026 NHL Stanley Cup?",
           "category": "All",
-          "prob": 0.0295,
+          "prob": 0.029,
           "slug": "https://polymarket.com/event/will-the-pittsburgh-penguins-win-the-2026-nhl-stanley-cup",
           "token_id": "[\"8851645587670338204652278122922654341568030658294043049798551516787478126093\", \"105159591365972907779164323332625661203129821196625530161327324705373588468320\"]"
         },
@@ -3320,7 +4714,7 @@
         {
           "question": "MegaETH market cap (FDV) >$6B one day after launch?",
           "category": "All",
-          "prob": 0.0245,
+          "prob": 0.024,
           "slug": "https://polymarket.com/event/megaeth-market-cap-fdv-6b-one-day-after-launch-365-559-334-815-776-488-224-766",
           "token_id": "[\"78059086946243166298250434231742381590921423205138738331803802527161013528631\", \"70438891017239169523888340706940482203786228582885836666142245799578935372711\"]"
         },
@@ -3348,14 +4742,14 @@
         {
           "question": "Will France win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.1635,
+          "prob": 0.1645,
           "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
           "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
         },
         {
           "question": "Will Brazil win the 2026 FIFA World Cup?",
           "category": "All",
-          "prob": 0.085,
+          "prob": 0.0855,
           "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
           "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
         },
@@ -3398,7 +4792,7 @@
       "chart_history": [],
       "min_prob_threshold": 0.7,
       "max_bet_cap": 3.0,
-      "last_sync": "21:27:46",
+      "last_sync": "21:38:23",
       "running": false
     }
   ],
@@ -3406,7 +4800,7 @@
   "target_capital": 13.0,
   "scaling_interval": 10.0,
   "last_notified_equity": 13.0,
-  "unallocated_balance": 3.0,
+  "unallocated_balance": 0.27023595036095216,
   "withdraw_pending": false,
   "withdraw_logs": [],
   "farm_capital": 13.0,
