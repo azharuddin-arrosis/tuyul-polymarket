@@ -605,8 +605,9 @@ async fn bot_worker(state: SharedState, bot_id: String) {
             };
             let questions = ["BTC Bullish?", "ETH Bakal Naik?", "Trump Menang?", "Fed Pivot?", "Emas ATH?", "AI Peak?"];
             
-            // Fetch real markets from Gamma API
+            // Fetch real markets from Gamma API (markets endpoint)
             let mut real_markets = vec![];
+            
             if let Ok(res) = reqwest::get("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=100").await {
                 if let Ok(json) = res.json::<serde_json::Value>().await {
                     if let Some(arr) = json.as_array() {

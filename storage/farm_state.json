@@ -17,209 +17,72 @@
           "prob": 0.4895,
           "slug": "https://polymarket.com/event/will-bitcoin-hit-1m-before-gta-vi-872",
           "token_id": "[\"105267568073659068217311993901927962476298440625043565106676088842803600775810\", \"91863162118308663069733924043159186005106558783397508844234610341221325526200\"]"
+        },
+        {
+          "question": "Will Spain win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1725,
+          "slug": "https://polymarket.com/event/will-spain-win-the-2026-fifa-world-cup-963",
+          "token_id": "[\"4394372887385518214471608448209527405727552777602031099972143344338178308080\", \"112680630004798425069810935278212000865453267506345451433803052322987302357330\"]"
+        },
+        {
+          "question": "Will England win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1105,
+          "slug": "https://polymarket.com/event/will-england-win-the-2026-fifa-world-cup-937",
+          "token_id": "[\"115556263888245616435851357148058235707004733438163639091106356867234218207169\", \"77121637225348873006259930776623502125079210522997384841464684944292365296940\"]"
+        },
+        {
+          "question": "Will France win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1635,
+          "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
+          "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
+        },
+        {
+          "question": "Will Brazil win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0845,
+          "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
+          "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
+        },
+        {
+          "question": "Will Argentina win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0885,
+          "slug": "https://polymarket.com/event/will-argentina-win-the-2026-fifa-world-cup-245",
+          "token_id": "[\"18812649149814341758733697580460697418474693998558159483117100240528657629879\", \"115428153746996892211798999366308897078723117634059783423375188043903703749062\"]"
+        },
+        {
+          "question": "Will Germany win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0515,
+          "slug": "https://polymarket.com/event/will-germany-win-the-2026-fifa-world-cup-467",
+          "token_id": "[\"81739002353269632749850710185641576213562066971072676369728657545679630163887\", \"45484070731786948288366703334552551439356529561722304542938873238430842810537\"]"
+        },
+        {
+          "question": "Will Portugal win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0695,
+          "slug": "https://polymarket.com/event/will-portugal-win-the-2026-fifa-world-cup-912",
+          "token_id": "[\"45415751658241142530386585138386640503488308219341470020075667342738719018629\", \"31940783580344558651011323787577288681658737625185216525249046282994042503801\"]"
+        },
+        {
+          "question": "Will Netherlands win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0325,
+          "slug": "https://polymarket.com/event/will-netherlands-win-the-2026-fifa-world-cup-739",
+          "token_id": "[\"55935183786009449883683540312350046975246300613283087403691731856990327029236\", \"103711573894614472510743687764792452240919804104728889027222697502832804498206\"]"
+        },
+        {
+          "question": "Will Norway win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0215,
+          "slug": "https://polymarket.com/event/will-norway-win-the-2026-fifa-world-cup-893",
+          "token_id": "[\"60447443643099453130956385288904175887233107411078568881602330835010340506057\", \"111538579557239934343870815626480092245052857494675784434731223739153238373070\"]"
         }
       ],
       "chart_history": [
-        {
-          "time": "21:07:58",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:01",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:05",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:08",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:11",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:15",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:18",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:21",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:24",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:27",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:31",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:34",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:37",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:40",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:44",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:47",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:50",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:53",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:57",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:00",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:03",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:06",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:10",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:13",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:16",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:19",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:23",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:26",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:29",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:32",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:36",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:39",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:42",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:45",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:49",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:52",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:55",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:59",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:02",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:05",
-          "wallet": 10.0,
-          "total": 10.0
-        },
         {
           "time": "21:10:08",
           "wallet": 10.0,
@@ -519,11 +382,211 @@
           "time": "21:13:21",
           "wallet": 10.0,
           "total": 10.0
+        },
+        {
+          "time": "21:13:24",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:27",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:31",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:34",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:37",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:48",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:51",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:54",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:57",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:01",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:04",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:07",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:11",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:14",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:17",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:20",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:24",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:27",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:30",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:33",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:37",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:40",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:43",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:46",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:50",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:53",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:56",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:59",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:03",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:06",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:09",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:13",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:16",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:19",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:22",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:26",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:30",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:34",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:37",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:40",
+          "wallet": 10.0,
+          "total": 10.0
         }
       ],
       "min_prob_threshold": 0.52,
       "max_bet_cap": 2.0,
-      "last_sync": "21:13:21",
+      "last_sync": "21:15:40",
       "running": true
     },
     {
@@ -543,209 +606,72 @@
           "prob": 0.4895,
           "slug": "https://polymarket.com/event/will-bitcoin-hit-1m-before-gta-vi-872",
           "token_id": "[\"105267568073659068217311993901927962476298440625043565106676088842803600775810\", \"91863162118308663069733924043159186005106558783397508844234610341221325526200\"]"
+        },
+        {
+          "question": "Will Spain win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1725,
+          "slug": "https://polymarket.com/event/will-spain-win-the-2026-fifa-world-cup-963",
+          "token_id": "[\"4394372887385518214471608448209527405727552777602031099972143344338178308080\", \"112680630004798425069810935278212000865453267506345451433803052322987302357330\"]"
+        },
+        {
+          "question": "Will England win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1105,
+          "slug": "https://polymarket.com/event/will-england-win-the-2026-fifa-world-cup-937",
+          "token_id": "[\"115556263888245616435851357148058235707004733438163639091106356867234218207169\", \"77121637225348873006259930776623502125079210522997384841464684944292365296940\"]"
+        },
+        {
+          "question": "Will France win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1635,
+          "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
+          "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
+        },
+        {
+          "question": "Will Brazil win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0845,
+          "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
+          "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
+        },
+        {
+          "question": "Will Argentina win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0885,
+          "slug": "https://polymarket.com/event/will-argentina-win-the-2026-fifa-world-cup-245",
+          "token_id": "[\"18812649149814341758733697580460697418474693998558159483117100240528657629879\", \"115428153746996892211798999366308897078723117634059783423375188043903703749062\"]"
+        },
+        {
+          "question": "Will Germany win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0515,
+          "slug": "https://polymarket.com/event/will-germany-win-the-2026-fifa-world-cup-467",
+          "token_id": "[\"81739002353269632749850710185641576213562066971072676369728657545679630163887\", \"45484070731786948288366703334552551439356529561722304542938873238430842810537\"]"
+        },
+        {
+          "question": "Will Portugal win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0695,
+          "slug": "https://polymarket.com/event/will-portugal-win-the-2026-fifa-world-cup-912",
+          "token_id": "[\"45415751658241142530386585138386640503488308219341470020075667342738719018629\", \"31940783580344558651011323787577288681658737625185216525249046282994042503801\"]"
+        },
+        {
+          "question": "Will Netherlands win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0325,
+          "slug": "https://polymarket.com/event/will-netherlands-win-the-2026-fifa-world-cup-739",
+          "token_id": "[\"55935183786009449883683540312350046975246300613283087403691731856990327029236\", \"103711573894614472510743687764792452240919804104728889027222697502832804498206\"]"
+        },
+        {
+          "question": "Will Norway win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0215,
+          "slug": "https://polymarket.com/event/will-norway-win-the-2026-fifa-world-cup-893",
+          "token_id": "[\"60447443643099453130956385288904175887233107411078568881602330835010340506057\", \"111538579557239934343870815626480092245052857494675784434731223739153238373070\"]"
         }
       ],
       "chart_history": [
-        {
-          "time": "21:07:58",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:01",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:04",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:08",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:11",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:14",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:17",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:21",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:24",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:27",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:30",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:34",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:37",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:40",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:43",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:47",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:50",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:53",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:56",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:00",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:03",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:06",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:09",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:12",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:16",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:19",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:22",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:25",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:29",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:32",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:35",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:39",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:42",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:45",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:48",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:52",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:55",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:58",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:02",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:05",
-          "wallet": 10.0,
-          "total": 10.0
-        },
         {
           "time": "21:10:08",
           "wallet": 10.0,
@@ -1045,11 +971,211 @@
           "time": "21:13:21",
           "wallet": 10.0,
           "total": 10.0
+        },
+        {
+          "time": "21:13:24",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:27",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:30",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:34",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:37",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:46",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:49",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:52",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:55",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:59",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:02",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:05",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:09",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:12",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:15",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:18",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:22",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:25",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:28",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:31",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:35",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:38",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:41",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:45",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:48",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:51",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:54",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:58",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:01",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:04",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:08",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:11",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:14",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:17",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:21",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:24",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:28",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:32",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:35",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:38",
+          "wallet": 10.0,
+          "total": 10.0
         }
       ],
       "min_prob_threshold": 0.52,
       "max_bet_cap": 2.0,
-      "last_sync": "21:13:21",
+      "last_sync": "21:15:38",
       "running": true
     },
     {
@@ -1069,209 +1195,72 @@
           "prob": 0.4895,
           "slug": "https://polymarket.com/event/will-bitcoin-hit-1m-before-gta-vi-872",
           "token_id": "[\"105267568073659068217311993901927962476298440625043565106676088842803600775810\", \"91863162118308663069733924043159186005106558783397508844234610341221325526200\"]"
+        },
+        {
+          "question": "Will Spain win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1725,
+          "slug": "https://polymarket.com/event/will-spain-win-the-2026-fifa-world-cup-963",
+          "token_id": "[\"4394372887385518214471608448209527405727552777602031099972143344338178308080\", \"112680630004798425069810935278212000865453267506345451433803052322987302357330\"]"
+        },
+        {
+          "question": "Will England win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1105,
+          "slug": "https://polymarket.com/event/will-england-win-the-2026-fifa-world-cup-937",
+          "token_id": "[\"115556263888245616435851357148058235707004733438163639091106356867234218207169\", \"77121637225348873006259930776623502125079210522997384841464684944292365296940\"]"
+        },
+        {
+          "question": "Will France win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1635,
+          "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
+          "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
+        },
+        {
+          "question": "Will Brazil win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0845,
+          "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
+          "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
+        },
+        {
+          "question": "Will Argentina win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0885,
+          "slug": "https://polymarket.com/event/will-argentina-win-the-2026-fifa-world-cup-245",
+          "token_id": "[\"18812649149814341758733697580460697418474693998558159483117100240528657629879\", \"115428153746996892211798999366308897078723117634059783423375188043903703749062\"]"
+        },
+        {
+          "question": "Will Germany win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0515,
+          "slug": "https://polymarket.com/event/will-germany-win-the-2026-fifa-world-cup-467",
+          "token_id": "[\"81739002353269632749850710185641576213562066971072676369728657545679630163887\", \"45484070731786948288366703334552551439356529561722304542938873238430842810537\"]"
+        },
+        {
+          "question": "Will Portugal win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0695,
+          "slug": "https://polymarket.com/event/will-portugal-win-the-2026-fifa-world-cup-912",
+          "token_id": "[\"45415751658241142530386585138386640503488308219341470020075667342738719018629\", \"31940783580344558651011323787577288681658737625185216525249046282994042503801\"]"
+        },
+        {
+          "question": "Will Netherlands win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0325,
+          "slug": "https://polymarket.com/event/will-netherlands-win-the-2026-fifa-world-cup-739",
+          "token_id": "[\"55935183786009449883683540312350046975246300613283087403691731856990327029236\", \"103711573894614472510743687764792452240919804104728889027222697502832804498206\"]"
+        },
+        {
+          "question": "Will Norway win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0215,
+          "slug": "https://polymarket.com/event/will-norway-win-the-2026-fifa-world-cup-893",
+          "token_id": "[\"60447443643099453130956385288904175887233107411078568881602330835010340506057\", \"111538579557239934343870815626480092245052857494675784434731223739153238373070\"]"
         }
       ],
       "chart_history": [
-        {
-          "time": "21:07:57",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:00",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:04",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:07",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:10",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:14",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:17",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:20",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:23",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:27",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:30",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:33",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:36",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:40",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:43",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:46",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:49",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:53",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:56",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:59",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:02",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:05",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:09",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:12",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:15",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:18",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:22",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:25",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:28",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:32",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:35",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:38",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:41",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:44",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:48",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:51",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:54",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:58",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:01",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:04",
-          "wallet": 10.0,
-          "total": 10.0
-        },
         {
           "time": "21:10:07",
           "wallet": 10.0,
@@ -1571,11 +1560,211 @@
           "time": "21:13:20",
           "wallet": 10.0,
           "total": 10.0
+        },
+        {
+          "time": "21:13:23",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:26",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:29",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:33",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:36",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:45",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:49",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:52",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:55",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:58",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:02",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:05",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:08",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:12",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:15",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:18",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:21",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:25",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:28",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:31",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:35",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:38",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:41",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:44",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:48",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:51",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:54",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:57",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:01",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:04",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:07",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:10",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:14",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:17",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:21",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:24",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:28",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:31",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:35",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:38",
+          "wallet": 10.0,
+          "total": 10.0
         }
       ],
       "min_prob_threshold": 0.52,
       "max_bet_cap": 2.0,
-      "last_sync": "21:13:20",
+      "last_sync": "21:15:38",
       "running": true
     },
     {
@@ -1595,209 +1784,72 @@
           "prob": 0.4895,
           "slug": "https://polymarket.com/event/will-bitcoin-hit-1m-before-gta-vi-872",
           "token_id": "[\"105267568073659068217311993901927962476298440625043565106676088842803600775810\", \"91863162118308663069733924043159186005106558783397508844234610341221325526200\"]"
+        },
+        {
+          "question": "Will Spain win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1725,
+          "slug": "https://polymarket.com/event/will-spain-win-the-2026-fifa-world-cup-963",
+          "token_id": "[\"4394372887385518214471608448209527405727552777602031099972143344338178308080\", \"112680630004798425069810935278212000865453267506345451433803052322987302357330\"]"
+        },
+        {
+          "question": "Will England win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1105,
+          "slug": "https://polymarket.com/event/will-england-win-the-2026-fifa-world-cup-937",
+          "token_id": "[\"115556263888245616435851357148058235707004733438163639091106356867234218207169\", \"77121637225348873006259930776623502125079210522997384841464684944292365296940\"]"
+        },
+        {
+          "question": "Will France win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1635,
+          "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
+          "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
+        },
+        {
+          "question": "Will Brazil win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0845,
+          "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
+          "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
+        },
+        {
+          "question": "Will Argentina win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0885,
+          "slug": "https://polymarket.com/event/will-argentina-win-the-2026-fifa-world-cup-245",
+          "token_id": "[\"18812649149814341758733697580460697418474693998558159483117100240528657629879\", \"115428153746996892211798999366308897078723117634059783423375188043903703749062\"]"
+        },
+        {
+          "question": "Will Germany win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0515,
+          "slug": "https://polymarket.com/event/will-germany-win-the-2026-fifa-world-cup-467",
+          "token_id": "[\"81739002353269632749850710185641576213562066971072676369728657545679630163887\", \"45484070731786948288366703334552551439356529561722304542938873238430842810537\"]"
+        },
+        {
+          "question": "Will Portugal win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0695,
+          "slug": "https://polymarket.com/event/will-portugal-win-the-2026-fifa-world-cup-912",
+          "token_id": "[\"45415751658241142530386585138386640503488308219341470020075667342738719018629\", \"31940783580344558651011323787577288681658737625185216525249046282994042503801\"]"
+        },
+        {
+          "question": "Will Netherlands win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0325,
+          "slug": "https://polymarket.com/event/will-netherlands-win-the-2026-fifa-world-cup-739",
+          "token_id": "[\"55935183786009449883683540312350046975246300613283087403691731856990327029236\", \"103711573894614472510743687764792452240919804104728889027222697502832804498206\"]"
+        },
+        {
+          "question": "Will Norway win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0215,
+          "slug": "https://polymarket.com/event/will-norway-win-the-2026-fifa-world-cup-893",
+          "token_id": "[\"60447443643099453130956385288904175887233107411078568881602330835010340506057\", \"111538579557239934343870815626480092245052857494675784434731223739153238373070\"]"
         }
       ],
       "chart_history": [
-        {
-          "time": "21:07:59",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:03",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:06",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:09",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:13",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:16",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:19",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:22",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:26",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:29",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:32",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:35",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:39",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:42",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:45",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:48",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:51",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:55",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:58",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:01",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:04",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:08",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:11",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:14",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:17",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:21",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:24",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:27",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:30",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:34",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:37",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:40",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:43",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:47",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:50",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:53",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:57",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:00",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:03",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:06",
-          "wallet": 10.0,
-          "total": 10.0
-        },
         {
           "time": "21:10:09",
           "wallet": 10.0,
@@ -2097,11 +2149,211 @@
           "time": "21:13:22",
           "wallet": 10.0,
           "total": 10.0
+        },
+        {
+          "time": "21:13:25",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:28",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:32",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:35",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:38",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:48",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:51",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:54",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:58",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:01",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:04",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:08",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:11",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:14",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:17",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:21",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:24",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:27",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:30",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:34",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:37",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:40",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:43",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:47",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:50",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:53",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:56",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:00",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:03",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:06",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:10",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:13",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:16",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:20",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:23",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:26",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:31",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:34",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:37",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:41",
+          "wallet": 10.0,
+          "total": 10.0
         }
       ],
       "min_prob_threshold": 0.52,
       "max_bet_cap": 2.0,
-      "last_sync": "21:13:22",
+      "last_sync": "21:15:41",
       "running": true
     },
     {
@@ -2121,209 +2373,72 @@
           "prob": 0.4895,
           "slug": "https://polymarket.com/event/will-bitcoin-hit-1m-before-gta-vi-872",
           "token_id": "[\"105267568073659068217311993901927962476298440625043565106676088842803600775810\", \"91863162118308663069733924043159186005106558783397508844234610341221325526200\"]"
+        },
+        {
+          "question": "Will Spain win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1725,
+          "slug": "https://polymarket.com/event/will-spain-win-the-2026-fifa-world-cup-963",
+          "token_id": "[\"4394372887385518214471608448209527405727552777602031099972143344338178308080\", \"112680630004798425069810935278212000865453267506345451433803052322987302357330\"]"
+        },
+        {
+          "question": "Will England win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1105,
+          "slug": "https://polymarket.com/event/will-england-win-the-2026-fifa-world-cup-937",
+          "token_id": "[\"115556263888245616435851357148058235707004733438163639091106356867234218207169\", \"77121637225348873006259930776623502125079210522997384841464684944292365296940\"]"
+        },
+        {
+          "question": "Will France win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1635,
+          "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
+          "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
+        },
+        {
+          "question": "Will Brazil win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0845,
+          "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
+          "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
+        },
+        {
+          "question": "Will Argentina win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0885,
+          "slug": "https://polymarket.com/event/will-argentina-win-the-2026-fifa-world-cup-245",
+          "token_id": "[\"18812649149814341758733697580460697418474693998558159483117100240528657629879\", \"115428153746996892211798999366308897078723117634059783423375188043903703749062\"]"
+        },
+        {
+          "question": "Will Germany win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0515,
+          "slug": "https://polymarket.com/event/will-germany-win-the-2026-fifa-world-cup-467",
+          "token_id": "[\"81739002353269632749850710185641576213562066971072676369728657545679630163887\", \"45484070731786948288366703334552551439356529561722304542938873238430842810537\"]"
+        },
+        {
+          "question": "Will Portugal win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0695,
+          "slug": "https://polymarket.com/event/will-portugal-win-the-2026-fifa-world-cup-912",
+          "token_id": "[\"45415751658241142530386585138386640503488308219341470020075667342738719018629\", \"31940783580344558651011323787577288681658737625185216525249046282994042503801\"]"
+        },
+        {
+          "question": "Will Netherlands win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0325,
+          "slug": "https://polymarket.com/event/will-netherlands-win-the-2026-fifa-world-cup-739",
+          "token_id": "[\"55935183786009449883683540312350046975246300613283087403691731856990327029236\", \"103711573894614472510743687764792452240919804104728889027222697502832804498206\"]"
+        },
+        {
+          "question": "Will Norway win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0215,
+          "slug": "https://polymarket.com/event/will-norway-win-the-2026-fifa-world-cup-893",
+          "token_id": "[\"60447443643099453130956385288904175887233107411078568881602330835010340506057\", \"111538579557239934343870815626480092245052857494675784434731223739153238373070\"]"
         }
       ],
       "chart_history": [
-        {
-          "time": "21:07:59",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:02",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:06",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:09",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:12",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:15",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:19",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:22",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:25",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:28",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:32",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:35",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:38",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:41",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:45",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:48",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:51",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:54",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:57",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:01",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:04",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:07",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:11",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:14",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:17",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:20",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:24",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:27",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:30",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:33",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:37",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:40",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:43",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:46",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:50",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:53",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:56",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:59",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:03",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:06",
-          "wallet": 10.0,
-          "total": 10.0
-        },
         {
           "time": "21:10:09",
           "wallet": 10.0,
@@ -2623,11 +2738,211 @@
           "time": "21:13:22",
           "wallet": 10.0,
           "total": 10.0
+        },
+        {
+          "time": "21:13:25",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:28",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:31",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:35",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:38",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:45",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:48",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:52",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:55",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:58",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:02",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:05",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:08",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:11",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:15",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:18",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:21",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:24",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:28",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:31",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:34",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:38",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:41",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:44",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:47",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:51",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:54",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:57",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:00",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:04",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:07",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:10",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:14",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:17",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:20",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:23",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:27",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:31",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:35",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:38",
+          "wallet": 10.0,
+          "total": 10.0
         }
       ],
       "min_prob_threshold": 0.52,
       "max_bet_cap": 2.0,
-      "last_sync": "21:13:22",
+      "last_sync": "21:15:38",
       "running": true
     },
     {
@@ -2647,214 +2962,72 @@
           "prob": 0.4895,
           "slug": "https://polymarket.com/event/will-bitcoin-hit-1m-before-gta-vi-872",
           "token_id": "[\"105267568073659068217311993901927962476298440625043565106676088842803600775810\", \"91863162118308663069733924043159186005106558783397508844234610341221325526200\"]"
+        },
+        {
+          "question": "Will Spain win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1725,
+          "slug": "https://polymarket.com/event/will-spain-win-the-2026-fifa-world-cup-963",
+          "token_id": "[\"4394372887385518214471608448209527405727552777602031099972143344338178308080\", \"112680630004798425069810935278212000865453267506345451433803052322987302357330\"]"
+        },
+        {
+          "question": "Will England win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1105,
+          "slug": "https://polymarket.com/event/will-england-win-the-2026-fifa-world-cup-937",
+          "token_id": "[\"115556263888245616435851357148058235707004733438163639091106356867234218207169\", \"77121637225348873006259930776623502125079210522997384841464684944292365296940\"]"
+        },
+        {
+          "question": "Will France win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1635,
+          "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
+          "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
+        },
+        {
+          "question": "Will Brazil win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0845,
+          "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
+          "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
+        },
+        {
+          "question": "Will Argentina win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0885,
+          "slug": "https://polymarket.com/event/will-argentina-win-the-2026-fifa-world-cup-245",
+          "token_id": "[\"18812649149814341758733697580460697418474693998558159483117100240528657629879\", \"115428153746996892211798999366308897078723117634059783423375188043903703749062\"]"
+        },
+        {
+          "question": "Will Germany win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0515,
+          "slug": "https://polymarket.com/event/will-germany-win-the-2026-fifa-world-cup-467",
+          "token_id": "[\"81739002353269632749850710185641576213562066971072676369728657545679630163887\", \"45484070731786948288366703334552551439356529561722304542938873238430842810537\"]"
+        },
+        {
+          "question": "Will Portugal win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0695,
+          "slug": "https://polymarket.com/event/will-portugal-win-the-2026-fifa-world-cup-912",
+          "token_id": "[\"45415751658241142530386585138386640503488308219341470020075667342738719018629\", \"31940783580344558651011323787577288681658737625185216525249046282994042503801\"]"
+        },
+        {
+          "question": "Will Netherlands win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0325,
+          "slug": "https://polymarket.com/event/will-netherlands-win-the-2026-fifa-world-cup-739",
+          "token_id": "[\"55935183786009449883683540312350046975246300613283087403691731856990327029236\", \"103711573894614472510743687764792452240919804104728889027222697502832804498206\"]"
+        },
+        {
+          "question": "Will Norway win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0215,
+          "slug": "https://polymarket.com/event/will-norway-win-the-2026-fifa-world-cup-893",
+          "token_id": "[\"60447443643099453130956385288904175887233107411078568881602330835010340506057\", \"111538579557239934343870815626480092245052857494675784434731223739153238373070\"]"
         }
       ],
       "chart_history": [
-        {
-          "time": "21:07:57",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:01",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:04",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:07",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:11",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:14",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:17",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:20",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:24",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:27",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:30",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:33",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:37",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:40",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:43",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:46",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:49",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:53",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:56",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:59",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:02",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:06",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:09",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:12",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:15",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:19",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:22",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:25",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:28",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:32",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:35",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:38",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:42",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:45",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:48",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:52",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:55",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:58",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:01",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:04",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:08",
-          "wallet": 10.0,
-          "total": 10.0
-        },
         {
           "time": "21:10:11",
           "wallet": 10.0,
@@ -3149,11 +3322,216 @@
           "time": "21:13:20",
           "wallet": 10.0,
           "total": 10.0
+        },
+        {
+          "time": "21:13:23",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:27",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:30",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:33",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:36",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:45",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:48",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:51",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:55",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:58",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:01",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:05",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:08",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:11",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:14",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:18",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:21",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:24",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:27",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:31",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:34",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:37",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:40",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:44",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:47",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:50",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:54",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:57",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:00",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:03",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:07",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:10",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:13",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:16",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:20",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:23",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:27",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:31",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:34",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:38",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:41",
+          "wallet": 10.0,
+          "total": 10.0
         }
       ],
       "min_prob_threshold": 0.57,
       "max_bet_cap": 2.0,
-      "last_sync": "21:13:20",
+      "last_sync": "21:15:41",
       "running": true
     },
     {
@@ -3173,209 +3551,72 @@
           "prob": 0.4895,
           "slug": "https://polymarket.com/event/will-bitcoin-hit-1m-before-gta-vi-872",
           "token_id": "[\"105267568073659068217311993901927962476298440625043565106676088842803600775810\", \"91863162118308663069733924043159186005106558783397508844234610341221325526200\"]"
+        },
+        {
+          "question": "Will Spain win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1725,
+          "slug": "https://polymarket.com/event/will-spain-win-the-2026-fifa-world-cup-963",
+          "token_id": "[\"4394372887385518214471608448209527405727552777602031099972143344338178308080\", \"112680630004798425069810935278212000865453267506345451433803052322987302357330\"]"
+        },
+        {
+          "question": "Will England win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1105,
+          "slug": "https://polymarket.com/event/will-england-win-the-2026-fifa-world-cup-937",
+          "token_id": "[\"115556263888245616435851357148058235707004733438163639091106356867234218207169\", \"77121637225348873006259930776623502125079210522997384841464684944292365296940\"]"
+        },
+        {
+          "question": "Will France win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1635,
+          "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
+          "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
+        },
+        {
+          "question": "Will Brazil win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0845,
+          "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
+          "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
+        },
+        {
+          "question": "Will Argentina win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0885,
+          "slug": "https://polymarket.com/event/will-argentina-win-the-2026-fifa-world-cup-245",
+          "token_id": "[\"18812649149814341758733697580460697418474693998558159483117100240528657629879\", \"115428153746996892211798999366308897078723117634059783423375188043903703749062\"]"
+        },
+        {
+          "question": "Will Germany win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0515,
+          "slug": "https://polymarket.com/event/will-germany-win-the-2026-fifa-world-cup-467",
+          "token_id": "[\"81739002353269632749850710185641576213562066971072676369728657545679630163887\", \"45484070731786948288366703334552551439356529561722304542938873238430842810537\"]"
+        },
+        {
+          "question": "Will Portugal win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0695,
+          "slug": "https://polymarket.com/event/will-portugal-win-the-2026-fifa-world-cup-912",
+          "token_id": "[\"45415751658241142530386585138386640503488308219341470020075667342738719018629\", \"31940783580344558651011323787577288681658737625185216525249046282994042503801\"]"
+        },
+        {
+          "question": "Will Netherlands win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0325,
+          "slug": "https://polymarket.com/event/will-netherlands-win-the-2026-fifa-world-cup-739",
+          "token_id": "[\"55935183786009449883683540312350046975246300613283087403691731856990327029236\", \"103711573894614472510743687764792452240919804104728889027222697502832804498206\"]"
+        },
+        {
+          "question": "Will Norway win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0215,
+          "slug": "https://polymarket.com/event/will-norway-win-the-2026-fifa-world-cup-893",
+          "token_id": "[\"60447443643099453130956385288904175887233107411078568881602330835010340506057\", \"111538579557239934343870815626480092245052857494675784434731223739153238373070\"]"
         }
       ],
       "chart_history": [
-        {
-          "time": "21:07:57",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:00",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:03",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:07",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:10",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:13",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:17",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:20",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:23",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:26",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:30",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:33",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:36",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:39",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:43",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:46",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:49",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:52",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:55",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:59",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:02",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:05",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:08",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:12",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:15",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:18",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:21",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:25",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:28",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:31",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:34",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:38",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:41",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:44",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:47",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:51",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:54",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:57",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:00",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:04",
-          "wallet": 10.0,
-          "total": 10.0
-        },
         {
           "time": "21:10:07",
           "wallet": 10.0,
@@ -3675,11 +3916,211 @@
           "time": "21:13:20",
           "wallet": 10.0,
           "total": 10.0
+        },
+        {
+          "time": "21:13:23",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:26",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:29",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:32",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:36",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:46",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:49",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:52",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:56",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:59",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:02",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:06",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:09",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:12",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:15",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:19",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:22",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:25",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:28",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:32",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:35",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:38",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:42",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:45",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:48",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:51",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:55",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:58",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:01",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:04",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:08",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:11",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:14",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:18",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:21",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:25",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:28",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:32",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:35",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:39",
+          "wallet": 10.0,
+          "total": 10.0
         }
       ],
       "min_prob_threshold": 0.57,
       "max_bet_cap": 2.0,
-      "last_sync": "21:13:20",
+      "last_sync": "21:15:39",
       "running": true
     },
     {
@@ -3699,209 +4140,72 @@
           "prob": 0.4895,
           "slug": "https://polymarket.com/event/will-bitcoin-hit-1m-before-gta-vi-872",
           "token_id": "[\"105267568073659068217311993901927962476298440625043565106676088842803600775810\", \"91863162118308663069733924043159186005106558783397508844234610341221325526200\"]"
+        },
+        {
+          "question": "Will Spain win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1725,
+          "slug": "https://polymarket.com/event/will-spain-win-the-2026-fifa-world-cup-963",
+          "token_id": "[\"4394372887385518214471608448209527405727552777602031099972143344338178308080\", \"112680630004798425069810935278212000865453267506345451433803052322987302357330\"]"
+        },
+        {
+          "question": "Will England win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1105,
+          "slug": "https://polymarket.com/event/will-england-win-the-2026-fifa-world-cup-937",
+          "token_id": "[\"115556263888245616435851357148058235707004733438163639091106356867234218207169\", \"77121637225348873006259930776623502125079210522997384841464684944292365296940\"]"
+        },
+        {
+          "question": "Will France win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1635,
+          "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
+          "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
+        },
+        {
+          "question": "Will Brazil win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0845,
+          "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
+          "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
+        },
+        {
+          "question": "Will Argentina win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0885,
+          "slug": "https://polymarket.com/event/will-argentina-win-the-2026-fifa-world-cup-245",
+          "token_id": "[\"18812649149814341758733697580460697418474693998558159483117100240528657629879\", \"115428153746996892211798999366308897078723117634059783423375188043903703749062\"]"
+        },
+        {
+          "question": "Will Germany win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0515,
+          "slug": "https://polymarket.com/event/will-germany-win-the-2026-fifa-world-cup-467",
+          "token_id": "[\"81739002353269632749850710185641576213562066971072676369728657545679630163887\", \"45484070731786948288366703334552551439356529561722304542938873238430842810537\"]"
+        },
+        {
+          "question": "Will Portugal win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0695,
+          "slug": "https://polymarket.com/event/will-portugal-win-the-2026-fifa-world-cup-912",
+          "token_id": "[\"45415751658241142530386585138386640503488308219341470020075667342738719018629\", \"31940783580344558651011323787577288681658737625185216525249046282994042503801\"]"
+        },
+        {
+          "question": "Will Netherlands win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0325,
+          "slug": "https://polymarket.com/event/will-netherlands-win-the-2026-fifa-world-cup-739",
+          "token_id": "[\"55935183786009449883683540312350046975246300613283087403691731856990327029236\", \"103711573894614472510743687764792452240919804104728889027222697502832804498206\"]"
+        },
+        {
+          "question": "Will Norway win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0215,
+          "slug": "https://polymarket.com/event/will-norway-win-the-2026-fifa-world-cup-893",
+          "token_id": "[\"60447443643099453130956385288904175887233107411078568881602330835010340506057\", \"111538579557239934343870815626480092245052857494675784434731223739153238373070\"]"
         }
       ],
       "chart_history": [
-        {
-          "time": "21:08:00",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:03",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:06",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:10",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:13",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:16",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:19",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:23",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:26",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:29",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:32",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:36",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:39",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:42",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:45",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:49",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:52",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:55",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:58",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:02",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:05",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:08",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:11",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:15",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:18",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:21",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:24",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:28",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:31",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:34",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:37",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:41",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:44",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:47",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:50",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:54",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:57",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:00",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:03",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:07",
-          "wallet": 10.0,
-          "total": 10.0
-        },
         {
           "time": "21:10:10",
           "wallet": 10.0,
@@ -4201,11 +4505,211 @@
           "time": "21:13:22",
           "wallet": 10.0,
           "total": 10.0
+        },
+        {
+          "time": "21:13:26",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:29",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:32",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:35",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:38",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:47",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:50",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:54",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:57",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:00",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:03",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:07",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:10",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:13",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:16",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:20",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:23",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:26",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:29",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:33",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:36",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:39",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:42",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:45",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:49",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:52",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:55",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:59",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:02",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:05",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:08",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:12",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:15",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:18",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:22",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:25",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:29",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:32",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:36",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:39",
+          "wallet": 10.0,
+          "total": 10.0
         }
       ],
       "min_prob_threshold": 0.57,
       "max_bet_cap": 2.0,
-      "last_sync": "21:13:22",
+      "last_sync": "21:15:39",
       "running": true
     },
     {
@@ -4225,209 +4729,72 @@
           "prob": 0.4895,
           "slug": "https://polymarket.com/event/will-bitcoin-hit-1m-before-gta-vi-872",
           "token_id": "[\"105267568073659068217311993901927962476298440625043565106676088842803600775810\", \"91863162118308663069733924043159186005106558783397508844234610341221325526200\"]"
+        },
+        {
+          "question": "Will Spain win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1725,
+          "slug": "https://polymarket.com/event/will-spain-win-the-2026-fifa-world-cup-963",
+          "token_id": "[\"4394372887385518214471608448209527405727552777602031099972143344338178308080\", \"112680630004798425069810935278212000865453267506345451433803052322987302357330\"]"
+        },
+        {
+          "question": "Will England win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1105,
+          "slug": "https://polymarket.com/event/will-england-win-the-2026-fifa-world-cup-937",
+          "token_id": "[\"115556263888245616435851357148058235707004733438163639091106356867234218207169\", \"77121637225348873006259930776623502125079210522997384841464684944292365296940\"]"
+        },
+        {
+          "question": "Will France win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1635,
+          "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
+          "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
+        },
+        {
+          "question": "Will Brazil win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0845,
+          "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
+          "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
+        },
+        {
+          "question": "Will Argentina win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0885,
+          "slug": "https://polymarket.com/event/will-argentina-win-the-2026-fifa-world-cup-245",
+          "token_id": "[\"18812649149814341758733697580460697418474693998558159483117100240528657629879\", \"115428153746996892211798999366308897078723117634059783423375188043903703749062\"]"
+        },
+        {
+          "question": "Will Germany win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0515,
+          "slug": "https://polymarket.com/event/will-germany-win-the-2026-fifa-world-cup-467",
+          "token_id": "[\"81739002353269632749850710185641576213562066971072676369728657545679630163887\", \"45484070731786948288366703334552551439356529561722304542938873238430842810537\"]"
+        },
+        {
+          "question": "Will Portugal win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0695,
+          "slug": "https://polymarket.com/event/will-portugal-win-the-2026-fifa-world-cup-912",
+          "token_id": "[\"45415751658241142530386585138386640503488308219341470020075667342738719018629\", \"31940783580344558651011323787577288681658737625185216525249046282994042503801\"]"
+        },
+        {
+          "question": "Will Netherlands win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0325,
+          "slug": "https://polymarket.com/event/will-netherlands-win-the-2026-fifa-world-cup-739",
+          "token_id": "[\"55935183786009449883683540312350046975246300613283087403691731856990327029236\", \"103711573894614472510743687764792452240919804104728889027222697502832804498206\"]"
+        },
+        {
+          "question": "Will Norway win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0215,
+          "slug": "https://polymarket.com/event/will-norway-win-the-2026-fifa-world-cup-893",
+          "token_id": "[\"60447443643099453130956385288904175887233107411078568881602330835010340506057\", \"111538579557239934343870815626480092245052857494675784434731223739153238373070\"]"
         }
       ],
       "chart_history": [
-        {
-          "time": "21:07:58",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:02",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:05",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:08",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:12",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:15",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:18",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:21",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:25",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:28",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:31",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:34",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:37",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:41",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:44",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:47",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:50",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:54",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:57",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:00",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:04",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:07",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:10",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:13",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:16",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:20",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:23",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:26",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:29",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:33",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:36",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:39",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:42",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:46",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:49",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:52",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:56",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:59",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:02",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:05",
-          "wallet": 10.0,
-          "total": 10.0
-        },
         {
           "time": "21:10:08",
           "wallet": 10.0,
@@ -4727,11 +5094,211 @@
           "time": "21:13:21",
           "wallet": 10.0,
           "total": 10.0
+        },
+        {
+          "time": "21:13:24",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:28",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:31",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:34",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:37",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:46",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:50",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:53",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:56",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:59",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:03",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:06",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:09",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:13",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:16",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:19",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:23",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:26",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:29",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:32",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:35",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:39",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:42",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:45",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:49",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:52",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:55",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:58",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:02",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:05",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:08",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:11",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:15",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:18",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:21",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:25",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:28",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:32",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:36",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:39",
+          "wallet": 10.0,
+          "total": 10.0
         }
       ],
       "min_prob_threshold": 0.57,
       "max_bet_cap": 2.0,
-      "last_sync": "21:13:21",
+      "last_sync": "21:15:39",
       "running": true
     },
     {
@@ -4751,209 +5318,72 @@
           "prob": 0.4895,
           "slug": "https://polymarket.com/event/will-bitcoin-hit-1m-before-gta-vi-872",
           "token_id": "[\"105267568073659068217311993901927962476298440625043565106676088842803600775810\", \"91863162118308663069733924043159186005106558783397508844234610341221325526200\"]"
+        },
+        {
+          "question": "Will Spain win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1725,
+          "slug": "https://polymarket.com/event/will-spain-win-the-2026-fifa-world-cup-963",
+          "token_id": "[\"4394372887385518214471608448209527405727552777602031099972143344338178308080\", \"112680630004798425069810935278212000865453267506345451433803052322987302357330\"]"
+        },
+        {
+          "question": "Will England win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1105,
+          "slug": "https://polymarket.com/event/will-england-win-the-2026-fifa-world-cup-937",
+          "token_id": "[\"115556263888245616435851357148058235707004733438163639091106356867234218207169\", \"77121637225348873006259930776623502125079210522997384841464684944292365296940\"]"
+        },
+        {
+          "question": "Will France win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.1635,
+          "slug": "https://polymarket.com/event/will-france-win-the-2026-fifa-world-cup-924",
+          "token_id": "[\"108233603819467706476318984012158651931658302669301887462181073562758483842092\", \"32270411694523539495262303868629477861017829722282576458031815333486368239544\"]"
+        },
+        {
+          "question": "Will Brazil win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0845,
+          "slug": "https://polymarket.com/event/will-brazil-win-the-2026-fifa-world-cup-183",
+          "token_id": "[\"27576533317283401577758999384642760405921738493660383550832555714312627457443\", \"52986718774908357330412653486471347449818893503063830313445318937088822580057\"]"
+        },
+        {
+          "question": "Will Argentina win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0885,
+          "slug": "https://polymarket.com/event/will-argentina-win-the-2026-fifa-world-cup-245",
+          "token_id": "[\"18812649149814341758733697580460697418474693998558159483117100240528657629879\", \"115428153746996892211798999366308897078723117634059783423375188043903703749062\"]"
+        },
+        {
+          "question": "Will Germany win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0515,
+          "slug": "https://polymarket.com/event/will-germany-win-the-2026-fifa-world-cup-467",
+          "token_id": "[\"81739002353269632749850710185641576213562066971072676369728657545679630163887\", \"45484070731786948288366703334552551439356529561722304542938873238430842810537\"]"
+        },
+        {
+          "question": "Will Portugal win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0695,
+          "slug": "https://polymarket.com/event/will-portugal-win-the-2026-fifa-world-cup-912",
+          "token_id": "[\"45415751658241142530386585138386640503488308219341470020075667342738719018629\", \"31940783580344558651011323787577288681658737625185216525249046282994042503801\"]"
+        },
+        {
+          "question": "Will Netherlands win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0325,
+          "slug": "https://polymarket.com/event/will-netherlands-win-the-2026-fifa-world-cup-739",
+          "token_id": "[\"55935183786009449883683540312350046975246300613283087403691731856990327029236\", \"103711573894614472510743687764792452240919804104728889027222697502832804498206\"]"
+        },
+        {
+          "question": "Will Norway win the 2026 FIFA World Cup?",
+          "category": "Soccer",
+          "prob": 0.0215,
+          "slug": "https://polymarket.com/event/will-norway-win-the-2026-fifa-world-cup-893",
+          "token_id": "[\"60447443643099453130956385288904175887233107411078568881602330835010340506057\", \"111538579557239934343870815626480092245052857494675784434731223739153238373070\"]"
         }
       ],
       "chart_history": [
-        {
-          "time": "21:07:59",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:02",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:05",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:09",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:12",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:15",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:18",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:22",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:25",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:28",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:31",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:35",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:38",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:41",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:44",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:48",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:51",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:54",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:08:57",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:00",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:04",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:07",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:10",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:14",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:17",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:20",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:23",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:26",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:30",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:33",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:36",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:39",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:43",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:46",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:49",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:53",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:56",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:09:59",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:02",
-          "wallet": 10.0,
-          "total": 10.0
-        },
-        {
-          "time": "21:10:06",
-          "wallet": 10.0,
-          "total": 10.0
-        },
         {
           "time": "21:10:09",
           "wallet": 10.0,
@@ -5253,11 +5683,211 @@
           "time": "21:13:21",
           "wallet": 10.0,
           "total": 10.0
+        },
+        {
+          "time": "21:13:25",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:28",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:31",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:34",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:38",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:47",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:51",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:54",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:13:57",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:00",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:04",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:07",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:10",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:14",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:17",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:20",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:23",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:27",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:30",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:33",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:36",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:40",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:43",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:46",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:49",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:53",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:56",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:14:59",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:02",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:06",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:09",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:12",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:16",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:19",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:22",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:26",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:29",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:33",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:36",
+          "wallet": 10.0,
+          "total": 10.0
+        },
+        {
+          "time": "21:15:39",
+          "wallet": 10.0,
+          "total": 10.0
         }
       ],
       "min_prob_threshold": 0.57,
       "max_bet_cap": 2.0,
-      "last_sync": "21:13:21",
+      "last_sync": "21:15:39",
       "running": true
     }
   ],
