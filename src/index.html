@@ -529,16 +529,16 @@
                 const btnWithdraw = document.getElementById('btnWithdraw');
                 
                 if (isHarvestPhase) {
+                    if (btnWithdraw && !MASTER_DATA.withdraw_pending) btnWithdraw.disabled = false;
+
                     if (totalEquity >= farmCapital * 2) {
                         badge.textContent = "HARVEST READY (2X EQUITY)";
                         badge.className = "text-[9px] px-2 py-0.5 rounded bg-amber-500 text-black font-black uppercase tracking-tighter animate-pulse shadow-[0_0_15px_#f59e0b]";
                         hint.textContent = "Anda sudah bisa memproses gajian bulan ini!";
-                        if (btnWithdraw && !MASTER_DATA.withdraw_pending) btnWithdraw.disabled = false;
                     } else {
                         badge.textContent = "COMPOUNDING PHASE";
                         badge.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold uppercase tracking-tighter";
-                        hint.textContent = `Tombol gajian aktif saat Total Equity menyentuh ${fUSD(farmCapital * 2)}`;
-                        if (btnWithdraw) btnWithdraw.disabled = true;
+                        hint.textContent = `Saran gajian saat Total Equity menyentuh ${fUSD(farmCapital * 2)}`;
                     }
                 } else {
                     badge.textContent = "SCALING PHASE";

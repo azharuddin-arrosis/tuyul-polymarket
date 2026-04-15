@@ -175,6 +175,7 @@ async fn main() {
                         total_equity, gajian, s.farm_capital, per_bot
                     );
                     let _ = send_telegram_msg(&msg).await;
+                    println!("✅ [WITHDRAW] Settlement complete. Notification sent.");
                 }
                 continue; // Jangan jalankan auto-scale jika sedang withdraw
             }
@@ -262,7 +263,7 @@ async fn main() {
                 if active_count >= 10 {
                     let threshold_step = 100.0;
                     if total_equity >= s.last_notified_equity + threshold_step {
-                        let total_profit = total_equity - 100.0; 
+                        let total_profit = total_equity - s.farm_capital; 
                         let owner_share = total_profit * 0.8;
                         let bot_growth = total_profit * 0.2;
                         
@@ -283,6 +284,31 @@ async fn main() {
                         let _ = send_telegram_msg(&msg).await;
                         // Always save state after sending notification to persist last_notified_equity
                         if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                    }
+
+                    // --- NEW: READY TO HARVEST (2X MODAL) NOTIFICATION ---
+                    if total_equity >= s.farm_capital * 2.0 && !s.withdraw_pending {
+                        // We use a simple check to avoid spamming: only if last_notified_equity is less than 2x
+                        if s.last_notified_equity < s.farm_capital * 2.0 {
+                            s.last_notified_equity = s.farm_capital * 2.0;
+
+                            let profit = total_equity - s.farm_capital;
+                            let gajian = profit * 0.8;
+                            let growth = profit * 0.2;
+
+                            let msg = format!(
+                                "🎊 *QUANTUM FARM: READY TO HARVEST!*\n\n\
+                                💰 *Total Equity:* ${:.2}\n\
+                                🎯 *Target 2X Modal:* ${:.2}\n\n\
+                                💵 *Potensi Gajian (80%):* ${:.2}\n\
+                                🛡️ *Bot Growth (20%):* ${:.2}\n\n\
+                                _Silahkan klik tombol 'PROSES WITHDRAW GAJIAN' di dashboard._",
+                                total_equity, s.farm_capital * 2.0, gajian, growth
+                            );
+                            let _ = send_telegram_msg(&msg).await;
+                            println!("📢 [NOTIFY] Ready to harvest alert sent.");
+                            if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                        }
                     }
                 }
             }
@@ -415,6 +441,15 @@ async fn reset_all_bots(State(state): State<SharedState>) -> impl IntoResponse {
             running: false,
         };
     }
+    s.auto_scale = false;
+    s.target_capital = 100.0;
+    s.farm_capital = 100.0;
+    s.last_notified_equity = 100.0;
+    s.unallocated_balance = 0.0;
+    s.withdraw_pending = false;
+
+    if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write(SAVE_FILE, c); }
+    println!("🧹 [RESET] All bots and farm metrics have been reset.");
     axum::http::StatusCode::OK
 }
 
@@ -436,6 +471,7 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
     s.auto_scale = p.auto_scale;
     s.target_capital = p.total_capital;
     s.farm_capital = p.total_capital; // Initialize current expected farm capital
+    s.last_notified_equity = p.total_capital; 
     s.scaling_interval = p.scaling_interval;
 
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
@@ -486,6 +522,7 @@ async fn prepare_withdraw(State(state): State<SharedState>) -> impl IntoResponse
         Menunggu semua open trades diclose secara natural..."
     );
     let _ = send_telegram_msg(&msg).await;
+    println!("📤 [WITHDRAW] Withdrawal process initiated by user.");
 
     axum::http::StatusCode::OK
 }
@@ -586,7 +623,7 @@ async fn send_telegram_msg(msg: &str) -> Result<(), Box<dyn std::error::Error>> 
     
     let url = format!("https://api.telegram.org/bot{}/sendMessage", token);
     let client = reqwest::Client::new();
-    let _ = client.post(url)
+    let res = client.post(url)
         .json(&serde_json::json!({
             "chat_id": chat_id,
             "text": msg,
@@ -594,6 +631,16 @@ async fn send_telegram_msg(msg: &str) -> Result<(), Box<dyn std::error::Error>> 
         }))
         .send()
         .await;
+    
+    match res {
+        Ok(resp) => {
+            if !resp.status().is_success() {
+                let err_text = resp.text().await.unwrap_or_default();
+                eprintln!("❌ Telegram API Error: {}", err_text);
+            }
+        },
+        Err(e) => eprintln!("❌ Failed to send Telegram message: {}", e),
+    }
     
     Ok(())
 }
