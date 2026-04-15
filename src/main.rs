@@ -11,7 +11,8 @@ use std::time::Duration;
 use tokio::time::sleep;
 use chrono::Local;
 use std::net::SocketAddr;
-// use dotenv::dotenv;
+use reqwest;
+use dotenv::dotenv;
 
 // --- CORE BOT TYPES ---
 
@@ -93,6 +94,7 @@ type SharedState = Arc<Mutex<MasterState>>;
 
 #[tokio::main]
 async fn main() {
+    dotenv().ok(); // Load credentials from .env
     let state = Arc::new(Mutex::new(load_state()));
 
     let bot_names = ["VORTEX", "PHANTOM", "TITAN", "REAPER", "NEON", "KRAKEN", "QUANTUM", "APOLLO", "ZENITH", "HYDRA"];
@@ -166,10 +168,8 @@ async fn main() {
                     
                     let deployed_capital = (target_count as f64) * s.scaling_interval;
                     s.unallocated_balance = (total_equity - deployed_capital).max(0.0);
-
                     if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
-                } 
-                else if needs_bailout && active_count > 0 {
+                } else if needs_bailout && active_count > 0 {
                     // --- SOFT BAILOUT / PROFIT REDISTRIBUTION ---
                     // Inject liquidity from winners to losers WITHOUT resetting their history/trades
                     println!("💸 [BAILOUT] Emergency Liquidity Injection! Redistributing profit to save struggling bots...");
@@ -189,6 +189,34 @@ async fn main() {
                         }
                     }
                     if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                }
+
+                // --- NEW: HARVEST TELEGRAM NOTIFICATION (2:8 Strategy) ---
+                if active_count >= 10 {
+                    let threshold_step = 100.0;
+                    if total_equity >= s.last_notified_equity + threshold_step {
+                        let total_profit = total_equity - 100.0; 
+                        let owner_share = total_profit * 0.8;
+                        let bot_growth = total_profit * 0.2;
+                        
+                        s.last_notified_equity = (total_equity / threshold_step).floor() * threshold_step;
+                        
+                        let msg = format!(
+                            "🔔 *QUANTUM FARM HARVEST ALERT!*\n\n\
+                            🚀 Keuntungan baru terdeteksi!\n\
+                            💰 *Total Equity:* ${:.2}\n\
+                            📈 *Total Profit:* ${:.2}\n\
+                            ---------------------------\n\
+                            🟢 *Jatah Gajian (80%):* ${:.2}\n\
+                            🔵 *Bot Growth (20%):* ${:.2}\n\
+                            ---------------------------\n\
+                            _Waktunya panen mingguan!_",
+                            total_equity, total_profit, owner_share, bot_growth
+                        );
+                        let _ = send_telegram_msg(&msg).await;
+                        // Always save state after sending notification to persist last_notified_equity
+                        if let Ok(c) = serde_json::to_string_pretty(&*s) { let _ = std::fs::write("storage/farm_state.json", c); }
+                    }
                 }
             }
         }
@@ -441,4 +469,23 @@ async fn bot_worker(state: SharedState, bot_id: String) {
         }
         sleep(Duration::from_secs(3)).await;
     }
+}
+
+async fn send_telegram_msg(msg: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let token = std::env::var("TELEGRAM_TOKEN").unwrap_or_default();
+    let chat_id = std::env::var("TELEGRAM_CHAT_ID").unwrap_or_default();
+    if token.is_empty() || chat_id.is_empty() { return Ok(()); }
+    
+    let url = format!("https://api.telegram.org/bot{}/sendMessage", token);
+    let client = reqwest::Client::new();
+    let _ = client.post(url)
+        .json(&serde_json::json!({
+            "chat_id": chat_id,
+            "text": msg,
+            "parse_mode": "Markdown"
+        }))
+        .send()
+        .await;
+    
+    Ok(())
 }

@@ -431,6 +431,7 @@
                     const equity = bot.balance + bot.usd_in_bet + unrealized;
                     totalEquity += equity;
                 });
+                totalEquity += (MASTER_DATA.unallocated_balance || 0);
                 
                 const activeCount = MASTER_DATA.bots.filter(b => b.running).length;
                 const interval = MASTER_DATA.scaling_interval || 10;
@@ -503,8 +504,8 @@
                     hint.textContent = "Menunggu 10 Bot jalan untuk mulai bagi hasil.";
                 }
 
-                // Calculate Idle (Sisa Dana yang belum kepakai bot)
-                const farmIdle = Math.max(0, totalEquity - totalCapital - (isHarvestPhase ? surplus : 0));
+                // Pull Idle Reserve natively from backend state
+                const farmIdle = MASTER_DATA.unallocated_balance || 0;
                 document.getElementById('totalFarmIdle').textContent = fUSD(farmIdle);
                 document.getElementById('totalFarmIdleIDR').textContent = 'Rp ' + (farmIdle * IDR_RATE).toLocaleString('id-ID', {maximumFractionDigits:0});
 
