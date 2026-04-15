@@ -223,7 +223,7 @@
                     </div>
 
                     <!-- SECURED PROFIT VAULT -->
-                    <div class="bg-amber-500/10 border-2 border-amber-500/30 rounded-lg p-4 flex justify-between items-center relative overflow-hidden group hover:border-amber-500/60 transition-all cursor-pointer shadow-xl shadow-amber-900/10" onclick="showSimulationModal()">
+                    <div class="bg-amber-500/10 border-2 border-amber-500/30 rounded-lg p-4 flex justify-between items-center relative overflow-hidden group hover:border-amber-500/60 transition-all shadow-xl shadow-amber-900/10">
                         <div class="absolute -right-4 -bottom-4 text-6xl opacity-[0.03] group-hover:rotate-12 transition-transform">💰</div>
                         <div>
                             <div class="flex items-center gap-2 mb-1">
@@ -238,8 +238,8 @@
                             <div class="text-[9px] text-amber-500/50 mt-1 italic font-bold">Total Keuntungan yang Telah Diamankan</div>
                         </div>
                         <div class="text-right">
-                            <div class="stat-label text-[9px] opacity-40">Plan Status</div>
-                            <div class="text-[9px] font-black text-amber-500 underline decoration-dotted">View Simulation Plan</div>
+                            <div class="stat-label text-[9px] opacity-40 uppercase tracking-widest">Share</div>
+                            <div class="text-xl font-black text-amber-500/40">80%</div>
                         </div>
                     </div>
                 </div>
@@ -462,44 +462,6 @@
                         </table>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SIMULATION PLAN MODAL -->
-    <div id="simulationModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4" onclick="hideSimulationModal(event)">
-        <div class="bg-[#0a0a0a] border border-white/10 rounded-xl w-full max-w-4xl overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
-            <div class="bg-amber-500/10 px-6 py-4 border-b border-amber-500/20 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <span class="text-2xl">📈</span>
-                    <span class="font-black text-lg tracking-tighter text-amber-400">QUANTUM 10-CYCLE GROWTH SIMULATION (8:2)</span>
-                </div>
-                <button onclick="hideSimulationModal()" class="text-white/40 hover:text-white text-3xl transition-colors">&times;</button>
-            </div>
-            <div class="p-6 overflow-x-auto">
-                <div class="bg-amber-500/5 border border-amber-500/10 p-4 rounded-lg mb-6 text-[10px] sm:text-xs leading-relaxed text-amber-200/70">
-                    <p class="font-bold text-amber-400 mb-2">MASTER STRATEGY:</p>
-                    Setiap kali Total Equity mencapai <span class="text-white font-bold">2x Modal</span>, sistem akan <span class="text-white font-bold">Auto-Withdraw 80%</span> dari profit ke Vault dan <span class="text-white font-bold">Re-invest 20%</span> sisanya sebagai tambahan modal trading (Compounding).
-                </div>
-                <table class="w-full text-left border-collapse text-[10px] sm:text-sm">
-                    <thead>
-                        <tr class="bg-white/5 text-zinc-400 uppercase tracking-widest text-[9px] font-bold">
-                            <th class="p-3 border-b border-white/10">Cycle</th>
-                            <th class="p-3 border-b border-white/10">Modal</th>
-                            <th class="p-3 border-b border-white/10">Target (2x)</th>
-                            <th class="p-3 border-b border-white/10">WD (80%)</th>
-                            <th class="p-3 border-b border-white/10">Comp (20%)</th>
-                            <th class="p-3 border-b border-white/10">Next Modal</th>
-                            <th class="p-3 border-b border-white/10 text-right">Total Vault</th>
-                        </tr>
-                    </thead>
-                    <tbody id="simTableBody" class="mono">
-                        <!-- Rows injected by JS -->
-                    </tbody>
-                </table>
-            </div>
-            <div class="bg-white/5 p-4 text-center border-t border-white/5">
-                <p class="text-[10px] opacity-40 italic">Angka di atas adalah simulasi matematis ideal berdasarkan target profit 100% per siklus.</p>
             </div>
         </div>
     </div>
@@ -963,42 +925,6 @@
                 const data = await res.json();
                 console.log("Auto Harvest set to:", data.auto_harvest);
             } catch(e) { console.error(e); }
-        }
-
-        function showSimulationModal() {
-            const body = document.getElementById('simTableBody');
-            let capital = 100;
-            let totalVault = 0;
-            let rows = "";
-
-            for(let i=1; i<=10; i++) {
-                let target = capital * 2;
-                let profit = capital;
-                let wd = profit * 0.8;
-                let comp = profit * 0.2;
-                totalVault += wd;
-                
-                rows += `
-                    <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                        <td class="p-3 text-zinc-500 font-bold">#${i}</td>
-                        <td class="p-3 text-blue-400">${fUSD(capital)}</td>
-                        <td class="p-3 text-emerald-400 font-bold">${fUSD(target)}</td>
-                        <td class="p-3 text-amber-500 font-black">${fUSD(wd)}</td>
-                        <td class="p-3 text-blue-300">${fUSD(comp)}</td>
-                        <td class="p-3 text-white font-bold">${fUSD(capital + comp)}</td>
-                        <td class="p-3 text-right text-amber-400 font-black">${fUSD(totalVault)}</td>
-                    </tr>
-                `;
-                capital = capital + comp;
-            }
-            body.innerHTML = rows;
-            document.getElementById('simulationModal').classList.remove('hidden');
-        }
-
-        function hideSimulationModal(e) { 
-            if(!e || e.target === document.getElementById('simulationModal')) {
-                document.getElementById('simulationModal').classList.add('hidden');
-            }
         }
 
         if(localStorage.getItem('bot_theme') === 'light') document.body.classList.add('light-mode');
