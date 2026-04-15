@@ -173,7 +173,7 @@ async fn main() {
                     save_state(&s);
 
                     // 6. Final Notification
-                    let idr_rate = 16200.0;
+                    let idr_rate = get_idr_rate().await;
                     let msg = format!(
                         "💰 *QUANTUM FARM: GAJIAN BERHASIL!*\n\n\
                         🏦 *Secured Profit Vault:* ${:.2} (Rp {:.*})\n\
@@ -542,10 +542,9 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
             bot.initial_balance = per_bot_bal;
             bot.running = true;
             
-            // Fixed Distribution: 50, 55, 60, 65, 70 (paired)
-            let pair_idx = (i / 2) as f64;
-            let threshold = 0.50 + (pair_idx * 0.05);
-            bot.min_prob_threshold = (threshold.min(0.70) * 100.0).round() / 100.0;
+            // Threshold: 52% for bots 0-4, 57% for bots 5-9
+            bot.min_prob_threshold = if i < 5 { 0.52 } else { 0.57 };
+            bot.max_bet_cap = 2.0;
             
             bot.last_sync = "START_ALL".to_string();
         } else {
@@ -583,8 +582,15 @@ async fn prepare_withdraw(State(state): State<SharedState>) -> impl IntoResponse
 }
 
 async fn bot_worker(state: SharedState, bot_id: String) {
-    use rand::Rng;
+    use rand::{Rng, SeedableRng};
+    use rand::rngs::StdRng;
+    use rand::RngCore;
     loop {
+        // Pre-generate random values before any await
+        let mut seed = [0u8; 32];
+        StdRng::from_entropy().fill_bytes(&mut seed);
+        let mut rng = StdRng::from_seed(seed);
+        
         {
             let mut master = state.lock().await;
             let withdraw_pending = master.withdraw_pending;
@@ -597,26 +603,74 @@ async fn bot_worker(state: SharedState, bot_id: String) {
                     continue;
                 }
             };
-            let mut rng = rand::thread_rng();
-
             let questions = ["BTC Bullish?", "ETH Bakal Naik?", "Trump Menang?", "Fed Pivot?", "Emas ATH?", "AI Peak?"];
-            bot.current_markets = (0..500).map(|i| {
-                let prob = if rng.gen_bool(0.7) { rng.gen_range(0.40..0.98) } else { rng.gen_range(0.10..0.40) };
-                Market {
-                    question: format!("{} (#{})", questions[rng.gen_range(0..questions.len())], i),
-                    category: "Global".to_string(), prob, slug: format!("https://poly.com/{}", i), token_id: None
+            
+            // Fetch real markets from Gamma API
+            let mut real_markets = vec![];
+            if let Ok(res) = reqwest::get("https://gamma-api.polymarket.com/markets?active=true&closed=false&limit=100").await {
+                if let Ok(json) = res.json::<serde_json::Value>().await {
+                    if let Some(arr) = json.as_array() {
+                        for m in arr {
+                            let prob_str = m["outcomePrices"].as_str().unwrap_or("0.5");
+                            let prices: Vec<f64> = prob_str.trim_start_matches('[')
+                                .trim_end_matches(']')
+                                .split(',')
+                                .filter_map(|s| s.trim().trim_matches('"').parse::<f64>().ok())
+                                .collect();
+                            let prob = prices.get(0).copied().unwrap_or(0.5);
+                            if prob >= 0.02 && prob <= 0.98 {
+                                let question = m["question"].as_str().unwrap_or("?").to_string();
+                                let lower_q = question.to_lowercase();
+                                if lower_q.contains("bitcoin") || lower_q.contains("btc") || 
+                                   lower_q.contains("crypto") || lower_q.contains("football") || 
+                                   lower_q.contains("soccer") || lower_q.contains("premier league") {
+                                    real_markets.push(Market {
+                                        question,
+                                        category: if lower_q.contains("bitcoin") || lower_q.contains("btc") || lower_q.contains("crypto") {
+                                            "Crypto".to_string()
+                                        } else {
+                                            "Soccer".to_string()
+                                        },
+                                        prob,
+                                        slug: format!("https://polymarket.com/event/{}", m["slug"].as_str().unwrap_or("")),
+                                        token_id: Some(m["clobTokenIds"].as_str().unwrap_or("").to_string()),
+                                    });
+                                }
+                            }
+                        }
+                    }
                 }
-            }).collect();
+            }
+            
+            // Fallback to synthetic if API fails
+            if real_markets.is_empty() {
+                bot.current_markets = (0..500).map(|i| {
+                    let prob = if rng.gen_bool(0.7) { rng.gen_range(0.40..0.98) } else { rng.gen_range(0.10..0.40) };
+                    Market {
+                        question: format!("{} (#{})", questions[rng.gen_range(0..questions.len())], i),
+                        category: "Global".to_string(), prob, slug: format!("https://poly.com/{}", i), token_id: None
+                    }
+                }).collect();
+            } else {
+                bot.current_markets = real_markets;
+            }
             bot.last_sync = Local::now().format("%H:%M:%S").to_string();
 
             if bot.running {
                 // Check if we should enter new trades
                 if !withdraw_pending {
-                    for m in &bot.current_markets {
-                        if m.prob >= bot.min_prob_threshold && bot.open_trades.len() < 5 {
+                    // Filter: Crypto (BTC) or Soccer only
+                    let valid_markets: Vec<_> = bot.current_markets.iter()
+                        .filter(|m| m.category == "Crypto" || m.category == "Soccer")
+                        .collect();
+                    
+                    for m in valid_markets {
+                        if m.prob >= bot.min_prob_threshold && bot.open_trades.len() < 3 {
+                            let gas_fee = 0.03;
                             let bet = (bot.balance.sqrt() * 0.35).max(1.0).min(bot.max_bet_cap);
-                            if bot.balance >= (bet + 0.02) {
-                                bot.balance -= bet + 0.02; bot.usd_in_bet += bet;
+                            let total_cost = bet + gas_fee;
+                            if bot.balance >= total_cost {
+                                bot.balance -= total_cost; bot.usd_in_bet += bet;
                                 bot.open_trades.push(Trade {
                                     id: format!("T-{}", rng.gen_range(1000..9999)),
                                     question: m.question.clone(), bet_amount: bet, entry_prob: m.prob,
@@ -664,8 +718,14 @@ async fn bot_worker(state: SharedState, bot_id: String) {
                 let time = bot.last_sync.clone();
                 bot.chart_history.push(HistoryPoint { time, wallet: bot.balance, total });
                 if bot.chart_history.len() > 100 { bot.chart_history.remove(0); }
+                
+                // Periodic save every ~30 seconds (every 10th iteration)
+                static SAVE_COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+                let count = SAVE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                if count % 10 == 0 {
+                    save_state(&master);
+                }
             }
-            // Removed frequent state save to prevent file corruption
         }
         sleep(Duration::from_secs(3)).await;
     }
@@ -698,4 +758,22 @@ async fn send_telegram_msg(msg: &str) -> Result<(), Box<dyn std::error::Error>> 
     }
     
     Ok(())
+}
+
+async fn get_idr_rate() -> f64 {
+    if let Ok(res) = reqwest::get("https://api.coingecko.com/api/v3/simple/price?ids=usd-idr&vs_currencies=idr").await {
+        if let Ok(json) = res.json::<serde_json::Value>().await {
+            if let Some(rate) = json.get("usd-idr").and_then(|v| v.get("idr")).and_then(|v| v.as_f64()) {
+                return rate;
+            }
+        }
+    }
+    if let Ok(res) = reqwest::get("https://api.exchangerate-api.com/v4/latest/USD").await {
+        if let Ok(json) = res.json::<serde_json::Value>().await {
+            if let Some(rate) = json.get("rates").and_then(|v| v.get("IDR")).and_then(|v| v.as_f64()) {
+                return rate;
+            }
+        }
+    }
+    16200.0
 }
