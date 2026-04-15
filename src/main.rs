@@ -325,8 +325,8 @@ async fn main() {
                         }
                     }
 
-                    // --- NEW: AUTO-HARVEST TRIGGER ---
-                    if s.auto_harvest && total_equity >= s.farm_capital * 2.0 && !s.withdraw_pending {
+                    // --- MANDATORY AUTO-HARVEST TRIGGER ---
+                    if total_equity >= s.farm_capital * 2.0 && !s.withdraw_pending {
                         s.withdraw_pending = true;
                         let msg = format!(
                             "🤖 *AUTO-HARVEST TRIGGERED!*\n\n\
@@ -423,7 +423,7 @@ fn load_state() -> MasterState {
         withdraw_logs: vec![],
         farm_capital: 100.0,
         vault_balance: 0.0,
-        auto_harvest: false,
+        auto_harvest: true,
     }
 }
 
@@ -559,9 +559,9 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
 
 async fn toggle_auto_harvest(State(state): State<SharedState>) -> impl IntoResponse {
     let mut s = state.lock().await;
-    s.auto_harvest = !s.auto_harvest;
+    s.auto_harvest = true; // MANDATORY
     save_state(&s);
-    Json(serde_json::json!({ "auto_harvest": s.auto_harvest }))
+    Json(serde_json::json!({ "auto_harvest": true }))
 }
 
 async fn prepare_withdraw(State(state): State<SharedState>) -> impl IntoResponse {

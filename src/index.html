@@ -86,7 +86,6 @@
             <div class="flex items-center gap-6">
                 <div class="flex items-center gap-2">
                     <button onclick="showStartAllModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">START ALL BOTS</button>
-                    <button id="btnWithdraw" onclick="prepareWithdraw()" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-amber-900/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>PROSES WITHDRAW GAJIAN</button>
                     <button onclick="resetAll()" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-rose-900/20 active:scale-95 transition-all">RESET ALL BOTS</button>
                     <button onclick="location.reload()" class="bg-white/5 hover:bg-white/10 px-3 py-1 rounded font-black text-[9px] tracking-widest active:scale-95 transition-all border border-white/5">REFRESH UI</button>
                 </div>
@@ -94,11 +93,9 @@
                 <div class="text-right border-l border-white/10 pl-6 flex items-center gap-4">
                     <div class="flex flex-col items-end">
                         <span class="stat-label">Auto-Harvest</span>
-                        <div class="flex items-center gap-2">
-                             <label class="relative inline-flex items-center cursor-pointer scale-75 origin-right">
-                                <input type="checkbox" id="toggleAutoHarvest" onchange="toggleAutoHarvest()" class="sr-only peer">
-                                <div class="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                            </label>
+                        <div class="flex items-center gap-1 font-black text-[9px] text-emerald-500 uppercase tracking-tighter">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            ACTIVE ALWAYS
                         </div>
                     </div>
                     <div>
@@ -576,27 +573,11 @@
                 const hint = document.getElementById('harvestHint');
                 
                 // --- WITHDRAW LOGIC UI ---
-                const btnWithdraw = document.getElementById('btnWithdraw');
-                
                 if (isHarvestPhase) {
-                    if (btnWithdraw) {
-                        if (MASTER_DATA.withdraw_pending) {
-                            btnWithdraw.disabled = true;
-                            btnWithdraw.textContent = MASTER_DATA.auto_harvest ? "AUTO-HARVEST IN PROGRESS" : "WITHDRAW SEDANG DIPROSES";
-                            btnWithdraw.className = "bg-rose-600/50 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest transition-all cursor-not-allowed animate-pulse";
-                        } else {
-                            btnWithdraw.disabled = false;
-                            btnWithdraw.textContent = "PROSES WITHDRAW GAJIAN";
-                            btnWithdraw.className = "bg-amber-600 hover:bg-amber-500 text-white px-3 py-1 rounded font-black text-[9px] tracking-widest shadow-lg shadow-amber-900/20 active:scale-95 transition-all";
-                        }
-                    }
-
                     if (totalEquity >= farmCapital * 2) {
                         badge.textContent = "HARVEST READY (2X EQUITY)";
                         badge.className = "text-[9px] px-2 py-0.5 rounded bg-amber-500 text-black font-black uppercase tracking-tighter animate-pulse shadow-[0_0_15px_#f59e0b]";
-                        hint.innerHTML = MASTER_DATA.auto_harvest 
-                            ? "<span class='text-emerald-500 font-bold'>AUTO-HARVEST AKTIF:</span> Sistem sedang memproses gajian Anda!" 
-                            : "Anda sudah bisa memproses gajian bulan ini!";
+                        hint.innerHTML = "<span class='text-emerald-500 font-bold'>AUTO-HARVEST INITIATED:</span> Sistem sedang mengamankan keuntungan secara otomatis!";
                     } else {
                         badge.textContent = "COMPOUNDING PHASE";
                         badge.className = "text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold uppercase tracking-tighter";
@@ -606,11 +587,6 @@
                     badge.textContent = "SCALING PHASE";
                     badge.className = "text-[9px] px-2 py-0.5 rounded bg-zinc-500/20 text-zinc-400 font-bold uppercase tracking-tighter";
                     hint.textContent = "Menunggu 10 Bot jalan untuk mulai fase compound.";
-                    if (btnWithdraw) {
-                        btnWithdraw.disabled = true;
-                        btnWithdraw.textContent = "PROSES WITHDRAW GAJIAN";
-                        btnWithdraw.className = "bg-amber-600/20 text-white/20 px-3 py-1 rounded font-black text-[9px] tracking-widest cursor-not-allowed";
-                    }
                 }
 
                 // Pull Idle Reserve natively from backend state
