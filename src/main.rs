@@ -621,7 +621,6 @@ async fn bot_worker(state: SharedState, bot_id: String) {
                             let prob = prices.get(0).copied().unwrap_or(0.5);
                             if prob >= 0.02 && prob <= 0.98 {
                                 let question = m["question"].as_str().unwrap_or("?").to_string();
-                                let lower_q = question.to_lowercase();
                                 // No filter - all events for testing
                                 real_markets.push(Market {
                                     question: question.clone(),
