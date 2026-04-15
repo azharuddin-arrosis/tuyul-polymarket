@@ -542,8 +542,8 @@ async fn start_all_bots(State(state): State<SharedState>, Json(p): Json<StartAll
             bot.initial_balance = per_bot_bal;
             bot.running = true;
             
-            // Threshold: 52% for bots 0-4, 57% for bots 5-9
-            bot.min_prob_threshold = if i < 5 { 0.52 } else { 0.57 };
+            // Threshold: 45% for bots 0-4, 50% for bots 5-9
+            bot.min_prob_threshold = if i < 5 { 0.45 } else { 0.50 };
             bot.max_bet_cap = 2.0;
             
             bot.last_sync = "START_ALL".to_string();
@@ -621,9 +621,8 @@ async fn bot_worker(state: SharedState, bot_id: String) {
                             if prob >= 0.02 && prob <= 0.98 {
                                 let question = m["question"].as_str().unwrap_or("?").to_string();
                                 let lower_q = question.to_lowercase();
-                                if lower_q.contains("bitcoin") || lower_q.contains("btc") || 
-                                   lower_q.contains("crypto") || lower_q.contains("football") || 
-                                   lower_q.contains("soccer") || lower_q.contains("premier league") {
+                                // All markets - no filter for testing
+                                if true {
                                     real_markets.push(Market {
                                         question,
                                         category: if lower_q.contains("bitcoin") || lower_q.contains("btc") || lower_q.contains("crypto") {
