@@ -1,0 +1,44 @@
+{
+  "settings": {
+    "usdc_balance": 98.20833333333333,
+    "matic_balance": 0.497,
+    "bet_size": 1.0,
+    "gas_price": 0.001,
+    "auto_mode": true,
+    "threshold_above": 0.52,
+    "threshold_below": 0.48,
+    "tp_threshold": 0.2,
+    "sl_threshold": -0.3
+  },
+  "history": [
+    {
+      "slug": "btc-updown-5m-1776334800",
+      "outcome": "Yes",
+      "amount": 1.0,
+      "price": 0.72,
+      "pnl": 0.20833333333333326,
+      "timestamp": 1776334912,
+      "gas_cost": 0.001,
+      "status": "Auto Exit"
+    }
+  ],
+  "open_positions": [
+    {
+      "slug": "btc-updown-5m-1776335100",
+      "outcome": "Yes",
+      "amount": 1.0,
+      "price": 0.52,
+      "timestamp": 1776334857,
+      "end_timestamp": 1776335400
+    },
+    {
+      "slug": "btc-updown-5m-1776334800",
+      "outcome": "Yes",
+      "amount": 1.0,
+      "price": 0.87,
+      "timestamp": 1776334912,
+      "end_timestamp": 1776335100
+    }
+  ],
+  "last_trade_timestamp": 1776334912
+}
