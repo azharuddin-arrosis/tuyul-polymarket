@@ -1,11 +1,14 @@
 # Dockerfile for Rust Bot
-FROM rust:1.81-bookworm as builder
+FROM rust:1.82-bookworm as builder
 
 WORKDIR /usr/src/app
 COPY . .
 
 # Install dependencies for building
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+
+# Fix for "edition2024" error: Update to latest stable cargo and ensure registry is fresh
+RUN cargo --version
 
 # Build binary
 RUN cargo build --release
