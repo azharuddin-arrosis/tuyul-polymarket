@@ -96,6 +96,13 @@ app.post('/api/sell', async (req, res) => {
     res.json(result);
 });
 
+app.post('/api/reset', async (req, res) => {
+    const result = await fetchBot('/api/reset', {
+        method: 'POST'
+    });
+    res.json(result);
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`BTC 5m Dashboard running on http://localhost:${PORT}`);

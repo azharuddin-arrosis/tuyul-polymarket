@@ -21,6 +21,7 @@ struct Market {
     icon: Option<String>,
     outcome_prices: Option<String>,
     clob_token_ids: Option<String>,
+    category: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,6 +32,8 @@ struct Position {
     price: f64,
     timestamp: i64,
     end_timestamp: i64,
+    #[serde(default)]
+    traded: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -148,6 +151,7 @@ struct MarketInfo {
     yes_price: f64,
     no_price: f64,
     icon: String,
+    category: String,
 }
 
 #[derive(Serialize)]
@@ -181,6 +185,7 @@ async fn fetch_btc5m_markets(client: &Client) -> Vec<Market> {
                         icon: market.get("icon").and_then(|v| v.as_str()).map(|s| s.to_string()),
                         outcome_prices: out_prices,
                         clob_token_ids: clob_ids,
+                        category: Some("BTC".to_string()),
                     });
                 }
             }
@@ -203,6 +208,7 @@ async fn fetch_btc5m_markets(client: &Client) -> Vec<Market> {
                             icon: market.get("icon").and_then(|v| v.as_str()).map(|s| s.to_string()),
                             outcome_prices: out_prices,
                             clob_token_ids: clob_ids,
+                            category: Some("BTC".to_string()),
                         });
                     }
                 }
@@ -228,15 +234,117 @@ async fn fetch_btc5m_markets(client: &Client) -> Vec<Market> {
     markets
 }
 
+async fn fetch_other_markets(client: &Client) -> Vec<Market> {
+    let now = Utc::now().timestamp();
+    
+    let mut markets = Vec::new();
+    
+    // Fetch active markets and include all (no endDate filter since most are far out)
+    let url = "https://gamma-api.polymarket.com/markets?active=true&limit=200";
+    match client.get(url).timeout(Duration::from_secs(3)).send().await {
+        Ok(resp) => {
+            match resp.json::<Vec<serde_json::Value>>().await {
+                Ok(m) => {
+                    println!("[DEBUG] Found {} total active markets", m.len());
+                    for market in m {
+                        let slug = market.get("slug").and_then(|v| v.as_str()).unwrap_or("");
+                        
+                        // Skip BTC 5m markets
+                        if slug.contains("btc-updown-5m") {
+                            continue;
+                        }
+                        
+                        // Check if market is closed
+                        let closed = market.get("closed").and_then(|v| v.as_bool()).unwrap_or(false);
+                        if closed {
+                            continue;
+                        }
+                        
+                        // Get endDate - if null, use a default (market never ends or TBD)
+                        let end_ts = market.get("endDate")
+                            .and_then(|v| v.as_str())
+                            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+                            .map(|dt| dt.timestamp())
+                            .unwrap_or(now + 86400 * 365); // Default to 1 year if no endDate
+                        
+                        // Include all non-expired markets (end date in the future)
+                        if end_ts > now {
+                            let out_prices = market.get("outcomePrices").and_then(|v| v.as_str()).map(|s| s.to_string());
+                            let clob_ids = market.get("clobTokenIds").and_then(|v| v.as_str()).map(|s| s.to_string());
+                            
+                            // Extract category from question/slug
+                            let question = market.get("question").and_then(|v| v.as_str()).unwrap_or("");
+                            let category = if question.to_lowercase().contains("soccer") || question.to_lowercase().contains("football") {
+                                "SOCCER"
+                            } else if question.to_lowercase().contains("nba") || question.to_lowercase().contains("basketball") {
+                                "NBA"
+                            } else if question.to_lowercase().contains("nhl") || question.to_lowercase().contains("hockey") {
+                                "NHL"
+                            } else if question.to_lowercase().contains("nfl") || (question.to_lowercase().contains("football") && question.to_lowercase().contains("game")) {
+                                "NFL"
+                            } else if question.to_lowercase().contains("tennis") {
+                                "TENNIS"
+                            } else if question.to_lowercase().contains("mma") || question.to_lowercase().contains("ufc") {
+                                "MMA"
+                            } else if question.to_lowercase().contains("cricket") {
+                                "CRICKET"
+                            } else if question.to_lowercase().contains("esports") {
+                                "ESPORTS"
+                            } else if slug.contains("sport") {
+                                "SPORTS"
+                            } else if question.to_lowercase().contains("election") || question.to_lowercase().contains("trump") || question.to_lowercase().contains("politics") {
+                                "POLITICS"
+                            } else {
+                                "OTHER"
+                            };
+                            
+                            markets.push(Market {
+                                slug: slug.to_string(),
+                                icon: market.get("icon").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                outcome_prices: out_prices,
+                                clob_token_ids: clob_ids,
+                                category: Some(category.to_string()),
+                            });
+                        }
+                    }
+                    println!("[DEBUG] Found {} other markets (non-expired)", markets.len());
+                },
+                Err(e) => println!("[DEBUG] Failed to parse markets: {}", e)
+            }
+        },
+        Err(e) => println!("[DEBUG] Failed to fetch markets: {}", e)
+    }
+    
+    // Sort by end date and limit to 15
+    markets.sort_by(|a, b| {
+        let end_a = a.slug.split('-').last().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0) + 300;
+        let end_b = b.slug.split('-').last().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0) + 300;
+        end_a.cmp(&end_b)
+    });
+    
+    markets.truncate(15);
+    println!("[DEBUG] Other markets after filter: {}", markets.len());
+    markets
+}
+
 async fn check_settlement(client: &Client, slug: &str) -> Option<String> {
+    // Try with active=false first to find resolved markets
     let url = format!("https://gamma-api.polymarket.com/markets?slug={}", slug);
     
     if let Ok(resp) = client.get(&url).timeout(Duration::from_secs(2)).send().await {
         if let Ok(m) = resp.json::<Vec<serde_json::Value>>().await {
             if let Some(market) = m.into_iter().next() {
-                // If there's an "unverifed" or "resolved" outcome
+                // Check for resolution - outcome field or resolved field
                 if let Some(outcome) = market.get("outcome").and_then(|v| v.as_str()) {
-                    return Some(outcome.to_string());
+                    if !outcome.is_empty() {
+                        return Some(outcome.to_string());
+                    }
+                }
+                // Also check the "resolution" field
+                if let Some(resolution) = market.get("resolution").and_then(|v| v.as_str()) {
+                    if !resolution.is_empty() {
+                        return Some(resolution.to_string());
+                    }
                 }
             }
         }
@@ -343,6 +451,7 @@ async fn get_markets(State(state): State<Arc<AppState>>) -> Json<ApiMarkets> {
             yes_price: prices.get(0).copied().unwrap_or(0.5),
             no_price: prices.get(1).copied().unwrap_or(0.5),
             icon: m.icon.clone().unwrap_or_default(),
+            category: m.category.clone().unwrap_or_else(|| "OTHER".to_string()),
         }
     }).collect();
     
@@ -409,6 +518,7 @@ async fn post_simulate(State(state): State<Arc<AppState>>, Json(form): Json<Simu
         price: form.price,
         timestamp: Utc::now().timestamp(),
         end_timestamp: end_ts,
+        traded: true,
     };
 
     s.settings.usdc_balance -= form.amount;
@@ -460,6 +570,38 @@ async fn post_sell(State(state): State<Arc<AppState>>, Json(form): Json<serde_js
     Json(serde_json::json!({"status": "error", "message": "Position not found"}))
 }
 
+async fn post_reset(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
+    let mut s = state.state.lock().await;
+    
+    // Reset to fresh state with desired defaults
+    s.settings.usdc_balance = 100.0;
+    s.settings.matic_balance = 0.5;
+    s.settings.bet_size = 1.0;
+    s.settings.gas_price = 0.001;
+    s.settings.auto_mode = true;
+    s.settings.threshold_above = 0.52;
+    s.settings.threshold_below = 0.48;
+    s.settings.tp_threshold = 0.0;  // disabled
+    s.settings.sl_threshold = -1.0; // disabled
+    s.history.clear();
+    s.open_positions.clear();
+    s.last_trade_timestamp = 0;
+    s.current_markets.clear();
+    s.save();
+    
+    // Clear the log file - use full path
+    let log_path = std::env::current_dir()
+        .map(|p| p.join("bot.log"))
+        .ok();
+    if let Some(p) = log_path {
+        let _ = std::fs::write(&p, "");
+    }
+    
+    println!("[RESET] Bot state and log cleared");
+    
+    Json(serde_json::json!({"status": "ok"}))
+}
+
 async fn run_bot(state: Arc<AppState>) {
     let mut ticker = interval(Duration::from_millis(500));
     let client = Client::builder()
@@ -483,8 +625,15 @@ async fn run_bot(state: Arc<AppState>) {
 
         // --- STEP 1: GATHER DATA (OUTSIDE LOCK) ---
         
-        // 1a. Fetch markets and prices
-        let mut markets = fetch_btc5m_markets(&client).await;
+        // 1a. Fetch BTC 5m markets
+        let mut btc_markets = fetch_btc5m_markets(&client).await;
+        
+        // 1b. Fetch other markets (sports, etc)
+        let other_markets = fetch_other_markets(&client).await;
+        
+        // Combine BTC + Other markets
+        let mut markets = btc_markets;
+        markets.extend(other_markets);
         
         // Fetch all CLOB prices concurrently
         let mut price_futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = (f64, f64)> + Send>>> = Vec::new();
@@ -551,42 +700,66 @@ async fn run_bot(state: Arc<AppState>) {
             let mut i = 0;
             while i < s.open_positions.len() {
                 let pos = &s.open_positions[i];
-                let mut removed = false;
 
-                // Check for resolution (outcomes_map)
-                if let Some(outcome) = outcomes_map.get(&pos.slug) {
-                    let pos = s.open_positions.remove(i);
-                    println!("[SETTLE] Market {} resolved as {}", pos.slug, outcome);
-                    
-                    let win = (pos.outcome == "Yes" && outcome == "Yes") || (pos.outcome == "No" && outcome == "No");
-                    let pnl = if win { (pos.amount / pos.price) - pos.amount } else { -pos.amount };
-                    
-                    let trade = Trade {
-                        slug: pos.slug,
-                        outcome: pos.outcome,
-                        amount: pos.amount,
-                        price: pos.price,
-                        pnl,
-                        timestamp: now,
-                        gas_cost: s.settings.gas_price,
-                        status: if win { "Won".to_string() } else { "Lost".to_string() },
-                    };
+                // Check for expired positions (market end time passed)
+                if now > pos.end_timestamp {
+                    // Try to get resolution from API, if not available treat as expired
+                    if let Some(outcome) = outcomes_map.get(&pos.slug) {
+                        let pos = s.open_positions.remove(i);
+                        println!("[SETTLE] Market {} resolved as {}", pos.slug, outcome);
+                        
+                        let win = (pos.outcome == "Yes" && outcome == "Yes") || (pos.outcome == "No" && outcome == "No");
+                        let pnl = if win { (pos.amount / pos.price) - pos.amount } else { -pos.amount };
+                        
+                        let trade = Trade {
+                            slug: pos.slug,
+                            outcome: pos.outcome,
+                            amount: pos.amount,
+                            price: pos.price,
+                            pnl,
+                            timestamp: now,
+                            gas_cost: s.settings.gas_price,
+                            status: if win { "Won".to_string() } else { "Lost".to_string() },
+                        };
 
-                    if win { s.settings.usdc_balance += pos.amount + pnl; }
-                    s.history.insert(0, trade);
-                    if s.history.len() > 100 { s.history.truncate(100); }
-                    removed = true;
-                    state_changed = true;
-                } 
-                // Check TP/SL for active markets
+                        if win { s.settings.usdc_balance += pos.amount + pnl; }
+                        s.history.insert(0, trade);
+                        if s.history.len() > 100 { s.history.truncate(100); }
+                        state_changed = true;
+                    } else {
+                        // Market expired without resolution - check if we already traded this position
+                        let pos = s.open_positions.remove(i);
+                        println!("[EXPIRE] Market {} expired without resolution", pos.slug);
+                        
+                        let trade = Trade {
+                            slug: pos.slug,
+                            outcome: pos.outcome,
+                            amount: pos.amount,
+                            price: pos.price,
+                            pnl: -pos.amount,
+                            timestamp: now,
+                            gas_cost: s.settings.gas_price,
+                            status: "Expired".to_string(),
+                        };
+
+                        s.history.insert(0, trade);
+                        if s.history.len() > 100 { s.history.truncate(100); }
+                        state_changed = true;
+                    }
+                }
+                // Check TP/SL for active markets (only if position hasn't expired)
                 else if let Some(m) = s.current_markets.iter().find(|m| m.slug == pos.slug) {
                     let prices = parse_prices(m.outcome_prices.as_deref());
                     let current_price = if pos.outcome == "Yes" { prices.get(0).copied() } else { prices.get(1).copied() }.unwrap_or(pos.price);
                     let pnl_pct = (current_price - pos.price) / pos.price;
                     
-                    if pnl_pct >= settings.tp_threshold || pnl_pct <= settings.sl_threshold {
+                    // Only trigger TP/SL if thresholds are actually enabled (>0 for TP, <0 for SL)
+                    let tp_enabled = settings.tp_threshold > 0.0 && pnl_pct >= settings.tp_threshold;
+                    let sl_enabled = settings.sl_threshold < 0.0 && pnl_pct <= settings.sl_threshold;
+                    
+                    if tp_enabled || sl_enabled {
                         let pos = s.open_positions.remove(i);
-                        let label = if pnl_pct >= settings.tp_threshold { "AUTO-TP" } else { "AUTO-SL" };
+                        let label = if tp_enabled { "AUTO-TP" } else { "AUTO-SL" };
                         println!("[{}] {} reached for {}: {:.1}%", label, label, pos.slug, pnl_pct * 100.0);
                         
                         let pnl = (pos.amount / pos.price) * current_price - pos.amount;
@@ -602,38 +775,46 @@ async fn run_bot(state: Arc<AppState>) {
                         };
                         s.settings.usdc_balance += pos.amount + pnl;
                         s.history.insert(0, trade);
-                        removed = true;
                         state_changed = true;
+                    } else {
+                        i += 1;
                     }
-                }
-
-                if !removed {
+                } else {
                     i += 1;
                 }
             }
 
-            // 2b. Auto-mode Trading Logic
+            // 2b. Auto-mode Trading Logic - Simple: 1 bet per 5-min window, hold until settlement
             if settings.auto_mode && !s.current_markets.is_empty() {
-                // Clone to release immutable borrow on s.current_markets before mutating s
-                let markets_snapshot: Vec<Market> = s.current_markets.iter().take(3).cloned().collect();
+                // Get current 5-minute window
+                let current_window = (now / 300) * 300;
+                let next_window = current_window + 300;
                 
-                for m in markets_snapshot {
+                // Check if we already have open position for current/next window
+                let has_position = s.open_positions.iter().any(|p| p.end_timestamp > now);
+                
+                // Clone markets to avoid borrow issues
+                let markets_clone: Vec<Market> = s.current_markets.clone();
+                
+                // Find the active market (current window that's still open)
+                if let Some(m) = markets_clone.into_iter().find(|m| {
+                    let end_ts = get_end_timestamp(&m.slug);
+                    end_ts > now && end_ts <= next_window
+                }) {
                     let end_ts = get_end_timestamp(&m.slug);
                     let time_left = end_ts - now;
                     let prices = parse_prices(m.outcome_prices.as_deref());
                     let yes_price = prices.get(0).copied().unwrap_or(0.5);
-                    let no_price = prices.get(1).copied().unwrap_or(0.5);
-
+                    
                     // Monitoring log
-                    println!("[REALTIME] {} | UP: {:.1}c | DOWN: {:.1}c | T-{}s | {}", 
+                    println!("[REALTIME] {} | UP: {:.1}c | T-{}s | {}", 
                         m.slug.split('-').last().unwrap_or(""), 
-                        yes_price * 100.0, 
-                        no_price * 100.0,
+                        yes_price * 100.0,
                         time_left,
-                        if time_left < 30 { "LOCKED" } else { "ACTIVE" });
+                        if time_left < 60 { "WAIT" } else { "READY" });
 
-                    // Execute trade if criteria met
-                    if time_left > 30 && !s.open_positions.iter().any(|p| p.slug == m.slug) {
+                    // Only trade if no position, enough time left, and price triggers
+                    if !has_position && time_left > 60 {
                         if yes_price >= settings.threshold_above || yes_price <= settings.threshold_below {
                             let outcome = if yes_price >= settings.threshold_above { "Yes" } else { "No" };
                             let entry_price = if outcome == "Yes" { yes_price } else { 1.0 - yes_price };
@@ -648,10 +829,12 @@ async fn run_bot(state: Arc<AppState>) {
                                 price: entry_price,
                                 timestamp: now,
                                 end_timestamp: end_ts,
+                                traded: true,
                             });
                             
                             s.last_trade_timestamp = now;
-                            println!("[AUTO] 🔥 EXECUTED {} order for {} at {:.1}%", outcome, m.slug, entry_price * 100.0);
+                            println!("[AUTO] 🎯 Placed {} bet for {} at {:.1}% (holding to settlement)", 
+                                outcome, m.slug, entry_price * 100.0);
                             state_changed = true;
                         }
                     }
@@ -680,6 +863,7 @@ async fn main() {
         .route("/api/settings", post(post_settings))
         .route("/api/simulate", post(post_simulate))
         .route("/api/sell", post(post_sell))
+        .route("/api/reset", post(post_reset))
         .with_state(state);
     
     let addr = SocketAddr::from(([0, 0, 0, 0], 8082));

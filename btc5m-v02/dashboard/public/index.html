@@ -49,21 +49,37 @@
         /* Main Grid */
         .main-grid { 
             display: grid; 
-            grid-template-columns: 1fr 1fr 1fr 1fr; 
+            grid-template-columns: 2fr 1fr; 
             gap: 1px; 
             background: #333; 
-            margin-top: 4px; 
             flex: 1; 
             min-height: 0; 
             overflow: hidden; 
         }
-        .section { 
-            background: #1e1e1e; 
+        
+        /* Left/Right Panels */
+        .left-panel { 
             display: flex; 
             flex-direction: column; 
             min-height: 0; 
             overflow: hidden; 
         }
+        .right-panel { 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 0; 
+            overflow: hidden; 
+            background: #1e1e1e; 
+        }
+        
+        .sub-section { 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 0; 
+            border-bottom: 1px solid #333;
+        }
+        .sub-section:last-child { border-bottom: none; }
+        
         .section-header { 
             background: #2a2a2a; 
             padding: 8px 12px; 
@@ -259,7 +275,10 @@
 <body style="height:100%;display:flex;flex-direction:column">
     <div class="header">
         <span>Bitcoin 5m Bot | Forward Test Engine</span>
-        <span id="time">--:--:--</span>
+        <div style="display:flex;gap:10px;align-items:center">
+            <button onclick="resetBot()" style="background:#ef4444;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:11px">Reset</button>
+            <span id="time">--:--:--</span>
+        </div>
     </div>
 
     <!-- Trade Detail Modal -->
@@ -299,76 +318,71 @@
             <div class="label">Gas Used (total)</div>
             <div class="value" id="gas-used" style="color:#f59e0b">0.0000</div>
         </div>
-    </div>
+</div>
     
     <div class="main-grid">
-        <div class="section">
-            <div class="section-header">Active Markets (Next 5)</div>
-            <div class="table-wrapper">
-                <table id="markets-table">
-                    <thead>
-                        <tr>
-                            <th rowspan="2" style="width:60px">Type</th>
-                            <th rowspan="2" style="width:50px">Time</th>
-                            <th colspan="2" style="text-align:center; background: #1a3a2a; color: #10b981; border-bottom: 2px solid #10b981;">BUY</th>
-                            <th colspan="2" style="text-align:center; background: #3a1a1a; color: #ef4444; border-bottom: 2px solid #ef4444;">SELL</th>
-                            <th rowspan="2" style="text-align:center; width: 80px;">Action</th>
-                        </tr>
-                        <tr>
-                            <th style="text-align:center; font-size: 9px; color: #10b981;">UP</th>
-                            <th style="text-align:center; font-size: 9px; color: #ef4444;">DOWN</th>
-                            <th style="text-align:center; font-size: 9px; color: #10b981;">UP</th>
-                            <th style="text-align:center; font-size: 9px; color: #ef4444;">DOWN</th>
-                        </tr>
-                    </thead>
-                    <tbody id="markets"></tbody>
-                </table>
+        <!-- Left Panel: Markets, Open, History -->
+        <div class="left-panel">
+            <div class="sub-section" style="flex:2">
+                <div class="section-header">Active Markets</div>
+                <div class="table-wrapper">
+                    <table id="markets-table">
+                        <thead>
+                            <tr>
+                                <th>Cat</th>
+                                <th>Time</th>
+                                <th style="color:#10b981">UP</th>
+                                <th style="color:#ef4444">DOWN</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="markets"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="sub-section" style="flex:1">
+                <div class="section-header">Open Positions <span id="open-count" style="font-size:10px; color:#10b981; margin-left:10px">0</span></div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Market</th>
+                                <th>Pos</th>
+                                <th>Entry</th>
+                                <th>P&L</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="positions">
+                            <tr><td colspan="6" style="text-align:center;color:#555">No open positions</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="sub-section" style="flex:1">
+                <div class="section-header">Trade History</div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Market</th>
+                                <th>Outcome</th>
+                                <th>Price</th>
+                                <th>P&L</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
         
-        <div class="section">
-            <div class="section-header">Open Positions <span id="open-count" style="font-size:10px; color:#10b981; margin-left:10px">0 Positions</span></div>
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Market</th>
-                            <th>Pos</th>
-                            <th>Entry</th>
-                            <th>Amt</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="positions">
-                        <tr><td colspan="6" style="text-align:center;color:#555">No open positions</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <div class="section">
-            <div class="section-header">Trade History (Settled)</div>
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Market</th>
-                            <th>Outcome</th>
-                            <th>Price</th>
-                            <th>Amt</th>
-                            <th>P&L</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history"></tbody>
-                </table>
-            </div>
-        </div>
-        
-        <div class="section">
-            <div class="section-header">Simulate Settings</div>
-            <div class="table-wrapper">
+        <!-- Right Panel: Config -->
+        <div class="right-panel">
+            <div class="section-header">Settings</div>
+            <div style="padding: 10px; overflow: auto;">
                 <div id="balance-info" style="padding:10px; background: #222; border-bottom: 1px solid #333; display: flex; justify-content: space-between;">
                     <span style="font-size:12px; font-weight: bold;">
                         USDC: <span class="green" id="usdc-balance">$100.00</span>
@@ -380,20 +394,8 @@
                 <form id="settings-form">
                     <div class="settings-grid">
                         <div class="input-group">
-                            <label>USDC Balance</label>
-                            <input type="number" name="usdc_balance" step="0.01" value="100">
-                        </div>
-                        <div class="input-group">
-                            <label>MATIC Gas</label>
-                            <input type="number" name="matic_balance" step="0.0001" value="0.5">
-                        </div>
-                        <div class="input-group">
-                            <label>Bet Size (USDC)</label>
+                            <label>Bet Size</label>
                             <input type="number" name="bet_size" step="0.01" value="1">
-                        </div>
-                        <div class="input-group">
-                            <label>Gas Price</label>
-                            <input type="number" name="gas_price" step="0.0001" value="0.001">
                         </div>
                         <div class="input-group">
                             <label>Threshold Above</label>
@@ -405,22 +407,21 @@
                         </div>
                         <div class="input-group">
                             <label>Take Profit (%)</label>
-                            <input type="number" name="tp_threshold" step="0.01" value="0.20">
+                            <input type="number" name="tp_threshold" step="0.01" value="0">
                         </div>
                         <div class="input-group">
                             <label>Stop Loss (%)</label>
-                            <input type="number" name="sl_threshold" step="0.01" value="-0.30">
+                            <input type="number" name="sl_threshold" step="0.01" value="-1">
                         </div>
-                        <div style="grid-column: span 2; display: flex; align-items: center; justify-content: space-between; padding-top: 5px;">
-                            <label style="font-size:11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                                <input type="checkbox" name="auto_mode" id="auto-mode" style="width:16px; height:16px"> AUTO TRADE
-                            </label>
-                            <button type="submit" class="btn" style="background:#107c41; color:#fff; padding: 6px 20px;">Save Settings</button>
+                        <div class="input-group">
+                            <label>Auto Mode</label>
+                            <input type="checkbox" name="auto_mode" checked>
                         </div>
                     </div>
+                    <button type="submit" style="background:#10b981;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;width:100%;margin-top:10px">Save Settings</button>
                 </form>
             </div>
-        </div>
+</div>
     </div>
     
     <div class="footer">BTC 5m Bot v02 | Forward Test Active | Data by Polymarket</div>
@@ -487,36 +488,53 @@
                 const elOpenCount = document.getElementById('open-count');
                 if (elOpenCount) elOpenCount.innerText = (state.open_positions?.length || 0) + ' Positions';
                 
-                // Update form values ONLY if not being edited
+                // Update form values ONLY if elements exist
+                const elUsdc = document.querySelector('input[name="usdc_balance"]');
+                const elMatic = document.querySelector('input[name="matic_balance"]');
+                const elBet = document.querySelector('input[name="bet_size"]');
+                const elGas = document.querySelector('input[name="gas_price"]');
+                const elAbove = document.querySelector('input[name="threshold_above"]');
+                const elBelow = document.querySelector('input[name="threshold_below"]');
+                const elTp = document.querySelector('input[name="tp_threshold"]');
+                const elSl = document.querySelector('input[name="sl_threshold"]');
+                
                 if (!document.activeElement || document.activeElement.tagName !== 'INPUT') {
-                    document.querySelector('input[name="usdc_balance"]').value = state.settings.usdc_balance;
-                    document.querySelector('input[name="matic_balance"]').value = state.settings.matic_balance;
-                    document.querySelector('input[name="bet_size"]').value = state.settings.bet_size;
-                    document.querySelector('input[name="gas_price"]').value = state.settings.gas_price;
-                    document.querySelector('input[name="threshold_above"]').value = state.settings.threshold_above;
-                    document.querySelector('input[name="threshold_below"]').value = state.settings.threshold_below;
-                    document.querySelector('input[name="tp_threshold"]').value = state.settings.tp_threshold;
-                    document.querySelector('input[name="sl_threshold"]').value = state.settings.sl_threshold;
-                    document.getElementById('auto-mode').checked = state.settings.auto_mode;
+                    if (elUsdc) elUsdc.value = state.settings.usdc_balance;
+                    if (elMatic) elMatic.value = state.settings.matic_balance;
+                    if (elBet) elBet.value = state.settings.bet_size;
+                    if (elGas) elGas.value = state.settings.gas_price;
+                    if (elAbove) elAbove.value = state.settings.threshold_above;
+                    if (elBelow) elBelow.value = state.settings.threshold_below;
+                    if (elTp) elTp.value = state.settings.tp_threshold;
+                    if (elSl) elSl.value = state.settings.sl_threshold;
+                    const elAuto = document.getElementById('auto-mode');
+                    if (elAuto) elAuto.checked = state.settings.auto_mode;
                 }
                 
-                // Update Open Positions
+// Update Open Positions
                 let posHtml = '';
+                const nowSec = Math.floor(Date.now() / 1000);
                 (state.open_positions || []).forEach(p => {
                     const time = new Date(p.timestamp * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                     const polyUrl = `https://polymarket.com/event/${p.slug}`;
+                    
+                    // Calculate countdown
+                    const timeLeft = p.end_timestamp - nowSec;
+                    const mins = Math.floor(timeLeft / 60);
+                    const secs = timeLeft % 60;
+                    const countdown = timeLeft > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : 'ENDED';
                     
                     // Find current price for P&L
                     const market = markets?.markets?.find(m => m.slug === p.slug);
                     const currentPrice = market ? (p.outcome === 'Yes' ? market.yes_price : market.no_price) : p.price;
                     const floatingPnl = (p.amount / p.price) * currentPrice - p.amount;
                     const pnlColor = floatingPnl >= 0 ? '#10b981' : '#ef4444';
- 
+  
                     posHtml += `<tr>
-                        <td>${time}</td>
+                        <td style="font-size:10px;color:#888">${countdown}</td>
                         <td title="${p.slug}"><a href="${polyUrl}" target="_blank" style="color:#f59e0b">${p.slug.slice(-10)}</a></td>
                         <td><span class="badge" style="background:${p.outcome === 'Yes' ? '#10b981' : '#ef4444'}">${p.outcome}</span></td>
-                        <td>$${p.price.toFixed(2)} $\rightarrow$ $${currentPrice.toFixed(2)}</td>
+                        <td>$${p.price.toFixed(2)} → $${currentPrice.toFixed(2)}</td>
                         <td style="color:${pnlColor}; font-weight:bold">${floatingPnl >= 0 ? '+' : ''}$${floatingPnl.toFixed(2)}</td>
                         <td>
                             <button class="btn" style="background:#ef4444; color:white; padding: 2px 6px" onclick="sellEarly('${p.slug}')">SELL</button>
@@ -527,7 +545,7 @@
                 document.getElementById('positions').innerHTML = posHtml;
             }
             
-            // Update markets
+// Update markets
             if (markets?.markets) {
                 let html = '';
                 markets.markets.forEach(m => {
@@ -537,12 +555,14 @@
                     // Estimate sell price (slippage / spread)
                     const sellYesCents = Math.floor(m.yes_price * 99);
                     const sellNoCents = Math.floor(m.no_price * 99);
- 
+  
                     const polyUrl = `https://polymarket.com/event/${m.slug}`;
                     const localTime = new Date((m.end_timestamp - 300) * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const category = m.category || 'OTHER';
+                    const catColor = category === 'BTC' ? '#f59e0b' : category === 'SOCCER' ? '#3b82f6' : '#8b5cf6';
 
                     html += `<tr>
-                        <td><div style="display:flex;align-items:center;gap:6px"><img src="${m.icon}" style="width:14px;height:14px;border-radius:2px"> <span style="font-weight:600;color:#e0e0e0">BTC 5m</span></div></td>
+                        <td><div style="display:flex;align-items:center;gap:6px"><span style="font-size:10px;padding:2px 6px;background:${catColor};border-radius:3px;color:white;font-weight:600">${category}</span></div></td>
                         <td><a href="${polyUrl}" target="_blank" style="color:#10b981; font-weight:bold;">${localTime}</a></td>
                         <td style="text-align:center"><span class="price-chip" style="color:#10b981">${yesCents}c</span></td>
                         <td style="text-align:center"><span class="price-chip" style="color:#ef4444">${noCents}c</span></td>
@@ -681,6 +701,14 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ slug })
             });
+        }
+        
+        async function resetBot() {
+            if (!confirm('Reset all bot data? This will clear all trades and reset balance to $100.')) return;
+            const response = await fetch('/api/reset', { method: 'POST' });
+            if (response.ok) {
+                location.reload();
+            }
         }
     </script>
 </body>
