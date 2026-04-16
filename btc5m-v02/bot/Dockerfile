@@ -1,5 +1,5 @@
 # Dockerfile for Rust Bot
-FROM rust:1.75-slim-bookworm as builder
+FROM rust:latest as builder
 
 WORKDIR /usr/src/app
 COPY . .
