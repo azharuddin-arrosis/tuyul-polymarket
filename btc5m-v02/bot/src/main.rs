@@ -471,6 +471,16 @@ async fn run_bot(state: Arc<AppState>) {
         ticker.tick().await;
         let now = Utc::now().timestamp();
         
+        // --- STEP 0: AUTO GAS REFILL (SIMULATION ONLY) ---
+        {
+            let mut s = state.state.lock().await;
+            if s.settings.matic_balance < 0.01 {
+                s.settings.matic_balance += 0.5;
+                println!("[GAS] ⛽ Refilling gas balance. Current: {:.4} MATIC", s.settings.matic_balance);
+                s.save();
+            }
+        }
+
         // --- STEP 1: GATHER DATA (OUTSIDE LOCK) ---
         
         // 1a. Fetch markets and prices
