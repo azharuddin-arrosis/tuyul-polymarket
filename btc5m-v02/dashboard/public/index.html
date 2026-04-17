@@ -527,23 +527,26 @@
                 // Update hourly chart
                 const chartRow = document.getElementById('hourly-chart-row');
                 const chartContainer = document.getElementById('hourly-chart');
+                
+                // Always show the row, even if empty
+                chartRow.style.display = 'flex';
+                
                 if (state.hourly_stats && Object.keys(state.hourly_stats).length > 0) {
-                    chartRow.style.display = 'flex';
                     let chartHtml = '';
                     const hourlyData = state.hourly_stats;
-                    Object.keys(hourlyData).slice(-12).forEach(key => {
+                    Object.keys(hourlyData).sort().slice(-12).forEach(key => {
                         const val = hourlyData[key].profit || 0;
-                        const height = Math.min(Math.abs(val) * 15, 30);
+                        const height = Math.max(Math.min(Math.abs(val) * 15, 25), 4); // min 4px height
                         const color = val >= 0 ? '#10b981' : '#ef4444';
                         const hour = key.split(' ')[1]?.slice(0,2) || '';
-                        chartHtml += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+                        chartHtml += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;min-width:20px;">
                             <div style="width:100%;background:${color};height:${height}px;border-radius:2px"></div>
                             <div style="color:#555;font-size:8px">${hour}</div>
                         </div>`;
                     });
-chartContainer.innerHTML = chartHtml;
+                    chartContainer.innerHTML = chartHtml;
                 } else {
-                    chartRow.style.display = 'none';
+                    chartContainer.innerHTML = '<div style="color:#555;font-size:10px;padding:10px;">No trades yet - chart will appear after first trade</div>';
                 }
                 
                 // Remove old detailed-stats if exists
