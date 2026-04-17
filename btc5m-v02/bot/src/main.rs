@@ -1037,9 +1037,9 @@ async fn run_bot(state: Arc<AppState>) {
                     let gas_needed = settings.gas_price * 2.0;
                     let can_trade  = !s.stopped
                         && !has_active
-                        && time_left > 60
-                        && time_into >= 150
-                        && time_into <= 270
+                        && time_left > 30
+                        && time_into >= 60       // Entry after 1 min
+                        && time_into <= 240      // Entry before 4 min
                         && settings.matic_balance >= gas_needed
                         && settings.usdc_balance  >= dynamic_bet
                         && yes_price > 0.01
