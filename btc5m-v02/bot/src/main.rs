@@ -60,8 +60,10 @@ struct BotSettings {
     bet_size: f64,
     gas_price: f64,
     auto_mode: bool,
-    threshold_above: f64,
-    threshold_below: f64,
+    threshold_above: f64,  // Min price to bet UP (e.g., 0.52)
+    threshold_below: f64,  // Max price to bet DOWN (e.g., 0.48)
+    max_above: f64,        // Max price to bet UP (e.g., 0.65) - skip if too high
+    min_below: f64,        // Min price to bet DOWN (e.g., 0.35) - skip if too low
     tp_threshold: f64, // e.g., 0.15 for 15%
     sl_threshold: f64, // e.g., -0.20 for 20% loss
 }
@@ -76,6 +78,8 @@ impl Default for BotSettings {
             auto_mode: false,
             threshold_above: 0.52,
             threshold_below: 0.48,
+            max_above: 0.65,    // Don't bet UP if price > 65c
+            min_below: 0.35,    // Don't bet DOWN if price < 35c
             tp_threshold: 0.20,
             sl_threshold: -0.30,
         }
@@ -547,6 +551,8 @@ struct SettingsForm {
     gas_price: f64,
     threshold_above: f64,
     threshold_below: f64,
+    max_above: f64,
+    min_below: f64,
     tp_threshold: f64,
     sl_threshold: f64,
     auto_mode: Option<String>,
@@ -570,6 +576,8 @@ async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<Sett
     s.settings.gas_price = form.gas_price;
     s.settings.threshold_above = form.threshold_above;
     s.settings.threshold_below = form.threshold_below;
+    s.settings.max_above = form.max_above;
+    s.settings.min_below = form.min_below;
     s.settings.tp_threshold = form.tp_threshold;
     s.settings.sl_threshold = form.sl_threshold;
     s.settings.auto_mode = form.auto_mode.as_ref().map(|s| s == "on").unwrap_or(false);
@@ -670,6 +678,8 @@ async fn post_reset(State(state): State<Arc<AppState>>) -> Json<serde_json::Valu
     s.settings.auto_mode = false;  // STOP simulation
     s.settings.threshold_above = 0.52;
     s.settings.threshold_below = 0.48;
+    s.settings.max_above = 0.65;
+    s.settings.min_below = 0.35;
     s.settings.tp_threshold = 0.0;
     s.settings.sl_threshold = -1.0;
     s.history.clear();
@@ -921,30 +931,43 @@ async fn run_bot(state: Arc<AppState>) {
                     } else if settings.usdc_balance < dynamic_bet {
                         println!("[ALERT] 🚨 Saldo USDC tidak cukup! Saldo: {:.2} | Butuh: {:.2}", 
                             settings.usdc_balance, dynamic_bet);
-                    } else if !s.stopped && !has_position && time_left > 60 && (yes_price >= settings.threshold_above || yes_price <= settings.threshold_below) {
-                        let outcome = if yes_price >= settings.threshold_above { "Yes" } else { "No" };
-                        let entry_price = if outcome == "Yes" { yes_price } else { 1.0 - yes_price };
-                        s.settings.usdc_balance -= dynamic_bet;
-                        s.settings.matic_balance -= settings.gas_price;
+                    } else if !s.stopped && !has_position && time_left > 60 {
+                        // Check if price is in safe entry zone
+                        let can_buy_up = yes_price >= settings.threshold_above && yes_price <= settings.max_above;
+                        let can_buy_down = yes_price <= settings.threshold_below && yes_price >= settings.min_below;
                         
-                        let (yes_token, no_token) = get_token_ids(m.clob_token_ids.as_deref());
-                        
-                        s.open_positions.push(Position {
-                            slug: m.slug.clone(),
-                            outcome: outcome.to_string(),
-                            amount: dynamic_bet,
-                            price: entry_price,
-                            timestamp: now,
-                            end_timestamp: end_ts,
-                            traded: true,
-                            yes_token_id: yes_token,
-                            no_token_id: no_token,
-                        });
-                        
-                        s.last_trade_timestamp = now;
-                        println!("[AUTO] 🎯 Placed {} bet ${:.2} for {} at {:.1}% (holding to settlement)", 
-                            outcome, dynamic_bet, m.slug, entry_price * 100.0);
-                        state_changed = true;
+                        if can_buy_up || can_buy_down {
+                            let outcome = if can_buy_up { "Yes" } else { "No" };
+                            let entry_price = if outcome == "Yes" { yes_price } else { 1.0 - yes_price };
+                            s.settings.usdc_balance -= dynamic_bet;
+                            s.settings.matic_balance -= settings.gas_price;
+                            
+                            let (yes_token, no_token) = get_token_ids(m.clob_token_ids.as_deref());
+                            
+                            s.open_positions.push(Position {
+                                slug: m.slug.clone(),
+                                outcome: outcome.to_string(),
+                                amount: dynamic_bet,
+                                price: entry_price,
+                                timestamp: now,
+                                end_timestamp: end_ts,
+                                traded: true,
+                                yes_token_id: yes_token,
+                                no_token_id: no_token,
+                            });
+                            
+                            s.last_trade_timestamp = now;
+                            println!("[AUTO] 🎯 Placed {} bet ${:.2} for {} at {:.1}% (holding to settlement)", 
+                                outcome, dynamic_bet, m.slug, entry_price * 100.0);
+                            state_changed = true;
+                        } else {
+                            // Log skipped trades due to price being too high/low
+                            if yes_price > settings.max_above {
+                                println!("[SKIP] Price {} too high for UP, max allowed is {:.0}%", yes_price * 100.0, settings.max_above * 100.0);
+                            } else if yes_price < settings.min_below {
+                                println!("[SKIP] Price {} too low for DOWN, min allowed is {:.0}%", yes_price * 100.0, settings.min_below * 100.0);
+                            }
+                        }
                     }
                 }
             }
