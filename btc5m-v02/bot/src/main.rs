@@ -564,7 +564,15 @@ async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<Sett
         println!("[INIT] Starting simulation with initial balance $100 USDC, 0.5 MATIC");
     }
     
-    // Preserve existing balance values - settings form only updates trading params
+    // If starting simulation with balance=0, use form values or defaults
+    let is_starting = s.settings.usdc_balance <= 0.0 && form.usdc_balance > 0.0;
+    if is_starting {
+        s.settings.usdc_balance = form.usdc_balance;
+        s.settings.matic_balance = form.matic_balance;
+        println!("[INIT] Starting simulation with balance ${:.2} USDC, {:.4} MATIC", form.usdc_balance, form.matic_balance);
+    }
+    
+    // Update trading params
     s.settings.bet_size = form.bet_size;
     s.settings.gas_price = form.gas_price;
     s.settings.threshold_above = form.threshold_above;
