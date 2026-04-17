@@ -298,24 +298,23 @@
             <div class="value" id="pnl" style="color:#10b981">$100.00</div>
         </div>
         <div class="stat-cell">
-            <div class="label">Settle Trades</div>
-            <div class="value" id="trades">0</div>
+            <div class="label">Realized P&L</div>
+            <div class="value" id="realized-pnl" style="color:#10b981">$0.00</div>
         </div>
         <div class="stat-cell">
-            <div class="label">Wins</div>
-            <div class="value green" id="wins">0</div>
+            <div class="label">Floating P&L</div>
+            <div class="value" id="floating-pnl" style="color:#f59e0b">$0.00</div>
         </div>
         <div class="stat-cell">
-            <div class="label">Losses</div>
-            <div class="value red" id="losses">0</div>
+            <div class="label">W/L</div>
+            <div class="value"><span class="green" id="wins">0</span>/<span class="red" id="losses">0</span></div>
         </div>
         <div class="stat-cell">
             <div class="label">Win Rate</div>
             <div class="value" id="winrate">0%</div>
-            <div class="win-bar"><div class="win" id="winbar" style="width:0%"></div><div class="loss" id="lossbar" style="width:100%"></div></div>
         </div>
         <div class="stat-cell">
-            <div class="label">Gas Used (total)</div>
+            <div class="label">Gas</div>
             <div class="value" id="gas-used" style="color:#f59e0b">0.0000</div>
         </div>
 </div>
@@ -368,8 +367,9 @@
                             <tr>
                                 <th>Time</th>
                                 <th>Market</th>
-                                <th>Outcome</th>
-                                <th>Price</th>
+                                <th>Type</th>
+                                <th>Entry</th>
+                                <th>Amount</th>
                                 <th>P&L</th>
                             </tr>
                         </thead>
@@ -472,18 +472,20 @@
                 document.getElementById('pnl').innerText = '$' + state.usdc_balance.toFixed(2);
                 
                 // Calculate stats from history
-                const trades = history?.trades || [];
-                const wins = trades.filter(t => t.status === 'Won').length;
-                const losses = trades.filter(t => t.status === 'Lost').length;
-                const total = trades.length;
+                const wins = state.wins || 0;
+                const losses = state.losses || 0;
+                const total = wins + losses;
                 const winRate = total > 0 ? Math.round(wins / total * 100) : 0;
+                const realizedPnl = state.realized_pnl || 0;
+                const floatingPnl = state.floating_pnl || 0;
                 
-                document.getElementById('trades').innerText = total;
                 document.getElementById('wins').innerText = wins;
                 document.getElementById('losses').innerText = losses;
                 document.getElementById('winrate').innerText = winRate + '%';
-                document.getElementById('winbar').style.width = winRate + '%';
-                document.getElementById('lossbar').style.width = (100 - winRate) + '%';
+                document.getElementById('realized-pnl').innerText = (realizedPnl >= 0 ? '+' : '') + '$' + realizedPnl.toFixed(2);
+                document.getElementById('realized-pnl').style.color = realizedPnl >= 0 ? '#10b981' : '#ef4444';
+                document.getElementById('floating-pnl').innerText = (floatingPnl >= 0 ? '+' : '') + '$' + floatingPnl.toFixed(2);
+                document.getElementById('floating-pnl').style.color = floatingPnl >= 0 ? '#10b981' : '#ef4444';
                 
                 const elOpenCount = document.getElementById('open-count');
                 if (elOpenCount) elOpenCount.innerText = (state.open_positions?.length || 0) + ' Positions';
@@ -530,11 +532,12 @@
                     const floatingPnl = (p.amount / p.price) * currentPrice - p.amount;
                     const pnlColor = floatingPnl >= 0 ? '#10b981' : '#ef4444';
   
+                    const typeLabel = p.outcome === 'Yes' ? 'BUY (UP)' : 'SELL (DOWN)';
                     posHtml += `<tr>
                         <td style="font-size:10px;color:#888">${countdown}</td>
-                        <td title="${p.slug}"><a href="${polyUrl}" target="_blank" style="color:#f59e0b">${p.slug.slice(-10)}</a></td>
-                        <td><span class="badge" style="background:${p.outcome === 'Yes' ? '#10b981' : '#ef4444'}">${p.outcome}</span></td>
-                        <td>$${p.price.toFixed(2)} → $${currentPrice.toFixed(2)}</td>
+                        <td title="${p.slug}"><a href="https://polymarket.com/market/${p.slug}" target="_blank" style="color:#f59e0b">${p.slug.slice(-10)}</a></td>
+                        <td><span class="badge" style="background:${p.outcome === 'Yes' ? '#10b981' : '#ef4444'}">${typeLabel}</span></td>
+                        <td>${(p.price * 100).toFixed(0)}c → ${(currentPrice * 100).toFixed(0)}c</td>
                         <td style="color:${pnlColor}; font-weight:bold">${floatingPnl >= 0 ? '+' : ''}$${floatingPnl.toFixed(2)}</td>
                         <td>
                             <button class="btn" style="background:#ef4444; color:white; padding: 2px 6px" onclick="sellEarly('${p.slug}')">SELL</button>
@@ -587,11 +590,12 @@
                     const pnlColor = t.pnl >= 0 ? '#10b981' : '#ef4444';
                     const netPnl = t.pnl - t.gas_cost;
                     const netColor = netPnl >= 0 ? '#10b981' : '#ef4444';
+                    const typeLabel = t.outcome === 'Yes' ? 'BUY (UP)' : 'SELL (DOWN)';
                     html += `<tr class="history-row" onclick="openTradeModal(${idx})">
                         <td>${time}</td>
-                        <td title="${t.slug}" style="color:#888">${t.slug.slice(-10)}</td>
-                        <td><span class="badge ${t.status === 'Won' ? 'badge-won' : t.status === 'Lost' ? 'badge-lost' : 'badge-open'}">${t.outcome} (${t.status})</span></td>
-                        <td>$${t.price.toFixed(2)}</td>
+                        <td><a href="https://polymarket.com/market/${t.slug}" target="_blank" title="${t.slug}" style="color:#6b7280;">${t.slug.slice(-10)}</a></td>
+                        <td><span class="badge ${t.outcome === 'Yes' ? 'badge-won' : 'badge-lost'}">${typeLabel}</span></td>
+                        <td>${(t.price * 100).toFixed(0)}c</td>
                         <td>$${t.amount.toFixed(2)}</td>
                         <td style="color:${netColor}; font-weight: bold;">${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(4)}</td>
                     </tr>`;

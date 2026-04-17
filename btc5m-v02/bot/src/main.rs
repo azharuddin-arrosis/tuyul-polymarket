@@ -68,7 +68,7 @@ struct BotSettings {
 impl Default for BotSettings {
     fn default() -> Self {
         Self {
-            usdc_balance: 100.0,
+            usdc_balance: 25.0,  // Default: smallest test
             matic_balance: 0.5,
             bet_size: 1.0,
             gas_price: 0.001,
@@ -87,6 +87,8 @@ struct BotState {
     history: Vec<Trade>,
     open_positions: Vec<Position>,
     last_trade_timestamp: i64,
+    #[serde(default)]
+    stopped: bool,
     #[serde(skip)]
     current_markets: Vec<Market>,
 }
@@ -122,6 +124,7 @@ impl Default for BotState {
             history: Vec::new(),
             open_positions: Vec::new(),
             last_trade_timestamp: 0,
+            stopped: false,
             current_markets: Vec::new(),
         }
     }
@@ -139,6 +142,10 @@ struct ApiState {
     last_trade_timestamp: i64,
     usdc_balance: f64,
     matic_balance: f64,
+    realized_pnl: f64,
+    floating_pnl: f64,
+    wins: i32,
+    losses: i32,
 }
 
 #[derive(Serialize)]
@@ -430,6 +437,29 @@ fn parse_prices(prices_str: Option<&str>) -> Vec<f64> {
 async fn get_state(State(state): State<Arc<AppState>>) -> Json<ApiState> {
     let s = state.state.lock().await;
     
+    // Calculate stats
+    let (wins, losses, realized_pnl) = s.history.iter().fold((0i32, 0i32, 0.0), |(w, l, pnl), t| {
+        if t.status == "Won" {
+            (w + 1, l, pnl + t.pnl)
+        } else if t.status == "Lost" {
+            (w, l + 1, pnl + t.pnl)
+        } else {
+            (w, l, pnl)
+        }
+    });
+    
+    // Calculate floating P&L from open positions
+    let floating_pnl: f64 = s.open_positions.iter().map(|p| {
+        s.current_markets.iter()
+            .find(|m| m.slug == p.slug)
+            .map(|m| {
+                let prices = parse_prices(m.outcome_prices.as_deref());
+                let current_price = if p.outcome == "Yes" { prices.get(0).copied().unwrap_or(0.5) } else { prices.get(1).copied().unwrap_or(0.5) };
+                (p.amount / p.price) * current_price - p.amount
+            })
+            .unwrap_or(0.0)
+    }).sum();
+    
     Json(ApiState {
         settings: s.settings.clone(),
         history: s.history.clone(),
@@ -437,6 +467,10 @@ async fn get_state(State(state): State<Arc<AppState>>) -> Json<ApiState> {
         last_trade_timestamp: s.last_trade_timestamp,
         usdc_balance: s.settings.usdc_balance,
         matic_balance: s.settings.matic_balance,
+        realized_pnl,
+        floating_pnl,
+        wins,
+        losses,
     })
 }
 
@@ -592,6 +626,7 @@ async fn post_reset(State(state): State<Arc<AppState>>) -> Json<serde_json::Valu
     s.history.clear();
     s.open_positions.clear();
     s.last_trade_timestamp = 0;
+    s.stopped = false;
     s.current_markets.clear();
     s.save();
     
@@ -816,34 +851,45 @@ async fn run_bot(state: Arc<AppState>) {
                         time_left,
                         if time_left < 60 { "WAIT" } else { "READY" });
 
-                    // Only trade if no position, enough time left, and price triggers
-                    if !has_position && time_left > 60 {
-                        if yes_price >= settings.threshold_above || yes_price <= settings.threshold_below {
-                            let outcome = if yes_price >= settings.threshold_above { "Yes" } else { "No" };
-                            let entry_price = if outcome == "Yes" { yes_price } else { 1.0 - yes_price };
-
-                            s.settings.usdc_balance -= settings.bet_size;
-                            s.settings.matic_balance -= settings.gas_price;
-                            
-                            let (yes_token, no_token) = get_token_ids(m.clob_token_ids.as_deref());
-                            
-                            s.open_positions.push(Position {
-                                slug: m.slug.clone(),
-                                outcome: outcome.to_string(),
-                                amount: settings.bet_size,
-                                price: entry_price,
-                                timestamp: now,
-                                end_timestamp: end_ts,
-                                traded: true,
-                                yes_token_id: yes_token,
-                                no_token_id: no_token,
-                            });
-                            
-                            s.last_trade_timestamp = now;
-                            println!("[AUTO] 🎯 Placed {} bet for {} at {:.1}% (holding to settlement)", 
-                                outcome, m.slug, entry_price * 100.0);
-                            state_changed = true;
+                    // Calculate dynamic bet size: balance / 25 (e.g., $25 → $1, $50 → $2, $100 → $4)
+                    let dynamic_bet = (settings.usdc_balance / 25.0).max(0.25).min(10.0);
+                    
+                    // Gas check: need at least 2x gas price for 2 bets
+                    let gas_needed = settings.gas_price * 2.0;
+                    if settings.matic_balance < gas_needed {
+                        if !s.stopped {
+                            s.stopped = true;
+                            s.save();
                         }
+                        println!("[ALERT] 🚨 Gas tidak cukup! Saldo MATIC: {:.4} | Butuh: {:.4} | TRADING DIHENTIKAN", 
+                            settings.matic_balance, gas_needed);
+                    } else if settings.usdc_balance < dynamic_bet {
+                        println!("[ALERT] 🚨 Saldo USDC tidak cukup! Saldo: {:.2} | Butuh: {:.2}", 
+                            settings.usdc_balance, dynamic_bet);
+                    } else if !s.stopped && !has_position && time_left > 60 && (yes_price >= settings.threshold_above || yes_price <= settings.threshold_below) {
+                        let outcome = if yes_price >= settings.threshold_above { "Yes" } else { "No" };
+                        let entry_price = if outcome == "Yes" { yes_price } else { 1.0 - yes_price };
+                        s.settings.usdc_balance -= dynamic_bet;
+                        s.settings.matic_balance -= settings.gas_price;
+                        
+                        let (yes_token, no_token) = get_token_ids(m.clob_token_ids.as_deref());
+                        
+                        s.open_positions.push(Position {
+                            slug: m.slug.clone(),
+                            outcome: outcome.to_string(),
+                            amount: dynamic_bet,
+                            price: entry_price,
+                            timestamp: now,
+                            end_timestamp: end_ts,
+                            traded: true,
+                            yes_token_id: yes_token,
+                            no_token_id: no_token,
+                        });
+                        
+                        s.last_trade_timestamp = now;
+                        println!("[AUTO] 🎯 Placed {} bet ${:.2} for {} at {:.1}% (holding to settlement)", 
+                            outcome, dynamic_bet, m.slug, entry_price * 100.0);
+                        state_changed = true;
                     }
                 }
             }
