@@ -62,11 +62,16 @@ struct BotSettings {
     auto_mode: bool,
     threshold_above: f64,  // Min price to bet UP (e.g., 0.52)
     threshold_below: f64,  // Max price to bet DOWN (e.g., 0.48)
+    #[serde(default = "default_max_above")]
     max_above: f64,        // Max price to bet UP (e.g., 0.65) - skip if too high
+    #[serde(default = "default_min_below")]
     min_below: f64,        // Min price to bet DOWN (e.g., 0.35) - skip if too low
-    tp_threshold: f64, // e.g., 0.15 for 15%
-    sl_threshold: f64, // e.g., -0.20 for 20% loss
+    tp_threshold: f64,
+    sl_threshold: f64,
 }
+
+fn default_max_above() -> f64 { 0.65 }
+fn default_min_below() -> f64 { 0.35 }
 
 impl Default for BotSettings {
     fn default() -> Self {
