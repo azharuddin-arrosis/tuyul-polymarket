@@ -880,6 +880,19 @@
             .stats-row {
                 grid-template-columns: repeat(4, 1fr);
                 height: auto;
+                gap: 0;
+            }
+
+            .stat-cell {
+                padding: 6px 8px;
+            }
+
+            .s-val {
+                font-size: 13px;
+            }
+
+            .s-sub {
+                font-size: 7px;
             }
 
             .chart-row {
@@ -909,6 +922,11 @@
         }
 
         @media (max-width: 640px) {
+            :root {
+                --header-h: 40px;
+                --stats-h: 64px;
+            }
+
             .header {
                 padding: 0 10px;
             }
@@ -921,8 +939,140 @@
                 display: none;
             }
 
+            .btn-reset {
+                padding: 3px 8px;
+                font-size: 9px;
+            }
+
             .stats-row {
                 grid-template-columns: repeat(2, 1fr);
+                gap: 1px;
+            }
+
+            .stat-cell {
+                padding: 5px 6px;
+            }
+
+            .s-label {
+                font-size: 7px;
+            }
+
+            .s-val {
+                font-size: 12px;
+            }
+
+            .s-sub {
+                font-size: 6px;
+                display: none;
+            }
+
+            .chart-row {
+                height: 120px;
+            }
+
+            .chart-canvas-wrap {
+                padding: 8px 10px 12px;
+            }
+
+            .panel-hdr {
+                padding: 6px 10px;
+            }
+
+            .panel-hdr-title {
+                font-size: 9px;
+            }
+
+            .config-body {
+                padding: 10px;
+                gap: 8px;
+            }
+
+            .cfg-section-title {
+                font-size: 8px;
+                margin-bottom: 4px;
+            }
+
+            .cfg-grid {
+                gap: 4px;
+            }
+
+            .cfg-field label {
+                font-size: 7px;
+            }
+
+            .cfg-field input {
+                padding: 4px 6px;
+                font-size: 10px;
+            }
+
+            .wallet-info {
+                padding: 6px 8px;
+                gap: 3px;
+            }
+
+            .wallet-row {
+                font-size: 9px;
+            }
+
+            .wallet-key {
+                font-size: 8px;
+            }
+
+            .mode-btn {
+                padding: 6px 8px;
+                font-size: 9px;
+            }
+
+            .status-banner {
+                padding: 6px 8px;
+                font-size: 8px;
+            }
+
+            .btn-start {
+                padding: 8px;
+                font-size: 10px;
+            }
+
+            .modal-box {
+                width: 90vw;
+                padding: 12px;
+            }
+
+            table {
+                font-size: 9px;
+            }
+
+            thead th {
+                padding: 4px 6px;
+                font-size: 7px;
+            }
+
+            tbody td {
+                padding: 4px 6px;
+                font-size: 9px;
+            }
+
+            .market-cell {
+                min-width: 180px;
+            }
+
+            .market-title {
+                font-size: 9px;
+            }
+
+            .price-chip {
+                font-size: 10px;
+            }
+
+            .btn-up,
+            .btn-dn {
+                padding: 2px 5px;
+                font-size: 8px;
+            }
+
+            .footer {
+                font-size: 7px;
+                padding: 3px;
             }
         }
     </style>
@@ -1420,13 +1570,15 @@
             const bal = s.settings?.usdc_balance ?? s.usdc_balance ?? 0;
             const rpnl = s.realized_pnl ?? 0;
             const fpnl = s.floating_pnl ?? 0;
-            const wins = s.wins ?? 0;
-            const losses = s.losses ?? 0;
-            const total = wins + losses;
-            const wr = total > 0 ? (wins / total) * 100 : 0;
             const matic = s.settings?.matic_balance ?? s.matic_balance ?? 0;
+            
             const profitTrades = _trades.filter(t => (t.pnl - (t.gas_cost || 0)) > 0);
             const lossTrades = _trades.filter(t => (t.pnl - (t.gas_cost || 0)) < 0);
+            
+            const wins = profitTrades.length;
+            const losses = lossTrades.length;
+            const total = wins + losses;
+            const wr = total > 0 ? (wins / total) * 100 : 0;
             const tp = profitTrades.reduce((a, t) => a + (t.pnl - (t.gas_cost || 0)), 0);
             const tl = lossTrades.reduce((a, t) => a + Math.abs(t.pnl - (t.gas_cost || 0)), 0);
 
