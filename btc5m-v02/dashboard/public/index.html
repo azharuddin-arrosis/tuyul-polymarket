@@ -461,9 +461,11 @@
             
             // Update stats
             if (state) {
-                document.getElementById('usdc-balance').innerText = '$' + state.usdc_balance.toFixed(2);
-                document.getElementById('matic-balance').innerText = state.matic_balance.toFixed(4);
-                document.getElementById('pnl').innerText = '$' + state.usdc_balance.toFixed(2);
+                const balance = state.settings ? state.settings.usdc_balance : state.usdc_balance;
+                const maticBal = state.settings ? state.settings.matic_balance : state.matic_balance;
+                document.getElementById('usdc-balance').innerText = '$' + (balance || 0).toFixed(2);
+                document.getElementById('matic-balance').innerText = (maticBal || 0).toFixed(4);
+                document.getElementById('pnl').innerText = '$' + (balance || 0).toFixed(2);
                 
                 // Calculate stats from history
                 const wins = state.wins || 0;
