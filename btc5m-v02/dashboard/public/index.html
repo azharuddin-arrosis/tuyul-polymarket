@@ -1251,7 +1251,16 @@
                 const sy = Math.floor(m.yes_price * 99);
                 const sn = Math.floor(m.no_price * 99);
                 const ts = m.slug.split('-').pop();
-                const t = ts ? new Date(parseInt(ts) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-';
+                let t = '-';
+                if (ts) {
+                    const tsNum = parseInt(ts, 10);
+                    if (!isNaN(tsNum)) {
+                        const date = new Date(tsNum * 1000);
+                        if (!isNaN(date.getTime())) {
+                            t = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        }
+                    }
+                }
                 const cat = m.category || 'OTHER';
                 const catCls = cat === 'BTC' ? 'cat-btc' : cat.includes('NHL') || cat.includes('NBA') ? 'cat-nhl' : 'cat-other';
                 return `<tr>
@@ -1288,7 +1297,15 @@
                 let mktName = p.slug;
                 if (p.slug.includes('btc-updown-5m')) {
                     const ts = p.slug.split('-').pop();
-                    if (ts) mktName = 'BTC ' + new Date(parseInt(ts) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    if (ts) {
+                        const tsNum = parseInt(ts, 10);
+                        if (!isNaN(tsNum)) {
+                            const date = new Date(tsNum * 1000);
+                            if (!isNaN(date.getTime())) {
+                                mktName = 'BTC ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            }
+                        }
+                    }
                 } else {
                     mktName = p.slug.slice(0, 14) + '…';
                 }
@@ -1313,7 +1330,16 @@
                 return;
             }
             const html = trades.slice(0, 60).map((t, i) => {
-                const time = new Date(t.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                let time = '-';
+                if (t.timestamp) {
+                    const tsNum = parseInt(t.timestamp, 10);
+                    if (!isNaN(tsNum)) {
+                        const date = new Date(tsNum * 1000);
+                        if (!isNaN(date.getTime())) {
+                            time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        }
+                    }
+                }
                 const net = t.pnl - (t.gas_cost || 0);
                 const netCls = net >= 0 ? 'pnl-pos' : 'pnl-neg';
                 const ep = (t.price * 100).toFixed(0) + 'c';
@@ -1326,13 +1352,21 @@
                 else if (t.status === 'Auto Exit') statusEl = '<span class="status-auto">Auto</span>';
                 else statusEl = '<span class="status-open">' + t.status + '</span>';
 
-                let mktName = t.slug;
-                if (t.slug.includes('btc-updown-5m')) {
-                    const ts = t.slug.split('-').pop();
-                    if (ts) mktName = new Date(parseInt(ts) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                } else {
-                    mktName = t.slug.slice(0, 12) + '…';
-                }
+                 let mktName = t.slug;
+                 if (t.slug.includes('btc-updown-5m')) {
+                     const ts = t.slug.split('-').pop();
+                     if (ts) {
+                         const tsNum = parseInt(ts, 10);
+                         if (!isNaN(tsNum)) {
+                             const date = new Date(tsNum * 1000);
+                             if (!isNaN(date.getTime())) {
+                                 mktName = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                             }
+                         }
+                     }
+                 } else {
+                     mktName = t.slug.slice(0, 12) + '…';
+                 }
 
                 return `<tr class="history-row" onclick="openModal(${i})">
             <td style="color:var(--text-mid)">${time}</td>
@@ -1368,7 +1402,17 @@
             document.getElementById('modal-title').innerText = 'Trade · ' + t.slug.slice(-12);
             document.getElementById('modal-body').innerHTML = `
         <div class="modal-row"><span class="modal-key">Status</span><span class="modal-val">${t.status} · ${t.outcome}</span></div>
-        <div class="modal-row"><span class="modal-key">Time</span><span class="modal-val">${new Date(t.timestamp * 1000).toLocaleString()}</span></div>
+        <div class="modal-row"><span class="modal-key">Time</span><span class="modal-val">
+${
+  (() => {
+    if (!t.timestamp) return '-';
+    const tsNum = parseInt(t.timestamp, 10);
+    if (isNaN(tsNum)) return '-';
+    const date = new Date(tsNum * 1000);
+    return isNaN(date.getTime()) ? '-' : date.toLocaleString();
+  })()
+}
+</span></div>
         <div class="modal-row"><span class="modal-key">Entry Price</span><span class="modal-val">${(t.price * 100).toFixed(0)}c</span></div>
         <div class="modal-row"><span class="modal-key">Final Price</span><span class="modal-val">${t.final_price ? (t.final_price * 100).toFixed(0) + 'c' : '-'}</span></div>
         <div class="modal-row"><span class="modal-key">Amount</span><span class="modal-val">$${t.amount.toFixed(4)}</span></div>
