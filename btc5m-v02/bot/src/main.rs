@@ -857,7 +857,9 @@ async fn run_bot(state: Arc<AppState>) {
         let other_markets = if should_fetch_markets {
             fetch_other_markets(&client).await
         } else {
-            Vec::new()
+            // When not fetching, we need old markets from state
+            let s = state.state.lock().await;
+            s.current_markets.iter().filter(|m| !m.slug.contains("btc-updown")).cloned().collect()
         };
         
         // Combine BTC + Other markets
