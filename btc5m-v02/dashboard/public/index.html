@@ -394,14 +394,6 @@
                 <form id="settings-form">
                     <div class="settings-grid">
                         <div class="input-group">
-                            <label>USDC Balance</label>
-                            <input type="number" name="usdc_balance" step="0.01" value="100">
-                        </div>
-                        <div class="input-group">
-                            <label>MATIC Balance</label>
-                            <input type="number" name="matic_balance" step="0.0001" value="0.5">
-                        </div>
-                        <div class="input-group">
                             <label>Bet Size</label>
                             <input type="number" name="bet_size" step="0.01" value="1">
                         </div>
@@ -670,6 +662,7 @@
             e.preventDefault();
             
             if (isSimulating) {
+                // Stop simulation - just reset UI state, don't send to server
                 isSimulating = false;
                 document.getElementById('sim-btn').innerText = 'Start Simulation';
                 document.getElementById('sim-btn').style.background = '#10b981';
@@ -679,8 +672,6 @@
             
             const formData = new FormData(e.target);
             const data = {
-                usdc_balance: parseFloat(formData.get('usdc_balance')),
-                matic_balance: parseFloat(formData.get('matic_balance')),
                 bet_size: parseFloat(formData.get('bet_size')),
                 gas_price: parseFloat(formData.get('gas_price')),
                 threshold_above: parseFloat(formData.get('threshold_above')),

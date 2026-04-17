@@ -516,8 +516,18 @@ struct SettingsForm {
 
 async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<SettingsForm>) -> Json<serde_json::Value> {
     let mut s = state.state.lock().await;
-    s.settings.usdc_balance = form.usdc_balance;
-    s.settings.matic_balance = form.matic_balance;
+    
+    let was_auto_mode = s.settings.auto_mode;
+    let is_starting_simulation = !was_auto_mode && form.auto_mode.as_ref().map(|v| v == "on").unwrap_or(false);
+    
+    // If starting simulation and balance is 0, set initial balance
+    if is_starting_simulation && s.settings.usdc_balance <= 0.0 {
+        s.settings.usdc_balance = 100.0;
+        s.settings.matic_balance = 0.5;
+        println!("[INIT] Starting simulation with initial balance $100 USDC, 0.5 MATIC");
+    }
+    
+    // Preserve existing balance values - settings form only updates trading params
     s.settings.bet_size = form.bet_size;
     s.settings.gas_price = form.gas_price;
     s.settings.threshold_above = form.threshold_above;
@@ -613,16 +623,16 @@ async fn post_sell(State(state): State<Arc<AppState>>, Json(form): Json<serde_js
 async fn post_reset(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
     let mut s = state.state.lock().await;
     
-    // Reset to fresh state with desired defaults
-    s.settings.usdc_balance = 100.0;
-    s.settings.matic_balance = 0.5;
+    // Reset to fresh state - balances to 0, stop simulation
+    s.settings.usdc_balance = 0.0;
+    s.settings.matic_balance = 0.0;
     s.settings.bet_size = 1.0;
     s.settings.gas_price = 0.001;
-    s.settings.auto_mode = true;
+    s.settings.auto_mode = false;  // STOP simulation
     s.settings.threshold_above = 0.52;
     s.settings.threshold_below = 0.48;
-    s.settings.tp_threshold = 0.0;  // disabled
-    s.settings.sl_threshold = -1.0; // disabled
+    s.settings.tp_threshold = 0.0;
+    s.settings.sl_threshold = -1.0;
     s.history.clear();
     s.open_positions.clear();
     s.last_trade_timestamp = 0;
@@ -630,7 +640,7 @@ async fn post_reset(State(state): State<Arc<AppState>>) -> Json<serde_json::Valu
     s.current_markets.clear();
     s.save();
     
-    // Clear the log file - use full path
+    // Clear the log file
     let log_path = std::env::current_dir()
         .map(|p| p.join("bot.log"))
         .ok();
@@ -638,7 +648,7 @@ async fn post_reset(State(state): State<Arc<AppState>>) -> Json<serde_json::Valu
         let _ = std::fs::write(&p, "");
     }
     
-    println!("[RESET] Bot state and log cleared");
+    println!("[RESET] Bot reset - simulation stopped, balances cleared to 0");
     
     Json(serde_json::json!({"status": "ok"}))
 }

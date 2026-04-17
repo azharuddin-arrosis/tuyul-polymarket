@@ -2,43 +2,50 @@
 
 ## Dashboard Frontend (index.html) - DONE ✅
 
-### 1. Tambah Input Balance di Form Settings
-- [x] Tambahkan input untuk USDC Balance
-- [x] Tambahkan input untuk MATIC Balance
-- [x] Style input agar konsisten
+### 1. Hapus Input Balance dari Form Settings
+- [x] Hapus input USDC Balance dari form
+- [x] Hapus input MATIC Balance dari form
+- [x] Balance ditampilkan hanya di header (stats bar)
 
 ### 2. Ubah Tombol Save → Start/Stop Simulation
 - [x] Ubah teks tombol "Save Settings" → "Start Simulation"
 - [x] Saat Start:
-  - Kirim settings ke server via POST /api/settings
-  - Ganti teks tombol jadi "Stop Simulation"  
+  - Kirim settings ke server via POST /api/settings (tanpa balance)
+  - Jika balance masih 0, server akan set $100 USDC dan 0.5 MATIC
+  - Ganti teks tombol jadi "Stop Simulation"
   - Ganti warna tombol jadi merah (#ef4444)
   - Disable semua input form
 - [x] Saat Stop:
-  - Enable kembali semua input form
+  - Enable kembali semua input form (auto_mode tetap true, hanya UI unlock)
   - Ganti teks jadi "Start Simulation"
   - Ganti warna jadi hijau (#10b981)
 
 ### 3. Perbaiki Form Submit
-- [x] Form submit mengirimkan: usdc_balance, matic_balance, bet_size, gas_price, threshold_above, threshold_below, tp_threshold, sl_threshold, auto_mode
+- [x] Form submit hanya kirim: bet_size, gas_price, threshold_above, threshold_below, tp_threshold, sl_threshold, auto_mode
 
 ---
 
 ## Bot Backend (main.rs) - DONE ✅
 
-### 4. Reset Balance
-- [x] Saat reset, default ke $100 USDC dan 0.5 MATIC (line 617-618)
+### 4. Reset Behavior
+- [x] Saat reset, set usdc_balance = 0
+- [x] Saat reset, set matic_balance = 0
+- [x] Saat reset, set auto_mode = false (simulation STOP)
+- [x] Clear all positions dan history
+- [x] Clear log file
+
+### 5. Start Simulation Behavior  
+- [x] Saat POST settings dengan auto_mode=true dan balance=0 → set $100 USDC, 0.5 MATIC
+- [x] Balance dipertahankan dari state yang ada (tidak di-overwrite dari form)
 
 ---
 
-## Testing Checklist
+## Flow Penggunaan
 
-- [ ] Load halaman dashboard → balance form harus kosong/tidak ada (SEBELUM)
-- [ ] Load halaman dashboard setelah fix → balance form muncul dengan input $100 dan 0.5
-- [ ] Klik Start Simulation → form disabled, tombol berubah ke "Stop Simulation"
-- [ ] Klik Stop Simulation → form enabled kembali, tombol berubah ke "Start Simulation"
-- [ ] Klik Reset button → balance di reset ke $100 (jika ada posisi, dihapus)
-- [ ] Simulate trade manual → balance berkurang
+1. **Initial State**: Bot dimulai dengan balance = 0, auto_mode = false
+2. **Start Simulation**: Klik tombol → auto_mode=true, balance=$100/0.5 → bot trading
+3. **Stop Simulation**: Klik tombol → UI unlock, auto_mode tetap true (bot terus trading)
+4. **Reset**: Klik reset button → auto_mode=false, balance=0, all positions cleared
 
 ---
 
