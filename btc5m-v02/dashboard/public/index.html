@@ -1240,12 +1240,14 @@
 
         // ── MARKETS ──
         function updateMarkets(markets) {
-            document.getElementById('market-count').innerText = markets.length;
-            if (!markets.length) {
-                document.getElementById('markets-body').innerHTML = '<tr class="empty-row"><td colspan="7">No active markets</td></tr>';
+            // Filter only BTC markets
+            const btcMarkets = markets.filter(m => m.category === 'BTC');
+            document.getElementById('market-count').innerText = btcMarkets.length;
+            if (!btcMarkets.length) {
+                document.getElementById('markets-body').innerHTML = '<tr class="empty-row"><td colspan="7">No active BTC markets</td></tr>';
                 return;
             }
-            const html = markets.map(m => {
+            const html = btcMarkets.map(m => {
                 const yc = Math.ceil(m.yes_price * 100);
                 const nc = Math.ceil(m.no_price * 100);
                 const sy = Math.floor(m.yes_price * 99);
