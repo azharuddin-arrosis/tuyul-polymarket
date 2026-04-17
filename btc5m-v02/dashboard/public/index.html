@@ -524,9 +524,21 @@
                     const pnlColor = floatingPnl >= 0 ? '#10b981' : '#ef4444';
   
                     const typeLabel = p.outcome === 'Yes' ? 'LONG (UP)' : 'SHORT (DOWN)';
+                    
+                    // Format market name
+                    let posMarketName = p.slug;
+                    if (p.slug.includes('btc-updown-5m')) {
+                        const ts = p.slug.split('-').pop();
+                        if (ts) {
+                            const date = new Date(parseInt(ts) * 1000);
+                            const marketTime = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            posMarketName = 'BTC 5m ' + marketTime;
+                        }
+                    }
+                    
                     posHtml += `<tr>
                         <td style="font-size:10px;color:#888">${countdown}</td>
-                        <td title="${p.slug}"><a href="https://polymarket.com/market/${p.slug}" target="_blank" style="color:#f59e0b">${p.slug.slice(-10)}</a></td>
+                        <td title="${p.slug}"><a href="https://polymarket.com/market/${p.slug}" target="_blank" style="color:#f59e0b;font-weight:600;">${posMarketName}</a></td>
                         <td><span class="badge" style="background:${p.outcome === 'Yes' ? '#10b981' : '#ef4444'}">${typeLabel}</span></td>
                         <td>${(p.price * 100).toFixed(0)}c → ${(currentPrice * 100).toFixed(0)}c</td>
                         <td style="color:${pnlColor}; font-weight:bold">${floatingPnl >= 0 ? '+' : ''}$${floatingPnl.toFixed(2)}</td>
@@ -584,9 +596,21 @@
                     const typeLabel = t.outcome === 'Yes' ? 'LONG (UP)' : 'SHORT (DOWN)';
                     const finalPrice = t.final_price ? (t.final_price * 100).toFixed(0) + 'c' : '-';
                     const entryPrice = (t.price * 100).toFixed(0) + 'c';
+                    
+                    // Format market name - extract category and time from slug
+                    let marketName = t.slug;
+                    if (t.slug.includes('btc-updown-5m')) {
+                        const ts = t.slug.split('-').pop();
+                        if (ts) {
+                            const date = new Date(parseInt(ts) * 1000);
+                            const marketTime = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            marketName = 'BTC 5m ' + marketTime;
+                        }
+                    }
+                    
                     html += `<tr class="history-row" onclick="openTradeModal(${idx})">
                         <td>${time}</td>
-                        <td><a href="https://polymarket.com/market/${t.slug}" target="_blank" title="${t.slug}" style="color:#6b7280;">${t.slug.slice(-10)}</a></td>
+                        <td><a href="https://polymarket.com/market/${t.slug}" target="_blank" title="${t.slug}" style="color:#f59e0b;font-weight:600;">${marketName}</a></td>
                         <td><span class="badge ${t.outcome === 'Yes' ? 'badge-won' : 'badge-lost'}">${typeLabel}</span></td>
                         <td>${entryPrice}</td>
                         <td>${finalPrice}</td>
