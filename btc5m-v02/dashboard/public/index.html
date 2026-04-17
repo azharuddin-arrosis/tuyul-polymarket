@@ -524,6 +524,7 @@
                     
                     // Find current price for P&L
                     const market = markets?.markets?.find(m => m.slug === p.slug);
+                    // For LONG (Yes): compare YES prices. For SHORT (No): compare NO prices.
                     const currentPrice = market ? (p.outcome === 'Yes' ? market.yes_price : market.no_price) : p.price;
                     const floatingPnl = (p.amount / p.price) * currentPrice - p.amount;
                     const pnlColor = floatingPnl >= 0 ? '#10b981' : '#ef4444';
