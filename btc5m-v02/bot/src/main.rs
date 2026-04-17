@@ -348,6 +348,7 @@ async fn fetch_other_markets(client: &Client) -> Vec<Market> {
     markets
 }
 
+#[allow(dead_code)]
 async fn check_settlement(client: &Client, slug: &str) -> Option<String> {
     // Try with active=false first to find resolved markets
     let url = format!("https://gamma-api.polymarket.com/markets?slug={}", slug);
@@ -787,7 +788,7 @@ async fn run_bot(state: Arc<AppState>) {
             let no_token = no_token.unwrap_or_default();
             let client_clone = client.clone();
             final_price_futures.push(Box::pin(async move {
-                let (yes_price, no_price) = tokio::join!(
+                let (yes_price, _no_price) = tokio::join!(
                     fetch_clob_price(&client_clone, &yes_token),
                     fetch_clob_price(&client_clone, &no_token)
                 );
