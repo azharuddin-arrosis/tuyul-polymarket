@@ -730,7 +730,7 @@ async fn run_bot(state: Arc<AppState>) {
         // --- STEP 1: GATHER DATA (OUTSIDE LOCK) ---
         
         // 1a. Fetch BTC 5m markets
-        let mut btc_markets = fetch_btc5m_markets(&client).await;
+        let btc_markets = fetch_btc5m_markets(&client).await;
         
         // 1b. Fetch other markets (sports, etc)
         let other_markets = fetch_other_markets(&client).await;
