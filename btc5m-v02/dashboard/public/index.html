@@ -394,8 +394,20 @@
                 <form id="settings-form">
                     <div class="settings-grid">
                         <div class="input-group">
+                            <label>USDC Balance</label>
+                            <input type="number" name="usdc_balance" step="0.01" value="100">
+                        </div>
+                        <div class="input-group">
+                            <label>MATIC Balance</label>
+                            <input type="number" name="matic_balance" step="0.0001" value="0.5">
+                        </div>
+                        <div class="input-group">
                             <label>Bet Size</label>
                             <input type="number" name="bet_size" step="0.01" value="1">
+                        </div>
+                        <div class="input-group">
+                            <label>Gas Price</label>
+                            <input type="number" name="gas_price" step="0.0001" value="0.001">
                         </div>
                         <div class="input-group">
                             <label>Threshold Above</label>
@@ -415,10 +427,10 @@
                         </div>
                         <div class="input-group">
                             <label>Auto Mode</label>
-                            <input type="checkbox" name="auto_mode" checked>
+                            <input type="checkbox" name="auto_mode" id="auto-mode" checked>
                         </div>
                     </div>
-                    <button type="submit" style="background:#10b981;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;width:100%;margin-top:10px">Save Settings</button>
+                    <button type="submit" id="sim-btn" style="background:#10b981;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;width:100%;margin-top:10px">Start Simulation</button>
                 </form>
             </div>
 </div>
@@ -651,9 +663,20 @@
             }
         }
         
-        // Form submit
+        // Form submit - Start/Stop Simulation
+        let isSimulating = false;
+        
         document.getElementById('settings-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            if (isSimulating) {
+                isSimulating = false;
+                document.getElementById('sim-btn').innerText = 'Start Simulation';
+                document.getElementById('sim-btn').style.background = '#10b981';
+                document.querySelectorAll('#settings-form input').forEach(input => input.disabled = false);
+                return;
+            }
+            
             const formData = new FormData(e.target);
             const data = {
                 usdc_balance: parseFloat(formData.get('usdc_balance')),
@@ -667,17 +690,26 @@
                 auto_mode: formData.get('auto_mode') ? 'on' : ''
             };
             
-            const btn = e.target.querySelector('button');
+            const btn = document.getElementById('sim-btn');
             const originalText = btn.innerText;
             btn.innerText = 'Saving...';
             
-            await fetch('/api/settings', {
+            const response = await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
             
-            setTimeout(() => btn.innerText = originalText, 500);
+            const result = await response.json();
+            if (result.status === 'ok') {
+                isSimulating = true;
+                btn.innerText = 'Stop Simulation';
+                btn.style.background = '#ef4444';
+                document.querySelectorAll('#settings-form input').forEach(input => input.disabled = true);
+            } else {
+                btn.innerText = originalText;
+                alert(result.message || 'Failed to save settings');
+            }
         });
         
         // Simulate trade
