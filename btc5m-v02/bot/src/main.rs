@@ -38,6 +38,10 @@ struct Position {
     yes_token_id: Option<String>,
     #[serde(default)]
     no_token_id: Option<String>,
+    #[serde(default)]
+    peak_price: Option<f64>,
+    #[serde(default)]
+    trailing_activated: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,11 +81,19 @@ struct BotSettings {
     min_below: f64,        // Min price to bet DOWN (e.g., 0.35) - skip if too low
     tp_threshold: f64,
     sl_threshold: f64,
+    #[serde(default)]
+    trailing_stop_enabled: bool,
+    #[serde(default = "default_trailing_trigger")]
+    trailing_trigger_pct: f64,
+    #[serde(default = "default_trailing_guard")]
+    trailing_guard_pct: f64,
 }
 
 fn default_bot_mode() -> BotMode { BotMode::Demo }
 fn default_max_above() -> f64 { 0.65 }
 fn default_min_below() -> f64 { 0.35 }
+fn default_trailing_trigger() -> f64 { 0.20 }
+fn default_trailing_guard() -> f64 { 0.10 }
 
 impl Default for BotSettings {
     fn default() -> Self {
@@ -98,6 +110,9 @@ impl Default for BotSettings {
             min_below: 0.35,    // Don't bet DOWN if price < 35c
             tp_threshold: 0.20,
             sl_threshold: -0.30,
+            trailing_stop_enabled: false,
+            trailing_trigger_pct: 0.20,
+            trailing_guard_pct: 0.10,
         }
     }
 }
@@ -562,6 +577,9 @@ struct SettingsForm {
     min_below: f64,
     tp_threshold: f64,
     sl_threshold: f64,
+    trailing_stop_enabled: Option<String>,
+    trailing_trigger_pct: f64,
+    trailing_guard_pct: f64,
     mode: Option<String>,
     auto_mode: Option<String>,
 }
@@ -612,6 +630,9 @@ async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<Sett
     s.settings.min_below = form.min_below;
     s.settings.tp_threshold = form.tp_threshold;
     s.settings.sl_threshold = form.sl_threshold;
+    s.settings.trailing_stop_enabled = form.trailing_stop_enabled.as_ref().map(|v| v == "on").unwrap_or(false);
+    s.settings.trailing_trigger_pct = form.trailing_trigger_pct;
+    s.settings.trailing_guard_pct = form.trailing_guard_pct;
     s.settings.auto_mode = requested_auto_mode;
     if !requested_auto_mode {
         s.stopped = false;
@@ -662,6 +683,8 @@ async fn post_simulate(State(state): State<Arc<AppState>>, Json(form): Json<Simu
         traded: true,
         yes_token_id: None,
         no_token_id: None,
+        peak_price: None,
+        trailing_activated: false,
     };
 
     s.settings.usdc_balance -= form.amount;
@@ -730,6 +753,9 @@ async fn post_reset(State(state): State<Arc<AppState>>) -> Json<serde_json::Valu
     s.settings.min_below = 0.35;
     s.settings.tp_threshold = 0.0;
     s.settings.sl_threshold = -1.0;
+    s.settings.trailing_stop_enabled = false;
+    s.settings.trailing_trigger_pct = 0.20;
+    s.settings.trailing_guard_pct = 0.10;
     s.history.clear();
     s.open_positions.clear();
     s.last_trade_timestamp = 0;
@@ -893,7 +919,7 @@ async fn run_bot(state: Arc<AppState>) {
                     if s.history.len() > 100 { s.history.truncate(100); }
                     state_changed = true;
                 }
-                // Check TP/SL for active markets (only if position hasn't expired)
+                // Check TP/SL/Trailing Stop for active markets
                 else if let Some(m) = s.current_markets.iter().find(|m| m.slug == pos.slug) {
                     let prices = parse_prices(m.outcome_prices.as_deref());
                     let current_price = if pos.outcome == "Yes" { prices.get(0).copied() } else { prices.get(1).copied() }.unwrap_or(pos.price);
@@ -903,9 +929,66 @@ async fn run_bot(state: Arc<AppState>) {
                     let tp_enabled = settings.tp_threshold > 0.0 && pnl_pct >= settings.tp_threshold;
                     let sl_enabled = settings.sl_threshold < 0.0 && pnl_pct <= settings.sl_threshold;
                     
-                    if tp_enabled || sl_enabled {
+                    // Collect position data for trailing stop logic
+                    let position_was_activated = pos.trailing_activated;
+                    let position_peak = pos.peak_price;
+                    
+                    // Update peak price if we're in profit
+                    let peak = position_peak.unwrap_or(pos.price);
+                    let new_peak = if current_price > peak { current_price } else { peak };
+                    
+                    // Check trailing stop (only if enabled and price has moved up enough)
+                    let mut should_exit_trailing = false;
+                    let mut trailing_update_peak: Option<f64> = None;
+                    let mut trailing_update_activated = false;
+                    if settings.trailing_stop_enabled {
+                        let trigger_pct = settings.trailing_trigger_pct;
+                        let guard_pct = settings.trailing_guard_pct;
+                        
+                        // Activate trailing stop when profit >= trigger %
+                        let has_triggered = position_was_activated || pnl_pct >= trigger_pct;
+                        
+                        if has_triggered {
+                            let actual_peak = if !position_was_activated && pnl_pct >= trigger_pct {
+                                current_price
+                            } else {
+                                new_peak
+                            };
+                            
+                            // Check if current price dropped back by guard % from peak
+                            let drop_from_peak = (actual_peak - current_price) / actual_peak;
+                            
+                            if drop_from_peak >= guard_pct {
+                                should_exit_trailing = true;
+                                println!("[TRAILING STOP] {} triggered! Peak: {:.1}c → Current: {:.1}c (drop: {:.1}%)", 
+                                    pos.slug, actual_peak * 100.0, current_price * 100.0, drop_from_peak * 100.0);
+                            }
+                            
+                            // Track updates to apply after borrows
+                            trailing_update_peak = if current_price > actual_peak { Some(current_price) } else { None };
+                            if !position_was_activated && pnl_pct >= trigger_pct {
+                                trailing_update_activated = true;
+                                trailing_update_peak = Some(current_price);
+                            }
+                        }
+                    }
+                    
+                    // Apply trailing stop updates if we're not exiting
+                    if !should_exit_trailing && !tp_enabled && !sl_enabled {
+                        if let Some(p) = trailing_update_peak {
+                            s.open_positions[i].peak_price = Some(p);
+                        }
+                        if trailing_update_activated {
+                            s.open_positions[i].trailing_activated = true;
+                        }
+                    }
+                    
+                    if should_exit_trailing || tp_enabled || sl_enabled {
                         let pos = s.open_positions.remove(i);
-                        let label = if tp_enabled { "AUTO-TP" } else { "AUTO-SL" };
+                        let _ = position_was_activated;
+                        let _ = position_peak;
+                        let _ = new_peak;
+                        let label = if should_exit_trailing { "TRAIL" } else if tp_enabled { "AUTO-TP" } else { "AUTO-SL" };
                         println!("[{}] {} reached for {}: {:.1}%", label, label, pos.slug, pnl_pct * 100.0);
                         
                         let pnl = (pos.amount / pos.price) * current_price - pos.amount;
@@ -917,7 +1000,7 @@ async fn run_bot(state: Arc<AppState>) {
                             pnl,
                             timestamp: now,
                             gas_cost: s.settings.gas_price,
-                            status: "Auto Exit".to_string(),
+                            status: if should_exit_trailing { "Trailing Stop".to_string() } else { "Auto Exit".to_string() },
                             final_price: current_price,
                         };
                         s.settings.usdc_balance += pos.amount + pnl;
@@ -999,6 +1082,8 @@ async fn run_bot(state: Arc<AppState>) {
                                 traded: true,
                                 yes_token_id: yes_token,
                                 no_token_id: no_token,
+                                peak_price: None,
+                                trailing_activated: false,
                             });
                             
                             s.last_trade_timestamp = now;
