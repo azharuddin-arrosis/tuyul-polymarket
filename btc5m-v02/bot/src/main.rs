@@ -1038,8 +1038,8 @@ async fn run_bot(state: Arc<AppState>) {
                     let can_trade  = !s.stopped
                         && !has_active
                         && time_left > 30
-                        && time_into >= 60       // Entry after 1 min
-                        && time_into <= 240      // Entry before 4 min
+                        && time_into >= 60       // Entry after 1 min (give time for price to settle)
+                        && time_into <= 270     // Entry before 5 min (almost end of window)
                         && settings.matic_balance >= gas_needed
                         && settings.usdc_balance  >= dynamic_bet
                         && yes_price > 0.01
@@ -1057,13 +1057,12 @@ async fn run_bot(state: Arc<AppState>) {
                         eprintln!("[ALERT] Insufficient USDC {:.2} < {:.2}",
                             settings.usdc_balance, dynamic_bet);
                     } else if can_trade {
-                        // FIX: respect threshold_above / threshold_below from settings
-                        let outcome = if yes_price < settings.threshold_above {
-                            "Yes"
-                        } else if yes_price > settings.threshold_below {
-                            "No"
+                        // STRATEGY: Only go UP when price is low (40-52%), expect bounce
+                        // Skip if price too high (> 52%) or too low (< 30%)
+                        let outcome = if yes_price >= 0.40 && yes_price < 0.52 {
+                            "Yes"  // Bet UP - expecting bounce
                         } else {
-                            "Skip"
+                            "Skip" // Skip otherwise
                         };
 
                         if outcome != "Skip" {
