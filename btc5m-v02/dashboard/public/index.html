@@ -40,6 +40,14 @@
             text-align: center; 
             border: 1px solid #333; 
         }
+        .stat-row {
+            display: flex;
+            width: 100%;
+        }
+        .stat-row .stat-cell {
+            flex: 1;
+            min-width: 80px;
+        }
         .stat-cell .label { color: #888; font-size: 9px; text-transform: uppercase; }
         .stat-cell .value { font-size: 14px; font-weight: 600; margin-top: 2px; }
         .win-bar { display: flex; height: 4px; margin-top: 4px; border-radius: 2px; overflow: hidden; }
@@ -292,32 +300,54 @@
         </div>
     </div>
     
-    <div class="stats-bar">
-        <div class="stat-cell">
-            <div class="label">Balance</div>
-            <div class="value" id="pnl" style="color:#10b981">$100.00</div>
+<div class="stats-bar">
+        <div class="stat-row">
+            <div class="stat-cell">
+                <div class="label">Balance</div>
+                <div class="value" id="pnl" style="color:#10b981">$100.00</div>
+            </div>
+            <div class="stat-cell">
+                <div class="label">Total Profit</div>
+                <div class="value" id="total-profit" style="color:#10b981">+$0.00</div>
+            </div>
+            <div class="stat-cell">
+                <div class="label">Total Loss</div>
+                <div class="value" id="total-loss" style="color:#ef4444">-$0.00</div>
+            </div>
+            <div class="stat-cell">
+                <div class="label">Net Profit</div>
+                <div class="value" id="net-profit" style="color:#10b981">+$0.00</div>
+            </div>
         </div>
-        <div class="stat-cell">
-            <div class="label">Realized P&L</div>
-            <div class="value" id="realized-pnl" style="color:#10b981">$0.00</div>
+        <div class="stat-row">
+            <div class="stat-cell">
+                <div class="label">Realized P&L</div>
+                <div class="value" id="realized-pnl" style="color:#10b981">$0.00</div>
+            </div>
+            <div class="stat-cell">
+                <div class="label">Floating P&L</div>
+                <div class="value" id="floating-pnl" style="color:#f59e0b">$0.00</div>
+            </div>
+            <div class="stat-cell">
+                <div class="label">W/L</div>
+                <div class="value"><span class="green" id="wins">0</span>/<span class="red" id="losses">0</span></div>
+            </div>
+            <div class="stat-cell">
+                <div class="label">Win Rate</div>
+                <div class="value" id="winrate">0%</div>
+            </div>
+            <div class="stat-cell">
+                <div class="label">Gas</div>
+                <div class="value" id="gas-used" style="color:#f59e0b">0.0000</div>
+            </div>
         </div>
-        <div class="stat-cell">
-            <div class="label">Floating P&L</div>
-            <div class="value" id="floating-pnl" style="color:#f59e0b">$0.00</div>
+        <div class="stat-row" id="hourly-chart-row" style="display:none;">
+            <div class="chart-container" style="flex:1;text-align:center;">
+                <div class="label">P&L per Hour</div>
+                <div id="hourly-chart" style="display:flex;gap:4px;align-items:flex-end;height:30px;justify-content:center;margin-top:5px;"></div>
+            </div>
         </div>
-        <div class="stat-cell">
-            <div class="label">W/L</div>
-            <div class="value"><span class="green" id="wins">0</span>/<span class="red" id="losses">0</span></div>
-        </div>
-        <div class="stat-cell">
-            <div class="label">Win Rate</div>
-            <div class="value" id="winrate">0%</div>
-        </div>
-        <div class="stat-cell">
-            <div class="label">Gas</div>
-            <div class="value" id="gas-used" style="color:#f59e0b">0.0000</div>
-        </div>
-</div>
+    </div>
     
     <div class="main-grid">
         <!-- Left Panel: Markets, Open, History -->
@@ -486,50 +516,39 @@
                 document.getElementById('floating-pnl').innerText = (floatingPnl >= 0 ? '+' : '') + '$' + floatingPnl.toFixed(2);
                 document.getElementById('floating-pnl').style.color = floatingPnl >= 0 ? '#10b981' : '#ef4444';
                 
-                // Update detailed stats display
-                let statsHtml = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;font-size:11px;">
-                    <div style="background:#1a1a1a;padding:8px;border-radius:4px;text-align:center">
-                        <div style="color:#10b981;font-weight:bold">+$${totalProfit.toFixed(2)}</div>
-                        <div style="color:#666">Total Profit</div>
-                    </div>
-                    <div style="background:#1a1a1a;padding:8px;border-radius:4px;text-align:center">
-                        <div style="color:#ef4444;font-weight:bold">-$${totalLoss.toFixed(2)}</div>
-                        <div style="color:#666">Total Loss</div>
-                    </div>
-                    <div style="background:#1a1a1a;padding:8px;border-radius:4px;text-align:center">
-                        <div style="color:${netProfit >= 0 ? '#10b981' : '#ef4444'};font-weight:bold">${netProfit >= 0 ? '+' : ''}$${netProfit.toFixed(2)}</div>
-                        <div style="color:#666">Net Profit</div>
-                    </div>
-                </div>`;
+                // Update new stats
+                document.getElementById('total-profit').innerText = '+$' + totalProfit.toFixed(2);
+                document.getElementById('total-profit').style.color = '#10b981';
+                document.getElementById('total-loss').innerText = '-$' + totalLoss.toFixed(2);
+                document.getElementById('total-loss').style.color = '#ef4444';
+                document.getElementById('net-profit').innerText = (netProfit >= 0 ? '+' : '') + '$' + netProfit.toFixed(2);
+                document.getElementById('net-profit').style.color = netProfit >= 0 ? '#10b981' : '#ef4444';
                 
-                // Add hourly chart if available
-                if (state.hourly_stats) {
+                // Update hourly chart
+                const chartRow = document.getElementById('hourly-chart-row');
+                const chartContainer = document.getElementById('hourly-chart');
+                if (state.hourly_stats && Object.keys(state.hourly_stats).length > 0) {
+                    chartRow.style.display = 'flex';
+                    let chartHtml = '';
                     const hourlyData = state.hourly_stats;
-                    let chartHtml = '<div style="margin-top:10px;padding:10px;background:#1a1a1a;border-radius:4px"><div style="color:#666;font-size:10px;margin-bottom:5px">P&L per Hour</div><div style="display:flex;gap:2px;align-items:flex-end;height:40px;">';
                     Object.keys(hourlyData).slice(-12).forEach(key => {
                         const val = hourlyData[key].profit || 0;
-                        const height = Math.min(Math.abs(val) * 20, 40);
+                        const height = Math.min(Math.abs(val) * 15, 30);
                         const color = val >= 0 ? '#10b981' : '#ef4444';
                         const hour = key.split(' ')[1]?.slice(0,2) || '';
-                        chartHtml += `<div style="flex:1;text-align:center">
+                        chartHtml += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;">
                             <div style="width:100%;background:${color};height:${height}px;border-radius:2px"></div>
                             <div style="color:#555;font-size:8px">${hour}</div>
                         </div>`;
                     });
-                    chartHtml += '</div></div>';
-                    statsHtml += chartHtml;
+chartContainer.innerHTML = chartHtml;
+                } else {
+                    chartRow.style.display = 'none';
                 }
                 
-                // Add stats container if exists
-                let statsContainer = document.getElementById('detailed-stats');
-                if (!statsContainer) {
-                    const pnlDiv = document.getElementById('realized-pnl').parentNode;
-                    const newDiv = document.createElement('div');
-                    newDiv.id = 'detailed-stats';
-                    newDiv.style.padding = '10px';
-                    pnlDiv.parentNode.insertBefore(newDiv, pnlDiv.nextSibling);
-                }
-                document.getElementById('detailed-stats').innerHTML = statsHtml;
+                // Remove old detailed-stats if exists
+                const oldStats = document.getElementById('detailed-stats');
+                if (oldStats) oldStats.remove();
                 
                 const elOpenCount = document.getElementById('open-count');
                 if (elOpenCount) elOpenCount.innerText = (state.open_positions?.length || 0) + ' Positions';
