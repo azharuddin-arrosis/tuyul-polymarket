@@ -144,6 +144,7 @@ struct AppState {
     state: Mutex<BotState>,
 }
 
+#[allow(dead_code)]
 #[derive(Serialize)]
 struct ApiState {
     settings: BotSettings,
@@ -480,19 +481,52 @@ fn parse_prices(prices_str: Option<&str>) -> Vec<f64> {
     vec![0.5, 0.5]
 }
 
-async fn get_state(State(state): State<Arc<AppState>>) -> Json<ApiState> {
+async fn get_state(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
     let s = state.state.lock().await;
     
-    // Calculate stats
-    let (wins, losses, realized_pnl) = s.history.iter().fold((0i32, 0i32, 0.0), |(w, l, pnl), t| {
-        if t.status == "Won" {
-            (w + 1, l, pnl + t.pnl)
-        } else if t.status == "Lost" {
-            (w, l + 1, pnl + t.pnl)
-        } else {
-            (w, l, pnl)
+    // Calculate detailed stats
+    let mut wins = 0i32;
+    let mut losses = 0i32;
+    let mut total_profit = 0.0;
+    let mut total_loss = 0.0;
+    let mut realized_pnl = 0.0;
+    
+    for t in &s.history {
+        let pnl = t.pnl;
+        if t.status == "Won" || t.status == "Sold Early" {
+            if pnl > 0.0 {
+                wins += 1;
+                total_profit += pnl;
+            } else {
+                losses += 1;
+                total_loss += pnl.abs();
+            }
+            realized_pnl += pnl;
+        } else if t.status == "Lost" || t.status == "Auto Exit" {
+            losses += 1;
+            total_loss += pnl.abs();
+            realized_pnl += pnl;
         }
-    });
+    }
+    
+    let win_rate = if wins + losses > 0 { (wins as f64 / (wins + losses) as f64) * 100.0 } else { 0.0 };
+    let net_profit = total_profit - total_loss;
+    
+    // Calculate hourly stats for charting
+    let mut hourly_stats: std::collections::HashMap<String, serde_json::Value> = std::collections::HashMap::new();
+    for t in &s.history {
+        let dt = chrono::DateTime::from_timestamp(t.timestamp, 0)
+            .map(|dt| dt.format("%Y-%m-%d %H:00").to_string())
+            .unwrap_or_default();
+        
+        if dt.is_empty() { continue; }
+        
+        let entry = hourly_stats.entry(dt).or_insert(serde_json::json!({"profit": 0.0, "trades": 0}));
+        if let Some(obj) = entry.as_object_mut() {
+            obj.insert("profit".to_string(), serde_json::json!(obj.get("profit").unwrap_or(&serde_json::Value::from(0.0)).as_f64().unwrap_or(0.0) + t.pnl));
+            obj.insert("trades".to_string(), serde_json::json!(obj.get("trades").unwrap_or(&serde_json::Value::from(0)).as_i64().unwrap_or(0) + 1));
+        }
+    }
     
     // Calculate floating P&L from open positions
     let floating_pnl: f64 = s.open_positions.iter().map(|p| {
@@ -506,18 +540,23 @@ async fn get_state(State(state): State<Arc<AppState>>) -> Json<ApiState> {
             .unwrap_or(0.0)
     }).sum();
     
-    Json(ApiState {
-        settings: s.settings.clone(),
-        history: s.history.clone(),
-        open_positions: s.open_positions.clone(),
-        last_trade_timestamp: s.last_trade_timestamp,
-        usdc_balance: s.settings.usdc_balance,
-        matic_balance: s.settings.matic_balance,
-        realized_pnl,
-        floating_pnl,
-        wins,
-        losses,
-    })
+    Json(serde_json::json!({
+        "settings": s.settings,
+        "history": s.history,
+        "open_positions": s.open_positions,
+        "last_trade_timestamp": s.last_trade_timestamp,
+        "usdc_balance": s.settings.usdc_balance,
+        "matic_balance": s.settings.matic_balance,
+        "realized_pnl": realized_pnl,
+        "floating_pnl": floating_pnl,
+        "wins": wins,
+        "losses": losses,
+        "win_rate": win_rate,
+        "total_profit": total_profit,
+        "total_loss": total_loss,
+        "net_profit": net_profit,
+        "hourly_stats": hourly_stats
+    }))
 }
 
 async fn get_markets(State(state): State<Arc<AppState>>) -> Json<ApiMarkets> {

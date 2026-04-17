@@ -471,17 +471,65 @@
                 const wins = state.wins || 0;
                 const losses = state.losses || 0;
                 const total = wins + losses;
-                const winRate = total > 0 ? Math.round(wins / total * 100) : 0;
+                const winRate = state.win_rate || (total > 0 ? Math.round(wins / total * 100) : 0);
                 const realizedPnl = state.realized_pnl || 0;
                 const floatingPnl = state.floating_pnl || 0;
+                const totalProfit = state.total_profit || 0;
+                const totalLoss = state.total_loss || 0;
+                const netProfit = state.net_profit || 0;
                 
                 document.getElementById('wins').innerText = wins;
                 document.getElementById('losses').innerText = losses;
-                document.getElementById('winrate').innerText = winRate + '%';
+                document.getElementById('winrate').innerText = winRate.toFixed(0) + '%';
                 document.getElementById('realized-pnl').innerText = (realizedPnl >= 0 ? '+' : '') + '$' + realizedPnl.toFixed(2);
                 document.getElementById('realized-pnl').style.color = realizedPnl >= 0 ? '#10b981' : '#ef4444';
                 document.getElementById('floating-pnl').innerText = (floatingPnl >= 0 ? '+' : '') + '$' + floatingPnl.toFixed(2);
                 document.getElementById('floating-pnl').style.color = floatingPnl >= 0 ? '#10b981' : '#ef4444';
+                
+                // Update detailed stats display
+                let statsHtml = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;font-size:11px;">
+                    <div style="background:#1a1a1a;padding:8px;border-radius:4px;text-align:center">
+                        <div style="color:#10b981;font-weight:bold">+$${totalProfit.toFixed(2)}</div>
+                        <div style="color:#666">Total Profit</div>
+                    </div>
+                    <div style="background:#1a1a1a;padding:8px;border-radius:4px;text-align:center">
+                        <div style="color:#ef4444;font-weight:bold">-$${totalLoss.toFixed(2)}</div>
+                        <div style="color:#666">Total Loss</div>
+                    </div>
+                    <div style="background:#1a1a1a;padding:8px;border-radius:4px;text-align:center">
+                        <div style="color:${netProfit >= 0 ? '#10b981' : '#ef4444'};font-weight:bold">${netProfit >= 0 ? '+' : ''}$${netProfit.toFixed(2)}</div>
+                        <div style="color:#666">Net Profit</div>
+                    </div>
+                </div>`;
+                
+                // Add hourly chart if available
+                if (state.hourly_stats) {
+                    const hourlyData = state.hourly_stats;
+                    let chartHtml = '<div style="margin-top:10px;padding:10px;background:#1a1a1a;border-radius:4px"><div style="color:#666;font-size:10px;margin-bottom:5px">P&L per Hour</div><div style="display:flex;gap:2px;align-items:flex-end;height:40px;">';
+                    Object.keys(hourlyData).slice(-12).forEach(key => {
+                        const val = hourlyData[key].profit || 0;
+                        const height = Math.min(Math.abs(val) * 20, 40);
+                        const color = val >= 0 ? '#10b981' : '#ef4444';
+                        const hour = key.split(' ')[1]?.slice(0,2) || '';
+                        chartHtml += `<div style="flex:1;text-align:center">
+                            <div style="width:100%;background:${color};height:${height}px;border-radius:2px"></div>
+                            <div style="color:#555;font-size:8px">${hour}</div>
+                        </div>`;
+                    });
+                    chartHtml += '</div></div>';
+                    statsHtml += chartHtml;
+                }
+                
+                // Add stats container if exists
+                let statsContainer = document.getElementById('detailed-stats');
+                if (!statsContainer) {
+                    const pnlDiv = document.getElementById('realized-pnl').parentNode;
+                    const newDiv = document.createElement('div');
+                    newDiv.id = 'detailed-stats';
+                    newDiv.style.padding = '10px';
+                    pnlDiv.parentNode.insertBefore(newDiv, pnlDiv.nextSibling);
+                }
+                document.getElementById('detailed-stats').innerHTML = statsHtml;
                 
                 const elOpenCount = document.getElementById('open-count');
                 if (elOpenCount) elOpenCount.innerText = (state.open_positions?.length || 0) + ' Positions';
