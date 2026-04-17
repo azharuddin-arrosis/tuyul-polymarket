@@ -28,11 +28,15 @@
         }
         
         /* Stats Bar */
-        .stats-bar { 
-            display: grid; 
-            grid-template-columns: repeat(6, 1fr); 
-            gap: 1px; 
-            background: #333; 
+/* Stats Bar */
+.stats-bar {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+            background: #222;
+            padding: 12px;
+            border-radius: 6px;
         }
         .stat-cell { 
             background: #252525; 
@@ -40,13 +44,16 @@
             text-align: center; 
             border: 1px solid #333; 
         }
-        .stat-row {
-            display: flex;
-            width: 100%;
-        }
-        .stat-row .stat-cell {
-            flex: 1;
-            min-width: 80px;
+        .stat-cell .label { color: #888; font-size: 9px; text-transform: uppercase; }
+        .stat-cell .value { font-size: 14px; font-weight: 600; margin-top: 2px; }
+        .win-bar { display: flex; height: 4px; margin-top: 4px; border-radius: 2px; overflow: hidden; }
+        .win-bar .win { background: #10b981; }
+        .win-bar .loss { background: #ef4444; }
+        .stat-cell { 
+            background: #252525; 
+            padding: 10px 8px; 
+            text-align: center; 
+            border: 1px solid #333; 
         }
         .stat-cell .label { color: #888; font-size: 9px; text-transform: uppercase; }
         .stat-cell .value { font-size: 14px; font-weight: 600; margin-top: 2px; }
