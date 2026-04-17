@@ -100,8 +100,8 @@ impl Default for BotSettings {
             max_above: 0.65,    // Don't bet UP if price > 65c
             min_below: 0.35,    // Don't bet DOWN if price < 35c
             tp_threshold: 0.20,
-            sl_threshold: -0.30,
-            profit_lock_pct: 0.20,
+            sl_threshold: -0.15,
+            profit_lock_pct: 0.40,
         }
     }
 }
@@ -193,6 +193,18 @@ struct MarketInfo {
 #[derive(Serialize)]
 struct ApiHistory {
     trades: Vec<Trade>,
+}
+
+#[derive(Serialize)]
+struct PricePoint {
+    timestamp: i64,
+    time: String,
+    price: f64,
+}
+
+#[derive(Serialize)]
+struct ApiPriceHistory {
+    prices: Vec<PricePoint>,
 }
 
 async fn fetch_btc5m_markets(client: &Client) -> Vec<Market> {
@@ -552,6 +564,33 @@ async fn get_history(State(state): State<Arc<AppState>>) -> Json<ApiHistory> {
     Json(ApiHistory { trades: s.history.clone() })
 }
 
+async fn get_price_history(State(state): State<Arc<AppState>>) -> Json<ApiPriceHistory> {
+    let s = state.state.lock().await;
+    let now = Utc::now().timestamp();
+    let start_window = (now / 300) * 300;
+    
+    let mut price_history: Vec<PricePoint> = Vec::new();
+    
+    for i in (0..20i64).rev() {
+        let ts = start_window - (i * 300);
+        let slug = format!("btc-updown-5m-{}", ts);
+        
+        if let Some(m) = s.current_markets.iter().find(|x| x.slug == slug) {
+            let prices = parse_prices(m.outcome_prices.as_deref());
+            let price = prices.get(0).copied().unwrap_or(0.5);
+            let time_str = format!("{:02}:{:02}", (ts / 3600) % 24, (ts / 60) % 60);
+            
+            price_history.push(PricePoint {
+                timestamp: ts,
+                time: time_str,
+                price,
+            });
+        }
+    }
+    
+    Json(ApiPriceHistory { prices: price_history })
+}
+
 #[derive(Deserialize)]
 struct SettingsForm {
     #[serde(default)]
@@ -735,8 +774,8 @@ async fn post_reset(State(state): State<Arc<AppState>>) -> Json<serde_json::Valu
     s.settings.max_above = 0.65;
     s.settings.min_below = 0.35;
     s.settings.tp_threshold = 0.0;
-    s.settings.sl_threshold = -1.0;
-    s.settings.profit_lock_pct = 0.20;
+    s.settings.sl_threshold = -0.15;
+    s.settings.profit_lock_pct = 0.40;
     s.history.clear();
     s.open_positions.clear();
     s.last_trade_timestamp = 0;
@@ -1085,6 +1124,7 @@ async fn main() {
         .route("/api/state", get(get_state))
         .route("/api/markets", get(get_markets))
         .route("/api/history", get(get_history))
+        .route("/api/price-history", get(get_price_history))
         .route("/api/settings", post(post_settings))
         .route("/api/simulate", post(post_simulate))
         .route("/api/sell", post(post_sell))

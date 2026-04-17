@@ -905,6 +905,19 @@
                 overflow: visible;
             }
 
+            .panel-chart {
+                grid-column: 1 / -1;
+                background: var(--bg2);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 12px;
+            }
+            
+            .panel-chart canvas {
+                width: 100%;
+                height: 140px;
+            }
+
             .panel-markets,
             .panel-config,
             .panel-bottom {
@@ -1154,6 +1167,13 @@
             </div>
 
             <div class="main-grid">
+                <div class="panel-chart">
+                    <div class="panel-hdr">
+                        <span class="panel-hdr-title">Price History</span>
+                    </div>
+                    <canvas id="price-chart" width="600" height="140"></canvas>
+                </div>
+
                 <div class="panel-markets">
                     <div class="panel-hdr">
                         <span class="panel-hdr-title">Active Markets</span>
@@ -1255,15 +1275,15 @@
                                 </div>
                                 <div class="cfg-field">
                                     <label>Stop Loss (%)</label>
-                                    <input type="number" name="sl_threshold" step="0.01" value="-1">
+                                    <input type="number" name="sl_threshold" step="0.01" value="-0.15">
                                 </div>
                             </div>
 
                             <div class="cfg-section-title" style="margin-top: 12px">Profit Lock</div>
                             <div class="cfg-grid">
                                 <div class="cfg-field">
-                                    <label>Lock Profit (%)</label>
-                                    <input type="number" name="profit_lock_pct" step="0.01" value="0.20">
+                                    <label>Lock at Profit (%)</label>
+                                    <input type="number" name="profit_lock_pct" step="0.01" value="0.40">
                                 </div>
                             </div>
 
@@ -1746,10 +1766,11 @@
 
         async function fetchSnapshot() {
             try {
-                const [stateRes, marketsRes, historyRes] = await Promise.all([
+                const [stateRes, marketsRes, historyRes, priceHistoryRes] = await Promise.all([
                     fetch('/api/state'),
                     fetch('/api/markets'),
-                    fetch('/api/history')
+                    fetch('/api/history'),
+                    fetch('/api/price-history').catch(() => ({ ok: false }))
                 ]);
 
                 if (!stateRes.ok || !marketsRes.ok || !historyRes.ok) {
@@ -1761,11 +1782,87 @@
                     marketsRes.json(),
                     historyRes.json()
                 ]);
+                
+                let priceHistory = [];
+                if (priceHistoryRes.ok) {
+                    const priceData = await priceHistoryRes.json();
+                    priceHistory = priceData.prices || [];
+                }
 
                 applySnapshot({ state, markets, history });
+                drawPriceChart(priceHistory);
             } catch (_) {
                 // Ignore transient polling failures; socket updates may still succeed.
             }
+        }
+        
+        function drawPriceChart(prices) {
+            const canvas = document.getElementById('price-chart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            const pad = 30;
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            if (!prices || prices.length < 2) {
+                ctx.fillStyle = '#4a5060';
+                ctx.font = '11px JetBrains Mono';
+                ctx.fillText('Collecting price data...', w/2 - 60, h/2);
+                return;
+            }
+            
+            const data = prices.map(p => p.price);
+            const min = Math.min(...data) - 0.05;
+            const max = Math.max(...data) + 0.05;
+            const range = max - min || 0.1;
+            
+            const toX = (i) => pad + (i / (data.length - 1)) * (w - pad * 2);
+            const toY = (v) => h - pad - ((v - min) / range) * (h - pad * 2);
+            
+            ctx.strokeStyle = '#1f2228';
+            ctx.lineWidth = 1;
+            [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9].forEach(v => {
+                if (v >= min && v <= max) {
+                    ctx.beginPath();
+                    ctx.moveTo(pad, toY(v));
+                    ctx.lineTo(w - pad, toY(v));
+                    ctx.stroke();
+                    ctx.fillStyle = '#4a5060';
+                    ctx.font = '9px JetBrains Mono';
+                    ctx.fillText((v * 100).toFixed(0) + 'c', 2, toY(v) + 3);
+                }
+            });
+            
+            ctx.strokeStyle = '#00d68f';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            data.forEach((v, i) => {
+                const x = toX(i);
+                const y = toY(v);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            
+            data.forEach((v, i) => {
+                const x = toX(i);
+                const y = toY(v);
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = v > 0.5 ? '#00d68f' : '#ff4d6a';
+                ctx.fill();
+            });
+            
+            const last = data[data.length - 1];
+            ctx.fillStyle = '#c8cdd6';
+            ctx.font = '11px JetBrains Mono';
+            ctx.fillText(`Current: ${(last * 100).toFixed(0)}c`, w - 70, 15);
+            
+            const avg = data.reduce((a, b) => a + b, 0) / data.length;
+            ctx.fillStyle = '#4a5060';
+            ctx.fillText(`Avg: ${(avg * 100).toFixed(0)}c`, w - 70, 28);
         }
 
         function openModal(idx) {
