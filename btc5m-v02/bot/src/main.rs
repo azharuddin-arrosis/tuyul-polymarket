@@ -100,8 +100,8 @@ impl Default for BotSettings {
             max_above: 0.65,    // Don't bet UP if price > 65c
             min_below: 0.35,    // Don't bet DOWN if price < 35c
             tp_threshold: 0.20,
-            sl_threshold: -0.15,
-            profit_lock_pct: 0.40,
+            sl_threshold: -0.20,
+            profit_lock_pct: 0.20,
         }
     }
 }
@@ -774,8 +774,8 @@ async fn post_reset(State(state): State<Arc<AppState>>) -> Json<serde_json::Valu
     s.settings.max_above = 0.65;
     s.settings.min_below = 0.35;
     s.settings.tp_threshold = 0.0;
-    s.settings.sl_threshold = -0.15;
-    s.settings.profit_lock_pct = 0.40;
+    s.settings.sl_threshold = -0.20;
+    s.settings.profit_lock_pct = 0.20;
     s.history.clear();
     s.open_positions.clear();
     s.last_trade_timestamp = 0;
@@ -1027,41 +1027,44 @@ async fn run_bot(state: Arc<AppState>) {
                         println!("[ALERT] 🚨 Saldo USDC tidak cukup! Saldo: {:.2} | Butuh: {:.2}", 
                             settings.usdc_balance, dynamic_bet);
                     } else if !s.stopped && !has_position && time_left > 60 {
-                        // Check if price is in safe entry zone
-                        let can_buy_up = yes_price >= settings.threshold_above && yes_price <= settings.max_above;
-                        let can_buy_down = yes_price <= settings.threshold_below && yes_price >= settings.min_below;
+                        // STRATEGY: Mid-entry (between 2.5min to 4.5min before expiry)
+                        // Skip jika price >= 78c (0.78)
+                        let time_into_window = 300 - time_left;
+                        let is_mid_entry = time_into_window >= 150 && time_into_window <= 270;
+                        let price_too_high = yes_price >= 0.78;
                         
-                        if can_buy_up || can_buy_down {
-                            let outcome = if can_buy_up { "Yes" } else { "No" };
-                            let entry_price = if outcome == "Yes" { yes_price } else { 1.0 - yes_price };
-                            s.settings.usdc_balance -= dynamic_bet;
-                            s.settings.matic_balance -= settings.gas_price;
+                        if price_too_high {
+                            println!("[SKIP] Price {:.0}c too high, skipping...", yes_price * 100.0);
+                        } else if is_mid_entry {
+                            // Mid-entry: UP jika < 52, DOWN jika > 48
+                            let outcome = if yes_price < 0.52 { "Yes" } else if yes_price > 0.48 { "No" } else { "Skip" };
                             
-                            let (yes_token, no_token) = get_token_ids(m.clob_token_ids.as_deref());
-                            
-                            s.open_positions.push(Position {
-                                slug: m.slug.clone(),
-                                outcome: outcome.to_string(),
-                                amount: dynamic_bet,
-                                price: entry_price,
-                                timestamp: now,
-                                end_timestamp: end_ts,
-                                traded: true,
-                                yes_token_id: yes_token,
-                                no_token_id: no_token,
-                            });
-                            
-                            s.last_trade_timestamp = now;
-                            println!("[AUTO] 🎯 Placed {} bet ${:.2} for {} at {:.1}% (holding to settlement)", 
-                                outcome, dynamic_bet, m.slug, entry_price * 100.0);
-                            state_changed = true;
-                        } else {
-                            // Log skipped trades due to price being too high/low
-                            if yes_price > settings.max_above {
-                                println!("[SKIP] Price {} too high for UP, max allowed is {:.0}%", yes_price * 100.0, settings.max_above * 100.0);
-                            } else if yes_price < settings.min_below {
-                                println!("[SKIP] Price {} too low for DOWN, min allowed is {:.0}%", yes_price * 100.0, settings.min_below * 100.0);
+                            if outcome != "Skip" {
+                                let entry_price = if outcome == "Yes" { yes_price } else { 1.0 - yes_price };
+                                s.settings.usdc_balance -= dynamic_bet;
+                                s.settings.matic_balance -= settings.gas_price;
+                                
+                                let (yes_token, no_token) = get_token_ids(m.clob_token_ids.as_deref());
+                                
+                                s.open_positions.push(Position {
+                                    slug: m.slug.clone(),
+                                    outcome: outcome.to_string(),
+                                    amount: dynamic_bet,
+                                    price: entry_price,
+                                    timestamp: now,
+                                    end_timestamp: end_ts,
+                                    traded: true,
+                                    yes_token_id: yes_token,
+                                    no_token_id: no_token,
+                                });
+                                
+                                s.last_trade_timestamp = now;
+                                println!("[AUTO] 🎯 Mid-entry {} bet ${:.2} for {} at {:.1}% (T-{}s)", 
+                                    outcome, dynamic_bet, m.slug, entry_price * 100.0, time_left);
+                                state_changed = true;
                             }
+                        } else {
+                            println!("[WAIT] Not mid-entry window yet, time: {}s", time_into_window);
                         }
                     }
                 }

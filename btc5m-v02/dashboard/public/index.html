@@ -1226,13 +1226,6 @@
                         </div>
 
                         <form id="settings-form">
-                            <div class="cfg-section-title">Execution Mode</div>
-                            <div class="mode-switch">
-                                <button type="button" class="mode-btn active" data-mode="demo">Demo</button>
-                                <button type="button" class="mode-btn real" data-mode="real">Real</button>
-                            </div>
-
-                            <hr class="cfg-divider">
                             <div class="cfg-section-title">Starting Balance</div>
                             <div class="cfg-grid">
                                 <div class="cfg-field">
@@ -1240,59 +1233,24 @@
                                     <input type="number" name="usdc_balance" step="0.01" value="100">
                                 </div>
                                 <div class="cfg-field">
-                                    <label>MATIC</label>
+                                    <label>MATIC (Gas)</label>
                                     <input type="number" name="matic_balance" step="0.001" value="0.5">
-                                </div>
-                            </div>
-
-                            <hr class="cfg-divider">
-                            <div class="cfg-section-title">Entry Thresholds</div>
-                            <div class="cfg-grid">
-                                <div class="cfg-field">
-                                    <label>Min UP (%)</label>
-                                    <input type="number" name="threshold_above" step="0.01" value="0.52">
-                                </div>
-                                <div class="cfg-field">
-                                    <label>Max DOWN (%)</label>
-                                    <input type="number" name="threshold_below" step="0.01" value="0.48">
-                                </div>
-                                <div class="cfg-field">
-                                    <label>Max UP (%)</label>
-                                    <input type="number" name="max_above" step="0.01" value="0.65">
-                                </div>
-                                <div class="cfg-field">
-                                    <label>Min DOWN (%)</label>
-                                    <input type="number" name="min_below" step="0.01" value="0.35">
-                                </div>
-                            </div>
-
-                            <hr class="cfg-divider">
-                            <div class="cfg-section-title">Risk Management</div>
-                            <div class="cfg-grid">
-                                <div class="cfg-field">
-                                    <label>Take Profit (%)</label>
-                                    <input type="number" name="tp_threshold" step="0.01" value="0">
-                                </div>
-                                <div class="cfg-field">
-                                    <label>Stop Loss (%)</label>
-                                    <input type="number" name="sl_threshold" step="0.01" value="-0.15">
-                                </div>
-                            </div>
-
-                            <div class="cfg-section-title" style="margin-top: 12px">Profit Lock</div>
-                            <div class="cfg-grid">
-                                <div class="cfg-field">
-                                    <label>Lock at Profit (%)</label>
-                                    <input type="number" name="profit_lock_pct" step="0.01" value="0.40">
                                 </div>
                             </div>
 
                             <input type="hidden" name="bet_size" value="1">
                             <input type="hidden" name="gas_price" value="0.001">
+                            <input type="hidden" name="threshold_above" value="0.52">
+                            <input type="hidden" name="threshold_below" value="0.48">
+                            <input type="hidden" name="max_above" value="0.65">
+                            <input type="hidden" name="min_below" value="0.35">
+                            <input type="hidden" name="tp_threshold" value="0">
+                            <input type="hidden" name="sl_threshold" value="-0.20">
+                            <input type="hidden" name="profit_lock_pct" value="0.20">
                             <input type="hidden" name="mode" id="mode-input" value="demo">
                             <input type="hidden" name="auto_mode" value="on">
 
-                            <div id="form-status" class="status-banner">Demo mode is active. Real mode will validate env, Polymarket connectivity, and wallet readiness.</div>
+                            <div id="form-status" class="status-banner">Demo mode is active. Bot will trade automatically.</div>
                             <button type="submit" class="btn-start" id="sim-btn">▶ START BOT</button>
                         </form>
                     </div>
