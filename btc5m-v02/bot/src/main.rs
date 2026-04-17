@@ -395,6 +395,41 @@ fn get_token_ids(clob_ids_str: Option<&str>) -> (Option<String>, Option<String>)
     (None, None)
 }
 
+async fn send_telegram_notification(message: &str) {
+    let token = std::env::var("TELEGRAM_TOKEN").ok();
+    let chat_id = std::env::var("TELEGRAM_CHAT_ID").ok();
+    
+    if let (Some(token), Some(chat_id)) = (token, chat_id) {
+        let url = format!("https://api.telegram.org/bot{}/sendMessage", token);
+        let client = Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build()
+            .unwrap();
+        
+        let payload = serde_json::json!({
+            "chat_id": chat_id,
+            "text": message,
+            "parse_mode": "HTML"
+        });
+        
+        let _ = client.post(&url)
+            .json(&payload)
+            .send()
+            .await;
+    }
+}
+
+fn check_milestone_balance(current_balance: f64, last_notified: f64) -> Option<i32> {
+    let current_milestone = (current_balance / 25.0).floor() as i32;
+    let last_milestone = (last_notified / 25.0).floor() as i32;
+    
+    if current_milestone > last_milestone {
+        Some(current_milestone)
+    } else {
+        None
+    }
+}
+
 async fn fetch_clob_price(client: &Client, token_id: &str) -> f64 {
     let url = format!("https://clob.polymarket.com/price?token_id={}&side=buy", token_id);
     
@@ -503,7 +538,9 @@ async fn get_history(State(state): State<Arc<AppState>>) -> Json<ApiHistory> {
 
 #[derive(Deserialize)]
 struct SettingsForm {
+    #[serde(default)]
     usdc_balance: f64,
+    #[serde(default)]
     matic_balance: f64,
     bet_size: f64,
     gas_price: f64,
@@ -659,6 +696,10 @@ async fn run_bot(state: Arc<AppState>) {
         .timeout(Duration::from_secs(5))
         .build()
         .unwrap();
+
+    // Track last notified balance for milestone alerts
+    let mut last_milestone_balance: f64 = 0.0;
+    let mut has_sent_start_notification = false;
 
     loop {
         ticker.tick().await;
@@ -908,6 +949,38 @@ async fn run_bot(state: Arc<AppState>) {
                 s.save();
             }
             let _ = std::io::stdout().flush();
+            
+            // Send notifications for: start, milestone balance, gas low
+            let current_balance = s.settings.usdc_balance;
+            let current_matic = s.settings.matic_balance;
+            
+            // 1. Start simulation notification (first time auto_mode becomes true with balance)
+            if settings.auto_mode && !has_sent_start_notification && current_balance >= 100.0 {
+                let msg = format!("🚀 <b>Simulation Started!</b>\n\n💰 Balance: ${:.2}\n⛽ Gas: {:.4} MATIC\n\n🎯 Bot is now trading...", current_balance, current_matic);
+                send_telegram_notification(&msg).await;
+                has_sent_start_notification = true;
+                last_milestone_balance = current_balance;
+            }
+            
+            // 2. Milestone balance (every $25)
+            if settings.auto_mode && current_balance > 0.0 {
+                if let Some(milestone) = check_milestone_balance(current_balance, last_milestone_balance) {
+                    let target = milestone as f64 * 25.0;
+                    let direction = if current_balance > last_milestone_balance { "📈" } else { "📉" };
+                    let pnl = current_balance - 100.0;
+                    let pnl_str = if pnl >= 0.0 { format!("+${:.2}", pnl) } else { format!("-${:.2}", pnl.abs()) };
+                    
+                    let msg = format!("{} <b>Balance Milestone!</b>\n\n💰 Current: ${:.2}\n📊 P&L: {}\n\n🎯 Every $25 matters!", direction, target, pnl_str);
+                    send_telegram_notification(&msg).await;
+                    last_milestone_balance = current_balance;
+                }
+            }
+            
+            // 3. Gas low warning (< 0.01 MATIC)
+            if settings.auto_mode && current_matic < 0.01 {
+                let msg = "⚠️ <b>Gas Low Warning!</b>\n\n⛽ MATIC balance very low!\nAuto-refill triggered...";
+                send_telegram_notification(&msg).await;
+            }
         }
     }
 }
