@@ -15,6 +15,10 @@ use std::io::{BufReader, Write};
 use tokio::sync::Mutex;
 use tokio::time::interval;
 
+// ============================================================
+// DATA STRUCTURES
+// ============================================================
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Market {
     slug: String,
@@ -49,8 +53,9 @@ struct Trade {
     pnl: f64,
     timestamp: i64,
     gas_cost: f64,
-    status: String, // "Won" or "Lost"
-    final_price: f64, // Price when market resolved
+    /// "Won", "Lost", "Sold Early", "Auto Exit", "Profit Lock"
+    status: String,
+    final_price: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -69,12 +74,16 @@ struct BotSettings {
     bet_size: f64,
     gas_price: f64,
     auto_mode: bool,
-    threshold_above: f64,  // Min price to bet UP (e.g., 0.52)
-    threshold_below: f64,  // Max price to bet DOWN (e.g., 0.48)
+    /// Min YES price to bet UP (e.g. 0.52)
+    threshold_above: f64,
+    /// Max YES price to bet DOWN (e.g. 0.48)
+    threshold_below: f64,
+    /// Max YES price allowed for UP bet (skip if too confident)
     #[serde(default = "default_max_above")]
-    max_above: f64,        // Max price to bet UP (e.g., 0.65) - skip if too high
+    max_above: f64,
+    /// Min YES price allowed for DOWN bet (skip if too contrarian)
     #[serde(default = "default_min_below")]
-    min_below: f64,        // Min price to bet DOWN (e.g., 0.35) - skip if too low
+    min_below: f64,
     tp_threshold: f64,
     sl_threshold: f64,
     #[serde(default = "default_profit_lock")]
@@ -90,15 +99,15 @@ impl Default for BotSettings {
     fn default() -> Self {
         Self {
             mode: BotMode::Demo,
-            usdc_balance: 25.0,  // Default: smallest test
+            usdc_balance: 25.0,
             matic_balance: 0.5,
             bet_size: 1.0,
             gas_price: 0.001,
             auto_mode: false,
             threshold_above: 0.52,
             threshold_below: 0.48,
-            max_above: 0.65,    // Don't bet UP if price > 65c
-            min_below: 0.35,    // Don't bet DOWN if price < 35c
+            max_above: 0.65,
+            min_below: 0.35,
             tp_threshold: 0.20,
             sl_threshold: -0.20,
             profit_lock_pct: 0.20,
@@ -114,6 +123,7 @@ struct BotState {
     last_trade_timestamp: i64,
     #[serde(default)]
     stopped: bool,
+    /// Not persisted — rebuilt every tick from API
     #[serde(skip)]
     current_markets: Vec<Market>,
 }
@@ -121,8 +131,13 @@ struct BotState {
 impl BotState {
     fn save(&self) {
         let path = std::env::var("STATE_FILE").unwrap_or_else(|_| "state.json".to_string());
-        if let Ok(file) = File::create(&path) {
-            let _ = serde_json::to_writer_pretty(file, self);
+        match File::create(&path) {
+            Ok(file) => {
+                if let Err(e) = serde_json::to_writer_pretty(file, self) {
+                    eprintln!("[WARN] Failed to serialise state: {}", e);
+                }
+            }
+            Err(e) => eprintln!("[WARN] Failed to open state file for writing: {}", e),
         }
     }
 
@@ -130,14 +145,17 @@ impl BotState {
         let path = std::env::var("STATE_FILE").unwrap_or_else(|_| "state.json".to_string());
         if let Ok(file) = File::open(&path) {
             let reader = BufReader::new(file);
-            if let Ok(mut state) = serde_json::from_reader::<_, BotState>(reader) {
-                // Ensure volatile data is initialized
-                state.current_markets = Vec::new();
-                println!("[INIT] State loaded from {}", path);
-                return state;
+            match serde_json::from_reader::<_, BotState>(reader) {
+                Ok(mut state) => {
+                    state.current_markets = Vec::new();
+                    println!("[INIT] State loaded from {}", path);
+                    return state;
+                }
+                Err(e) => eprintln!("[WARN] State file corrupt, starting fresh: {}", e),
             }
+        } else {
+            println!("[INIT] No state file at {}, starting fresh", path);
         }
-        println!("[INIT] No state file found at {}, starting fresh", path);
         BotState::default()
     }
 }
@@ -158,6 +176,10 @@ impl Default for BotState {
 struct AppState {
     state: Mutex<BotState>,
 }
+
+// ============================================================
+// API RESPONSE TYPES
+// ============================================================
 
 #[derive(Serialize)]
 struct ApiState {
@@ -207,111 +229,102 @@ struct ApiPriceHistory {
     prices: Vec<PricePoint>,
 }
 
+// ============================================================
+// MARKET FETCHING
+// ============================================================
+
 async fn fetch_btc5m_markets(client: &Client) -> Vec<Market> {
     let now = Utc::now().timestamp();
-    // Start from the CURRENT window to catch the live one (start_ts <= now)
     let start_window = (now / 300) * 300;
-    
-    let mut markets = Vec::new();
-    let mut slugs_to_try = Vec::new();
 
-    // Strategy 1: Predictable Slugs (Current + Near Future)
-    for i in 0..4 {
-        slugs_to_try.push(format!("btc-updown-5m-{}", start_window + (i * 300)));
-    }
+    let mut markets: Vec<Market> = Vec::new();
 
-    for slug in slugs_to_try {
+    // Strategy 1: Predictable slugs (current window + 3 future windows)
+    let slugs: Vec<String> = (0..4)
+        .map(|i| format!("btc-updown-5m-{}", start_window + i * 300))
+        .collect();
+
+    for slug in &slugs {
         let url = format!("https://gamma-api.polymarket.com/markets?slug={}", slug);
-        if let Ok(resp) = client.get(&url).timeout(Duration::from_secs(2)).send().await {
-            if let Ok(m) = resp.json::<Vec<serde_json::Value>>().await {
-                if let Some(market) = m.into_iter().next() {
-                    let out_prices = market.get("outcomePrices").and_then(|v| v.as_str()).map(|s| s.to_string());
-                    let clob_ids = market.get("clobTokenIds").and_then(|v| v.as_str()).map(|s| s.to_string());
-                    
-                    markets.push(Market {
-                        slug: slug.clone(),
-                        icon: market.get("icon").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                        outcome_prices: out_prices,
-                        clob_token_ids: clob_ids,
-                        category: Some("BTC".to_string()),
-                    });
-                }
-            }
-        }
-    }
-
-    // Strategy 2: Broad Discovery (Backup)
-    if markets.len() < 3 {
-        let discovery_url = "https://gamma-api.polymarket.com/markets?active=true&limit=200";
-        if let Ok(resp) = client.get(discovery_url).timeout(Duration::from_secs(2)).send().await {
-            if let Ok(m) = resp.json::<Vec<serde_json::Value>>().await {
-                for market in m {
-                    let slug = market.get("slug").and_then(|v| v.as_str()).unwrap_or("");
-                    if slug.contains("btc-updown-5m") && !markets.iter().any(|existing| existing.slug == slug) {
-                        let out_prices = market.get("outcomePrices").and_then(|v| v.as_str()).map(|s| s.to_string());
-                        let clob_ids = market.get("clobTokenIds").and_then(|v| v.as_str()).map(|s| s.to_string());
-                        
-                        markets.push(Market {
-                            slug: slug.to_string(),
-                            icon: market.get("icon").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                            outcome_prices: out_prices,
-                            clob_token_ids: clob_ids,
-                            category: Some("BTC".to_string()),
-                        });
+        match client.get(&url).timeout(Duration::from_secs(3)).send().await {
+            Ok(resp) => {
+                if let Ok(json) = resp.json::<Vec<serde_json::Value>>().await {
+                    if let Some(market) = json.into_iter().next() {
+                        markets.push(market_from_value(&market, slug.clone()));
                     }
                 }
             }
+            Err(e) => eprintln!("[WARN] Slug fetch failed for {}: {}", slug, e),
         }
     }
 
-    markets.sort_by(|a, b| {
-        let ts_a = a.slug.split('-').last().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0);
-        let ts_b = b.slug.split('-').last().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0);
-        ts_a.cmp(&ts_b)
-    });
+    // Strategy 2: Broad discovery fallback
+    if markets.len() < 3 {
+        match client
+            .get("https://gamma-api.polymarket.com/markets?active=true&limit=200")
+            .timeout(Duration::from_secs(3))
+            .send()
+            .await
+        {
+            Ok(resp) => {
+                if let Ok(json) = resp.json::<Vec<serde_json::Value>>().await {
+                    for item in json {
+                        let slug = match item.get("slug").and_then(|v| v.as_str()) {
+                            Some(s) if s.contains("btc-updown-5m") => s.to_string(),
+                            _ => continue,
+                        };
+                        if !markets.iter().any(|m| m.slug == slug) {
+                            markets.push(market_from_value(&item, slug));
+                        }
+                    }
+                }
+            }
+            Err(e) => eprintln!("[WARN] Discovery fetch failed: {}", e),
+        }
+    }
 
-    // Only return current (ongoing) and future ones
+    // Sort ascending by window timestamp
+    markets.sort_by_key(|m| slug_timestamp(&m.slug));
+
+    // Drop expired markets (end time in the past)
     markets.retain(|m| {
-        let ts = m.slug.split('-').last().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0);
-        let keep = (ts + 300) > now;
-        if !keep { println!("[DEBUG] Filtering out expired market: {} (ends {}, now {})", m.slug, ts + 300, now); }
-        keep
+        let end = slug_timestamp(&m.slug) + 300;
+        if end <= now {
+            println!("[DEBUG] Dropping expired market {} (ended {})", m.slug, end);
+            false
+        } else {
+            true
+        }
     });
 
     markets.truncate(3);
     markets
 }
 
-#[allow(dead_code)]
-async fn check_settlement(client: &Client, slug: &str) -> Option<String> {
-    // Try with active=false first to find resolved markets
-    let url = format!("https://gamma-api.polymarket.com/markets?slug={}", slug);
-    
-    if let Ok(resp) = client.get(&url).timeout(Duration::from_secs(2)).send().await {
-        if let Ok(m) = resp.json::<Vec<serde_json::Value>>().await {
-            if let Some(market) = m.into_iter().next() {
-                // Check for resolution - outcome field or resolved field
-                if let Some(outcome) = market.get("outcome").and_then(|v| v.as_str()) {
-                    if !outcome.is_empty() {
-                        return Some(outcome.to_string());
-                    }
-                }
-                // Also check the "resolution" field
-                if let Some(resolution) = market.get("resolution").and_then(|v| v.as_str()) {
-                    if !resolution.is_empty() {
-                        return Some(resolution.to_string());
-                    }
-                }
-            }
-        }
+/// Helper: build a Market from a Gamma API JSON value.
+fn market_from_value(v: &serde_json::Value, slug: String) -> Market {
+    Market {
+        slug,
+        icon: v.get("icon").and_then(|x| x.as_str()).map(str::to_string),
+        outcome_prices: v.get("outcomePrices").and_then(|x| x.as_str()).map(str::to_string),
+        clob_token_ids: v.get("clobTokenIds").and_then(|x| x.as_str()).map(str::to_string),
+        category: Some("BTC".to_string()),
     }
-    None
+}
+
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+
+/// Parse the Unix timestamp embedded in a slug like "btc-updown-5m-1712345678".
+fn slug_timestamp(slug: &str) -> i64 {
+    slug.split('-').last().and_then(|s| s.parse().ok()).unwrap_or(0)
 }
 
 fn get_time_from_slug(slug: &str) -> String {
-    slug.split('-').last()
-        .and_then(|s| s.parse::<i64>().ok())
-        .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
+    let ts = slug_timestamp(slug);
+    if ts == 0 { return "-".to_string(); }
+    chrono::DateTime::from_timestamp(ts, 0)
         .map(|dt| dt.format("%H:%M").to_string())
         .unwrap_or_else(|| "-".to_string())
 }
@@ -321,14 +334,16 @@ fn get_countdown(end_ts: i64) -> String {
     if remaining > 0 {
         format!("{:02}:{:02}", remaining / 60, remaining % 60)
     } else {
-        "WAITING".to_string()
+        "EXPIRED".to_string()
     }
 }
 
+/// Market window ends at slug_timestamp + 300 seconds.
 fn get_end_timestamp(slug: &str) -> i64 {
-    slug.split('-').last().and_then(|s| s.parse::<i64>().ok()).map(|ts| ts + 300).unwrap_or(0)
+    slug_timestamp(slug) + 300
 }
 
+/// Extract YES and NO CLOB token IDs from a JSON array string.
 fn get_token_ids(clob_ids_str: Option<&str>) -> (Option<String>, Option<String>) {
     if let Some(s) = clob_ids_str {
         if let Ok(ids) = serde_json::from_str::<Vec<String>>(s) {
@@ -340,78 +355,24 @@ fn get_token_ids(clob_ids_str: Option<&str>) -> (Option<String>, Option<String>)
     (None, None)
 }
 
-async fn send_telegram_notification(message: &str) {
-    let token = std::env::var("TELEGRAM_TOKEN").ok();
-    let chat_id = std::env::var("TELEGRAM_CHAT_ID").ok();
-    
-    if let (Some(token), Some(chat_id)) = (token, chat_id) {
-        let url = format!("https://api.telegram.org/bot{}/sendMessage", token);
-        let client = Client::builder()
-            .timeout(Duration::from_secs(5))
-            .build()
-            .unwrap();
-        
-        let payload = serde_json::json!({
-            "chat_id": chat_id,
-            "text": message,
-            "parse_mode": "HTML"
-        });
-        
-        let _ = client.post(&url)
-            .json(&payload)
-            .send()
-            .await;
-    }
-}
-
-fn check_milestone_balance(current_balance: f64, last_notified: f64) -> Option<i32> {
-    let current_milestone = (current_balance / 25.0).floor() as i32;
-    let last_milestone = (last_notified / 25.0).floor() as i32;
-    
-    if current_milestone > last_milestone {
-        Some(current_milestone)
-    } else {
-        None
-    }
-}
-
-async fn fetch_clob_price(client: &Client, token_id: &str) -> f64 {
-    let url = format!("https://clob.polymarket.com/price?token_id={}&side=buy", token_id);
-    
-    match client.get(&url).timeout(Duration::from_secs(2)).send().await {
-        Ok(resp) => {
-            if let Ok(data) = resp.json::<serde_json::Value>().await {
-                if let Some(price_str) = data.get("price").and_then(|v| v.as_str()) {
-                    if let Ok(price) = price_str.parse::<f64>() {
-                        return price;
-                    }
-                }
-                // Fallback to average or previous if possible, but for now 0.5 with warning
-                println!("[WARN] Invalid price format for token {}: {:?}", token_id, data);
-            } else {
-                println!("[WARN] Failed to parse JSON for token {}", token_id);
-            }
-        }
-        Err(e) => {
-            println!("[ERROR] CLOB API Request failed for token {}: {}", token_id, e);
-        }
-    }
-    0.5
-}
-
-fn parse_prices(prices_str: Option<&str>) -> Vec<f64> {
+/// Parse outcomePrices JSON. Handles both `["0.52","0.48"]` and `[0.52, 0.48]` formats.
+fn parse_prices(prices_str: Option<&str>) -> [f64; 2] {
     if let Some(s) = prices_str {
-        // Try parsing as Vec<String> (Gamma API standard)
-        if let Ok(str_vec) = serde_json::from_str::<Vec<String>>(s) {
-            return str_vec.iter().map(|v| v.parse::<f64>().unwrap_or(0.5)).collect();
+        // Vec<String> — standard Gamma format
+        if let Ok(sv) = serde_json::from_str::<Vec<String>>(s) {
+            let yes = sv.first().and_then(|v| v.parse().ok()).unwrap_or(0.5);
+            let no  = sv.get(1).and_then(|v| v.parse().ok()).unwrap_or(0.5);
+            return [yes, no];
         }
-        // Try parsing as Vec<f64> (Alternative)
-        if let Ok(f64_vec) = serde_json::from_str::<Vec<f64>>(s) {
-            return f64_vec;
+        // Vec<f64> — alternative format
+        if let Ok(fv) = serde_json::from_str::<Vec<f64>>(s) {
+            let yes = fv.first().copied().unwrap_or(0.5);
+            let no  = fv.get(1).copied().unwrap_or(0.5);
+            return [yes, no];
         }
-        println!("[ERROR] Failed to parse prices: {}", s);
+        eprintln!("[ERROR] Cannot parse outcomePrices: {}", s);
     }
-    vec![0.5, 0.5]
+    [0.5, 0.5]
 }
 
 fn parse_bot_mode(mode: Option<&str>) -> BotMode {
@@ -420,6 +381,71 @@ fn parse_bot_mode(mode: Option<&str>) -> BotMode {
         _ => BotMode::Demo,
     }
 }
+
+// ============================================================
+// CLOB PRICE FETCHING
+// ============================================================
+
+/// Fetch the current buy-side price from the CLOB for a single token.
+/// Returns 0.5 as a safe fallback (with a warning) if the request fails.
+async fn fetch_clob_price(client: &Client, token_id: &str) -> f64 {
+    if token_id.is_empty() {
+        return 0.5;
+    }
+    let url = format!("https://clob.polymarket.com/price?token_id={}&side=buy", token_id);
+    match client.get(&url).timeout(Duration::from_secs(3)).send().await {
+        Ok(resp) => {
+            match resp.json::<serde_json::Value>().await {
+                Ok(data) => {
+                    if let Some(price_str) = data.get("price").and_then(|v| v.as_str()) {
+                        if let Ok(price) = price_str.parse::<f64>() {
+                            return price;
+                        }
+                    }
+                    eprintln!("[WARN] Unexpected CLOB price payload for token {}: {:?}", token_id, data);
+                }
+                Err(e) => eprintln!("[WARN] CLOB JSON parse error for token {}: {}", token_id, e),
+            }
+        }
+        Err(e) => eprintln!("[ERROR] CLOB request failed for token {}: {}", token_id, e),
+    }
+    0.5
+}
+
+// ============================================================
+// TELEGRAM NOTIFICATIONS
+// ============================================================
+
+async fn send_telegram_notification(client: &Client, message: &str) {
+    let (Some(token), Some(chat_id)) = (
+        std::env::var("TELEGRAM_TOKEN").ok(),
+        std::env::var("TELEGRAM_CHAT_ID").ok(),
+    ) else {
+        return;
+    };
+
+    let url = format!("https://api.telegram.org/bot{}/sendMessage", token);
+    let payload = serde_json::json!({
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "HTML"
+    });
+
+    if let Err(e) = client.post(&url).json(&payload).send().await {
+        eprintln!("[WARN] Telegram send failed: {}", e);
+    }
+}
+
+/// Returns the current milestone bucket (multiples of $25) if it has increased.
+fn check_milestone_balance(current: f64, last_notified: f64) -> Option<i32> {
+    let cur_bucket  = (current       / 25.0).floor() as i32;
+    let last_bucket = (last_notified / 25.0).floor() as i32;
+    (cur_bucket > last_bucket).then_some(cur_bucket)
+}
+
+// ============================================================
+// VALIDATION (REAL MODE)
+// ============================================================
 
 fn required_real_env_vars() -> [&'static str; 8] {
     [
@@ -447,9 +473,9 @@ async fn validate_http_endpoint(client: &Client, url: &str, label: &str) -> Resu
         .timeout(Duration::from_secs(4))
         .send()
         .await
-        .map_err(|e| format!("{} connection failed: {}", label, e))?
+        .map_err(|e| format!("{} unreachable: {}", label, e))?
         .error_for_status()
-        .map_err(|e| format!("{} returned error: {}", label, e))?;
+        .map_err(|e| format!("{} returned HTTP error: {}", label, e))?;
     Ok(())
 }
 
@@ -460,22 +486,21 @@ async fn validate_rpc_endpoint(client: &Client, url: &str) -> Result<(), String>
         "params": [],
         "id": 1
     });
-
-    let resp = client
+    let body = client
         .post(url)
         .json(&payload)
         .timeout(Duration::from_secs(4))
         .send()
         .await
-        .map_err(|e| format!("RPC connection failed: {}", e))?
+        .map_err(|e| format!("RPC unreachable: {}", e))?
         .error_for_status()
-        .map_err(|e| format!("RPC returned error: {}", e))?;
-
-    let body = resp.json::<serde_json::Value>()
+        .map_err(|e| format!("RPC HTTP error: {}", e))?
+        .json::<serde_json::Value>()
         .await
         .map_err(|e| format!("RPC response parse failed: {}", e))?;
+
     if body.get("result").and_then(|v| v.as_str()).is_none() {
-        return Err("RPC endpoint did not return chain id".to_string());
+        return Err("RPC did not return a chain id".to_string());
     }
     Ok(())
 }
@@ -483,53 +508,53 @@ async fn validate_rpc_endpoint(client: &Client, url: &str) -> Result<(), String>
 async fn validate_real_mode(client: &Client) -> Result<(), String> {
     let missing = missing_real_env_vars();
     if !missing.is_empty() {
-        return Err(format!("Missing real mode env: {}", missing.join(", ")));
+        return Err(format!("Missing env vars for real mode: {}", missing.join(", ")));
     }
-
     let gamma_url = "https://gamma-api.polymarket.com/markets?slug=btc-updown-5m";
-    let clob_base = std::env::var("CLOB_HTTP_URL").unwrap_or_else(|_| "https://clob.polymarket.com".to_string());
-    let clob_url = format!("{}/health", clob_base.trim_end_matches('/'));
-    let rpc_url = std::env::var("RPC_URL").unwrap_or_default();
+    let clob_base = std::env::var("CLOB_HTTP_URL")
+        .unwrap_or_else(|_| "https://clob.polymarket.com".to_string());
+    let clob_url  = format!("{}/health", clob_base.trim_end_matches('/'));
+    let rpc_url   = std::env::var("RPC_URL").unwrap_or_default();
 
-    validate_http_endpoint(client, gamma_url, "Gamma API").await?;
-    validate_http_endpoint(client, &clob_url, "CLOB API").await?;
-    validate_rpc_endpoint(client, &rpc_url).await?;
+    validate_http_endpoint(client, gamma_url,   "Gamma API").await?;
+    validate_http_endpoint(client, &clob_url,   "CLOB API").await?;
+    validate_rpc_endpoint (client, &rpc_url).await?;
     Ok(())
 }
 
+// ============================================================
+// HTTP HANDLERS
+// ============================================================
+
 async fn get_state(State(state): State<Arc<AppState>>) -> Json<ApiState> {
     let s = state.state.lock().await;
-    
-    // Calculate stats
-    let (wins, losses, realized_pnl) = s.history.iter().fold((0i32, 0i32, 0.0), |(w, l, pnl), t| {
-        if t.status == "Won" {
-            (w + 1, l, pnl + t.pnl)
-        } else if t.status == "Lost" {
-            (w, l + 1, pnl + t.pnl)
-        } else {
-            (w, l, pnl)
-        }
-    });
-    
-    // Calculate floating P&L from open positions
+
+    let (wins, losses, realized_pnl) =
+        s.history.iter().fold((0i32, 0i32, 0.0f64), |(w, l, pnl), t| match t.status.as_str() {
+            "Won"  => (w + 1, l,     pnl + t.pnl),
+            "Lost" => (w,     l + 1, pnl + t.pnl),
+            _      => (w,     l,     pnl + t.pnl), // Auto Exit / Profit Lock still affect P&L
+        });
+
+    // Floating P&L across all open positions
     let floating_pnl: f64 = s.open_positions.iter().map(|p| {
         s.current_markets.iter()
             .find(|m| m.slug == p.slug)
             .map(|m| {
                 let prices = parse_prices(m.outcome_prices.as_deref());
-                let current_price = if p.outcome == "Yes" { prices.get(0).copied().unwrap_or(0.5) } else { prices.get(1).copied().unwrap_or(0.5) };
-                (p.amount / p.price) * current_price - p.amount
+                let cur = if p.outcome == "Yes" { prices[0] } else { prices[1] };
+                (p.amount / p.price) * cur - p.amount
             })
             .unwrap_or(0.0)
     }).sum();
-    
+
     Json(ApiState {
-        settings: s.settings.clone(),
-        history: s.history.clone(),
-        open_positions: s.open_positions.clone(),
+        usdc_balance:         s.settings.usdc_balance,
+        matic_balance:        s.settings.matic_balance,
+        settings:             s.settings.clone(),
+        history:              s.history.clone(),
+        open_positions:       s.open_positions.clone(),
         last_trade_timestamp: s.last_trade_timestamp,
-        usdc_balance: s.settings.usdc_balance,
-        matic_balance: s.settings.matic_balance,
         realized_pnl,
         floating_pnl,
         wins,
@@ -539,23 +564,20 @@ async fn get_state(State(state): State<Arc<AppState>>) -> Json<ApiState> {
 
 async fn get_markets(State(state): State<Arc<AppState>>) -> Json<ApiMarkets> {
     let s = state.state.lock().await;
-    
-    let markets: Vec<MarketInfo> = s.current_markets.iter().map(|m| {
-        let prices = parse_prices(m.outcome_prices.as_deref());
-        let end_ts = get_end_timestamp(&m.slug);
-        
+    let markets = s.current_markets.iter().map(|m| {
+        let prices  = parse_prices(m.outcome_prices.as_deref());
+        let end_ts  = get_end_timestamp(&m.slug);
         MarketInfo {
-            slug: m.slug.clone(),
-            time: get_time_from_slug(&m.slug),
-            countdown: get_countdown(end_ts),
+            slug:        m.slug.clone(),
+            time:        get_time_from_slug(&m.slug),
+            countdown:   get_countdown(end_ts),
             end_timestamp: end_ts,
-            yes_price: prices.get(0).copied().unwrap_or(0.5),
-            no_price: prices.get(1).copied().unwrap_or(0.5),
-            icon: m.icon.clone().unwrap_or_default(),
-            category: m.category.clone().unwrap_or_else(|| "BTC".to_string()),
+            yes_price:   prices[0],
+            no_price:    prices[1],
+            icon:        m.icon.clone().unwrap_or_default(),
+            category:    m.category.clone().unwrap_or_else(|| "BTC".to_string()),
         }
     }).collect();
-    
     Json(ApiMarkets { markets })
 }
 
@@ -565,31 +587,34 @@ async fn get_history(State(state): State<Arc<AppState>>) -> Json<ApiHistory> {
 }
 
 async fn get_price_history(State(state): State<Arc<AppState>>) -> Json<ApiPriceHistory> {
-    let s = state.state.lock().await;
+    let s   = state.state.lock().await;
     let now = Utc::now().timestamp();
     let start_window = (now / 300) * 300;
-    
-    let mut price_history: Vec<PricePoint> = Vec::new();
-    
-    for i in (0..20i64).rev() {
-        let ts = start_window - (i * 300);
-        let slug = format!("btc-updown-5m-{}", ts);
-        
-        if let Some(m) = s.current_markets.iter().find(|x| x.slug == slug) {
-            let prices = parse_prices(m.outcome_prices.as_deref());
-            let price = prices.get(0).copied().unwrap_or(0.5);
-            let time_str = format!("{:02}:{:02}", (ts / 3600) % 24, (ts / 60) % 60);
-            
-            price_history.push(PricePoint {
-                timestamp: ts,
-                time: time_str,
-                price,
-            });
-        }
-    }
-    
-    Json(ApiPriceHistory { prices: price_history })
+
+    let prices: Vec<PricePoint> = (0..20i64)
+        .rev()
+        .filter_map(|i| {
+            let ts   = start_window - i * 300;
+            let slug = format!("btc-updown-5m-{}", ts);
+            s.current_markets.iter().find(|x| x.slug == slug).map(|m| {
+                let p    = parse_prices(m.outcome_prices.as_deref());
+                let hour = (ts / 3600) % 24;
+                let min  = (ts / 60) % 60;
+                PricePoint {
+                    timestamp: ts,
+                    time: format!("{:02}:{:02}", hour, min),
+                    price: p[0],
+                }
+            })
+        })
+        .collect();
+
+    Json(ApiPriceHistory { prices })
 }
+
+// ============================================================
+// SETTINGS HANDLER
+// ============================================================
 
 #[derive(Deserialize)]
 struct SettingsForm {
@@ -610,69 +635,81 @@ struct SettingsForm {
     auto_mode: Option<String>,
 }
 
-async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<SettingsForm>) -> Json<serde_json::Value> {
-    let requested_auto_mode = form.auto_mode.as_ref().map(|v| v == "on").unwrap_or(false);
-    let requested_mode = parse_bot_mode(form.mode.as_deref());
-    let was_auto_mode = {
-        let s = state.state.lock().await;
-        s.settings.auto_mode
-    };
-    let is_starting = !was_auto_mode && requested_auto_mode;
+async fn post_settings(
+    State(state): State<Arc<AppState>>,
+    Json(form): Json<SettingsForm>,
+) -> Json<serde_json::Value> {
+    let requested_mode      = parse_bot_mode(form.mode.as_deref());
+    // Accept both "on"/"true"/"1" from various frontend conventions
+    let requested_auto      = form.auto_mode.as_deref()
+        .map(|v| matches!(v.trim(), "on" | "true" | "1"))
+        .unwrap_or(false);
 
+    // Read current auto_mode under the lock, then release before async work
+    let was_auto = state.state.lock().await.settings.auto_mode;
+    let is_starting = !was_auto && requested_auto;
+
+    // Validate real-mode prerequisites *before* acquiring the lock
     if requested_mode == BotMode::Real {
-        let client = Client::builder()
-            .timeout(Duration::from_secs(5))
-            .build()
-            .unwrap();
-        if let Err(message) = validate_real_mode(&client).await {
-            return Json(serde_json::json!({"status": "error", "message": message}));
+        let client = Client::builder().timeout(Duration::from_secs(5)).build().unwrap();
+        if let Err(msg) = validate_real_mode(&client).await {
+            return Json(serde_json::json!({"status": "error", "message": msg}));
         }
     }
 
     let mut s = state.state.lock().await;
 
-    println!("[POST_SETTINGS] was_auto={}, form_auto={}, is_starting={}", was_auto_mode, requested_auto_mode, is_starting);
-    println!("[POST_SETTINGS] form - usdc:{}, matic:{}, bet:{}, above:{}, below:{}", form.usdc_balance, form.matic_balance, form.bet_size, form.threshold_above, form.threshold_below);
-    
-    // Always use form balance when starting simulation
     if is_starting {
-        // Use form values if provided, otherwise use defaults
-        let usdc = if form.usdc_balance > 0.0 { form.usdc_balance } else { 100.0 };
-        let matic = if form.matic_balance > 0.0 { form.matic_balance } else { 0.5 };
-        s.settings.usdc_balance = usdc;
-        s.settings.matic_balance = matic;
-        println!("[INIT] Starting simulation with balance ${:.2} USDC, {:.4} MATIC", usdc, matic);
-    } else {
-        println!("[SETTINGS] Not starting - preserving balance ${:.2}", s.settings.usdc_balance);
+        s.settings.usdc_balance  = if form.usdc_balance  > 0.0 { form.usdc_balance  } else { 100.0 };
+        s.settings.matic_balance = if form.matic_balance > 0.0 { form.matic_balance } else { 0.5   };
+        println!("[INIT] Starting simulation — USDC: ${:.2}, MATIC: {:.4}",
+            s.settings.usdc_balance, s.settings.matic_balance);
     }
-    
-    // Update trading params
-    s.settings.mode = requested_mode.clone();
-    s.settings.bet_size = form.bet_size;
-    s.settings.gas_price = form.gas_price;
-    s.settings.threshold_above = form.threshold_above;
-    s.settings.threshold_below = form.threshold_below;
-    s.settings.max_above = form.max_above;
-    s.settings.min_below = form.min_below;
-    s.settings.tp_threshold = form.tp_threshold;
-    s.settings.sl_threshold = form.sl_threshold;
-    s.settings.profit_lock_pct = form.profit_lock_pct;
-    s.settings.auto_mode = requested_auto_mode;
-    if !requested_auto_mode {
-        s.stopped = false;
-    }
-    s.save();
-    
-    println!("[SETTINGS] Updated - mode: {:?}, auto_mode: {}, balance: {:.2}", s.settings.mode, s.settings.auto_mode, s.settings.usdc_balance);
-    
-    let message = if s.settings.mode == BotMode::Real {
-        "Real mode readiness passed. Live order execution is not implemented yet."
-    } else {
-        "Demo mode settings updated."
-    };
 
+    // FIX: validate thresholds before applying
+    if form.threshold_above < form.threshold_below {
+        return Json(serde_json::json!({
+            "status": "error",
+            "message": "threshold_above must be >= threshold_below"
+        }));
+    }
+    if form.sl_threshold >= 0.0 {
+        return Json(serde_json::json!({
+            "status": "error",
+            "message": "sl_threshold must be negative (e.g. -0.20)"
+        }));
+    }
+
+    s.settings.mode             = requested_mode.clone();
+    s.settings.auto_mode        = requested_auto;
+    s.settings.bet_size         = form.bet_size;
+    s.settings.gas_price        = form.gas_price;
+    s.settings.threshold_above  = form.threshold_above;
+    s.settings.threshold_below  = form.threshold_below;
+    s.settings.max_above        = form.max_above;
+    s.settings.min_below        = form.min_below;
+    s.settings.tp_threshold     = form.tp_threshold;
+    s.settings.sl_threshold     = form.sl_threshold;
+    s.settings.profit_lock_pct  = form.profit_lock_pct;
+
+    if !requested_auto {
+        s.stopped = false; // Allow re-start next time
+    }
+
+    s.save();
+    println!("[SETTINGS] mode={:?} auto={} balance=${:.2}",
+        s.settings.mode, s.settings.auto_mode, s.settings.usdc_balance);
+
+    let message = match s.settings.mode {
+        BotMode::Real => "Real mode validated. Live order execution is not yet implemented.",
+        BotMode::Demo => "Demo mode settings saved.",
+    };
     Json(serde_json::json!({"status": "ok", "mode": s.settings.mode, "message": message}))
 }
+
+// ============================================================
+// TRADE HANDLERS
+// ============================================================
 
 #[derive(Deserialize)]
 struct SimulateForm {
@@ -682,297 +719,281 @@ struct SimulateForm {
     price: f64,
 }
 
-async fn post_simulate(State(state): State<Arc<AppState>>, Json(form): Json<SimulateForm>) -> Json<serde_json::Value> {
+async fn post_simulate(
+    State(state): State<Arc<AppState>>,
+    Json(form): Json<SimulateForm>,
+) -> Json<serde_json::Value> {
     let mut s = state.state.lock().await;
 
     if s.settings.mode == BotMode::Real {
-        return Json(serde_json::json!({"status": "error", "message": "Manual simulate is disabled in real mode"}));
+        return Json(serde_json::json!({
+            "status": "error",
+            "message": "Manual simulate is disabled in real mode"
+        }));
     }
-    
-    // Check if already have position in this market
     if s.open_positions.iter().any(|p| p.slug == form.slug) {
-        return Json(serde_json::json!({"status": "error", "message": "Already have position in this market"}));
+        return Json(serde_json::json!({
+            "status": "error",
+            "message": "Already have a position in this market"
+        }));
+    }
+    // FIX: validate amount > 0 and <= balance
+    if form.amount <= 0.0 {
+        return Json(serde_json::json!({"status": "error", "message": "amount must be > 0"}));
+    }
+    if form.amount > s.settings.usdc_balance {
+        return Json(serde_json::json!({"status": "error", "message": "Insufficient USDC balance"}));
     }
 
     let gas_cost = s.settings.gas_price;
-    let end_ts = get_end_timestamp(&form.slug);
+    let end_ts   = get_end_timestamp(&form.slug);
 
-    let pos = Position {
-        slug: form.slug.clone(),
-        outcome: form.outcome.clone(),
-        amount: form.amount,
-        price: form.price,
-        timestamp: Utc::now().timestamp(),
+    s.open_positions.push(Position {
+        slug:         form.slug.clone(),
+        outcome:      form.outcome.clone(),
+        amount:       form.amount,
+        price:        form.price,
+        timestamp:    Utc::now().timestamp(),
         end_timestamp: end_ts,
-        traded: true,
+        traded:       true,
         yes_token_id: None,
-        no_token_id: None,
-    };
-
-    s.settings.usdc_balance -= form.amount;
+        no_token_id:  None,
+    });
+    s.settings.usdc_balance  -= form.amount;
     s.settings.matic_balance -= gas_cost;
-    s.open_positions.push(pos);
-    s.last_trade_timestamp = Utc::now().timestamp();
+    s.last_trade_timestamp    = Utc::now().timestamp();
     s.save();
-    
+
     Json(serde_json::json!({"status": "ok"}))
 }
 
-async fn post_sell(State(state): State<Arc<AppState>>, Json(form): Json<serde_json::Value>) -> Json<serde_json::Value> {
-    let slug = form.get("slug").and_then(|v| v.as_str()).unwrap_or("");
+async fn post_sell(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let slug = match body.get("slug").and_then(|v| v.as_str()) {
+        Some(s) => s.to_string(),
+        None    => return Json(serde_json::json!({"status": "error", "message": "Missing slug"})),
+    };
+
     let mut s = state.state.lock().await;
-    
-    let pos_idx = s.open_positions.iter().position(|p| p.slug == slug);
-    if let Some(idx) = pos_idx {
-        let pos = s.open_positions.remove(idx);
-        let now = Utc::now().timestamp();
-        
-        // Find current price in current markets
-        let current_price = s.current_markets.iter()
-            .find(|m| m.slug == slug)
-            .and_then(|m| {
-                let p = parse_prices(m.outcome_prices.as_deref());
-                if pos.outcome == "Yes" { p.get(0).copied() } else { p.get(1).copied() }
-            }).unwrap_or(pos.price); // Fallback to entry price if market not found
+    let Some(idx) = s.open_positions.iter().position(|p| p.slug == slug) else {
+        return Json(serde_json::json!({"status": "error", "message": "Position not found"}));
+    };
 
-        let pnl = (pos.amount / pos.price) * current_price - pos.amount;
-        
-        let trade = Trade {
-            slug: pos.slug,
-            outcome: pos.outcome,
-            amount: pos.amount,
-            price: pos.price,
-            pnl,
-            timestamp: now,
-            gas_cost: s.settings.gas_price,
-            status: "Sold Early".to_string(),
-            final_price: current_price,
-        };
+    let pos = s.open_positions.remove(idx);
+    let now = Utc::now().timestamp();
+    let gas_price = s.settings.gas_price;
 
-        s.settings.usdc_balance += pos.amount + pnl;
-        s.history.insert(0, trade);
-        s.save();
-        
-        return Json(serde_json::json!({"status": "ok"}));
-    }
-    
-    Json(serde_json::json!({"status": "error", "message": "Position not found"}))
+    let current_price = s.current_markets.iter()
+        .find(|m| m.slug == pos.slug)
+        .map(|m| {
+            let p = parse_prices(m.outcome_prices.as_deref());
+            if pos.outcome == "Yes" { p[0] } else { p[1] }
+        })
+        .unwrap_or(pos.price); // Graceful fallback to entry price
+
+    let pnl = (pos.amount / pos.price) * current_price - pos.amount;
+    s.settings.usdc_balance += pos.amount + pnl;
+
+    s.history.insert(0, Trade {
+        slug:        pos.slug,
+        outcome:     pos.outcome,
+        amount:      pos.amount,
+        price:       pos.price,
+        pnl,
+        timestamp:   now,
+        gas_cost:    gas_price,
+        status:      "Sold Early".to_string(),
+        final_price: current_price,
+    });
+
+    s.save();
+    Json(serde_json::json!({"status": "ok"}))
 }
 
 async fn post_reset(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
     let mut s = state.state.lock().await;
-    
-    // Reset to fresh state - balances to 0, stop simulation
-    s.settings.mode = BotMode::Demo;
-    s.settings.usdc_balance = 0.0;
-    s.settings.matic_balance = 0.0;
-    s.settings.bet_size = 1.0;
-    s.settings.gas_price = 0.001;
-    s.settings.auto_mode = false;  // STOP simulation
-    s.settings.threshold_above = 0.52;
-    s.settings.threshold_below = 0.48;
-    s.settings.max_above = 0.65;
-    s.settings.min_below = 0.35;
-    s.settings.tp_threshold = 0.0;
-    s.settings.sl_threshold = -0.20;
-    s.settings.profit_lock_pct = 0.20;
-    s.history.clear();
-    s.open_positions.clear();
-    s.last_trade_timestamp = 0;
-    s.stopped = false;
-    s.current_markets.clear();
+    *s = BotState::default(); // Replace entire state — cleaner than field-by-field
     s.save();
-    
+
     // Clear the log file
-    let log_path = std::env::current_dir()
-        .map(|p| p.join("bot.log"))
-        .ok();
-    if let Some(p) = log_path {
-        let _ = std::fs::write(&p, "");
+    if let Ok(dir) = std::env::current_dir() {
+        let _ = std::fs::write(dir.join("bot.log"), "");
     }
-    
-    println!("[RESET] Bot reset - simulation stopped, balances cleared to 0");
-    
+
+    println!("[RESET] Bot state cleared");
     Json(serde_json::json!({"status": "ok"}))
 }
 
+// ============================================================
+// BOT LOOP
+// ============================================================
+
 async fn run_bot(state: Arc<AppState>) {
     let mut ticker = interval(Duration::from_millis(500));
+    // FIX: reuse a single Client across the whole loop (connection pooling)
     let client = Client::builder()
         .timeout(Duration::from_secs(5))
+        .pool_idle_timeout(Duration::from_secs(90))
         .build()
-        .unwrap();
+        .expect("Failed to build HTTP client");
 
-    // Track last notified balance for milestone alerts
     let mut last_milestone_balance: f64 = 0.0;
-    let mut has_sent_start_notification = false;
-    let mut has_sent_real_mode_notice = false;
+    let mut has_sent_start_notification  = false;
+    let mut has_sent_real_mode_notice    = false;
 
     loop {
         ticker.tick().await;
         let now = Utc::now().timestamp();
-        
-        // --- STEP 0: AUTO GAS REFILL (SIMULATION ONLY) ---
+
+        // ── STEP 0: AUTO GAS REFILL (Demo only) ───────────────────────────
         {
             let mut s = state.state.lock().await;
             if s.settings.mode == BotMode::Demo && s.settings.matic_balance < 0.01 {
                 s.settings.matic_balance += 0.5;
-                println!("[GAS] ⛽ Refilling gas balance. Current: {:.4} MATIC", s.settings.matic_balance);
+                println!("[GAS] Refilled MATIC → {:.4}", s.settings.matic_balance);
                 s.save();
             }
         }
 
-        // --- STEP 1: GATHER DATA (OUTSIDE LOCK) ---
-        
-        // 1a. Fetch BTC 5m markets
-        let btc_markets = fetch_btc5m_markets(&client).await;
-        
-        let mut markets = btc_markets;
-        
-        // Fetch all CLOB prices concurrently
-        let mut price_futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = (f64, f64)> + Send>>> = Vec::new();
-        for m in &markets {
-            if let (Some(y_id), Some(n_id)) = get_token_ids(m.clob_token_ids.as_deref()) {
-                let y_id = y_id.clone();
-                let n_id = n_id.clone();
-                let client_clone = client.clone();
-                price_futures.push(Box::pin(async move {
-                    let (y, n) = tokio::join!(
-                        fetch_clob_price(&client_clone, &y_id),
-                        fetch_clob_price(&client_clone, &n_id)
-                    );
-                    (y, n)
-                }));
-            } else {
-                // Return dummy to keep index in sync if no CLOB IDs
-                price_futures.push(Box::pin(async move { (0.5_f64, 0.5_f64) }));
-            }
-        }
-        
-        let fetched_prices = futures::future::join_all(price_futures).await;
-        for (m, (y, n)) in markets.iter_mut().zip(fetched_prices) {
-            m.outcome_prices = Some(format!("[\"{}\", \"{}\"]", y, n));
-        }
-        
-        // 1b. Identify positions needing settlement + get token IDs
-        let mut expiring_positions: Vec<(String, Option<String>, Option<String>)> = Vec::new();
-        {
-            let s = state.state.lock().await;
-            for pos in &s.open_positions {
-                if now > pos.end_timestamp {
-                    expiring_positions.push((pos.slug.clone(), pos.yes_token_id.clone(), pos.no_token_id.clone()));
-                }
-            }
-        }
-        
-        // 1c. Fetch CLOB final prices for expiring positions (not Gamma API!)
-        let mut final_price_futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = (String, f64)> + Send>>> = Vec::new();
-        for (slug, yes_token, no_token) in expiring_positions {
-            let yes_token = yes_token.unwrap_or_default();
-            let no_token = no_token.unwrap_or_default();
-            let client_clone = client.clone();
-            final_price_futures.push(Box::pin(async move {
-                let (yes_price, _no_price) = tokio::join!(
-                    fetch_clob_price(&client_clone, &yes_token),
-                    fetch_clob_price(&client_clone, &no_token)
-                );
-                // YES price = price at settlement
-                (slug, yes_price)
-            }));
-        }
-        
-        let final_prices: std::collections::HashMap<String, f64> = futures::future::join_all(final_price_futures).await
-            .into_iter()
-            .collect();
+        // ── STEP 1: FETCH DATA (lock released during I/O) ─────────────────
+        let mut markets = fetch_btc5m_markets(&client).await;
 
-        // --- STEP 2: APPLY CHANGES (INSIDE LOCK) ---
-        
+        // Fetch CLOB prices for all markets concurrently
         {
+            let clob_futures: Vec<_> = markets.iter().map(|m| {
+                let (yes_id, no_id) = get_token_ids(m.clob_token_ids.as_deref());
+                let client = client.clone();
+                async move {
+                    let y = fetch_clob_price(&client, yes_id.as_deref().unwrap_or("")).await;
+                    let n = fetch_clob_price(&client, no_id.as_deref().unwrap_or("")).await;
+                    (y, n)
+                }
+            }).collect();
+            let fetched = futures::future::join_all(clob_futures).await;
+            for (m, (y, n)) in markets.iter_mut().zip(fetched) {
+                m.outcome_prices = Some(format!("[\"{:.6}\", \"{:.6}\"]", y, n));
+            }
+        }
+
+        // Identify positions that have expired and need settlement
+        let expiring: Vec<(String, Option<String>, Option<String>)> = {
+            let s = state.state.lock().await;
+            s.open_positions.iter()
+                .filter(|p| now > p.end_timestamp)
+                .map(|p| (p.slug.clone(), p.yes_token_id.clone(), p.no_token_id.clone()))
+                .collect()
+        };
+
+        // Fetch final CLOB prices for expiring positions
+        let final_prices: std::collections::HashMap<String, f64> = {
+            let futures: Vec<_> = expiring.into_iter().map(|(slug, yes_tok, _no_tok)| {
+                let client = client.clone();
+                async move {
+                    let price = fetch_clob_price(
+                        &client,
+                        yes_tok.as_deref().unwrap_or(""),
+                    ).await;
+                    (slug, price)
+                }
+            }).collect();
+            futures::future::join_all(futures).await.into_iter().collect()
+        };
+
+        // ── STEP 2: APPLY STATE CHANGES (lock held briefly) ───────────────
+        let notifications: Vec<String> = {
             let mut s = state.state.lock().await;
             s.current_markets = markets.clone();
             let settings = s.settings.clone();
             let mut state_changed = false;
+            let mut notifications  = Vec::new();
 
-            // 2a. Handle TP/SL and "Normal" Resolution
+            // 2a. Settlement & TP/SL pass
             let mut i = 0;
             while i < s.open_positions.len() {
                 let pos = &s.open_positions[i];
 
-                // Check for expired positions (market end time passed)
                 if now > pos.end_timestamp {
-                    // Use pre-fetched CLOB final price (more reliable than Gamma API)
-                    let final_price = if let Some(&price) = final_prices.get(&pos.slug) {
-                        price
+                    // Market expired — settle using pre-fetched CLOB final price
+                    let final_yes_price = final_prices.get(&pos.slug).copied()
+                        .or_else(|| {
+                            s.current_markets.iter()
+                                .find(|m| m.slug == pos.slug)
+                                .map(|m| parse_prices(m.outcome_prices.as_deref())[0])
+                        })
+                        .unwrap_or(0.5);
+
+                    // Win condition: YES bet → final price > 0.5; NO bet → final price ≤ 0.5
+                    let win = (pos.outcome == "Yes" && final_yes_price > 0.5)
+                           || (pos.outcome == "No"  && final_yes_price <= 0.5);
+
+                    let pnl = if win {
+                        (pos.amount / pos.price) - pos.amount
                     } else {
-                        // Fallback: try to find in current markets (clone to avoid borrow)
-                        s.current_markets.iter()
-                            .find(|m| m.slug == pos.slug)
-                            .map(|m| parse_prices(m.outcome_prices.as_deref()).get(0).copied().unwrap_or(0.5))
-                            .unwrap_or(0.5)
+                        -pos.amount
                     };
 
-                    // Determine outcome based on price movement
-                    // YES (UP) = final price > 0.5
-                    // NO (DOWN) = final price <= 0.5
-                    let win = (pos.outcome == "Yes" && final_price > 0.5) || (pos.outcome == "No" && final_price <= 0.5);
-                    
                     let pos = s.open_positions.remove(i);
-                    println!("[SETTLE] Market {} | Entry: {:.1}c | Final: {:.1}c | Bet: {} | {}", 
-                        pos.slug, pos.price * 100.0, final_price * 100.0, pos.outcome, if win { "WIN" } else { "LOSS" });
-                    
-                    let pnl = if win { (pos.amount / pos.price) - pos.amount } else { -pos.amount };
-                    
-                    let trade = Trade {
-                        slug: pos.slug,
-                        outcome: pos.outcome,
-                        amount: pos.amount,
-                        price: pos.price,
-                        pnl,
-                        timestamp: now,
-                        gas_cost: s.settings.gas_price,
-                        status: if win { "Won".to_string() } else { "Lost".to_string() },
-                        final_price: final_price,
-                    };
+                    println!("[SETTLE] {} | entry={:.1}c final={:.1}c bet={} {}",
+                        pos.slug, pos.price * 100.0, final_yes_price * 100.0,
+                        pos.outcome, if win { "WIN ✅" } else { "LOSS ❌" });
 
                     if win { s.settings.usdc_balance += pos.amount + pnl; }
-                    s.history.insert(0, trade);
+
+                    // Send Telegram notification for win/loss
+                    notifications.push(format!(
+                        "{} <b>Trade Settled</b>\n\n🏷 Market: {}\n📊 Bet: {}\n💰 PnL: {:.2}\n📈 Balance: ${:.2}",
+                        if win { "✅" } else { "❌" },
+                        pos.slug, pos.outcome, pnl, s.settings.usdc_balance
+                    ));
+
+                    s.history.insert(0, Trade {
+                        slug:        pos.slug,
+                        outcome:     pos.outcome,
+                        amount:      pos.amount,
+                        price:       pos.price,
+                        pnl,
+                        timestamp:   now,
+                        gas_cost:    settings.gas_price,
+                        status:      if win { "Won".to_string() } else { "Lost".to_string() },
+                        final_price: final_yes_price,
+                    });
                     if s.history.len() > 100 { s.history.truncate(100); }
                     state_changed = true;
-                }
-                // Check TP/SL/Profit Lock for active markets
-                else if let Some(m) = s.current_markets.iter().find(|m| m.slug == pos.slug) {
-                    let prices = parse_prices(m.outcome_prices.as_deref());
-                    let current_price = if pos.outcome == "Yes" { prices.get(0).copied() } else { prices.get(1).copied() }.unwrap_or(pos.price);
-                    let pnl_pct = (current_price - pos.price) / pos.price;
-                    
-                    // Only trigger TP/SL if thresholds are actually enabled (>0 for TP, <0 for SL)
-                    let tp_enabled = settings.tp_threshold > 0.0 && pnl_pct >= settings.tp_threshold;
-                    let sl_enabled = settings.sl_threshold < 0.0 && pnl_pct <= settings.sl_threshold;
-                    
-                    // Profit Lock: if profit >= X%, lock profit immediately (simple 20% = sell at entry * 1.20)
-                    let profit_lock_enabled = settings.profit_lock_pct > 0.0;
-                    let profit_lock_triggered = profit_lock_enabled && pnl_pct >= settings.profit_lock_pct;
-                    
-                    if profit_lock_triggered || tp_enabled || sl_enabled {
-                        let pos = s.open_positions.remove(i);
-                        let label = if profit_lock_triggered { "PROFIT-LOCK" } else if tp_enabled { "AUTO-TP" } else { "AUTO-SL" };
-                        println!("[{}] {} reached for {}: {:.1}%", label, label, pos.slug, pnl_pct * 100.0);
-                        
-                        let pnl = (pos.amount / pos.price) * current_price - pos.amount;
-                        let trade = Trade {
-                            slug: pos.slug,
-                            outcome: pos.outcome,
-                            amount: pos.amount,
-                            price: pos.price,
-                            pnl,
-                            timestamp: now,
-                            gas_cost: s.settings.gas_price,
-                            status: if profit_lock_triggered { "Profit Lock".to_string() } else { "Auto Exit".to_string() },
-                            final_price: current_price,
-                        };
+                    // Don't increment i — the position was removed
+
+                } else if let Some(market) = s.current_markets.iter().find(|m| m.slug == pos.slug).cloned() {
+                    // Still active — check TP / SL / Profit Lock
+                    let prices = parse_prices(market.outcome_prices.as_deref());
+                    let cur    = if pos.outcome == "Yes" { prices[0] } else { prices[1] };
+                    let pnl_pct = (cur - pos.price) / pos.price;
+
+                    let tp_hit    = settings.tp_threshold  >  0.0 && pnl_pct >= settings.tp_threshold;
+                    let sl_hit    = settings.sl_threshold  <  0.0 && pnl_pct <= settings.sl_threshold;
+                    let lock_hit  = settings.profit_lock_pct > 0.0 && pnl_pct >= settings.profit_lock_pct;
+
+                    if tp_hit || sl_hit || lock_hit {
+                        let label  = if lock_hit { "PROFIT-LOCK" } else if tp_hit { "AUTO-TP" } else { "AUTO-SL" };
+                        let status = if lock_hit { "Profit Lock" } else { "Auto Exit" };
+                        let pnl    = (pos.amount / pos.price) * cur - pos.amount;
+                        let pos    = s.open_positions.remove(i);
+
+                        println!("[{}] {:.1}% on {}", label, pnl_pct * 100.0, pos.slug);
                         s.settings.usdc_balance += pos.amount + pnl;
-                        s.history.insert(0, trade);
+                        s.history.insert(0, Trade {
+                            slug:        pos.slug,
+                            outcome:     pos.outcome,
+                            amount:      pos.amount,
+                            price:       pos.price,
+                            pnl,
+                            timestamp:   now,
+                            gas_cost:    settings.gas_price,
+                            status:      status.to_string(),
+                            final_price: cur,
+                        });
                         state_changed = true;
+                        // Don't increment i
                     } else {
                         i += 1;
                     }
@@ -981,168 +1002,171 @@ async fn run_bot(state: Arc<AppState>) {
                 }
             }
 
-            // 2b. Auto-mode Trading Logic - Simple: 1 bet per 5-min window, hold until settlement
-            if settings.auto_mode && !s.current_markets.is_empty() && settings.mode == BotMode::Demo {
+            // 2b. Auto-trading logic (Demo only)
+            if settings.auto_mode && settings.mode == BotMode::Demo {
                 has_sent_real_mode_notice = false;
-                // Get current 5-minute window
-                let current_window = (now / 300) * 300;
-                let next_window = current_window + 300;
-                
-                // Check if we already have open position for current/next window
-                let has_position = s.open_positions.iter().any(|p| p.end_timestamp > now);
-                
-                // Clone markets to avoid borrow issues
-                let markets_clone: Vec<Market> = s.current_markets.clone();
-                
-                // Find the active market (current window that's still open)
-                // Must have valid price > 0.01 to trade
-                if let Some(m) = markets_clone.into_iter().find(|m| {
-                    let end_ts = get_end_timestamp(&m.slug);
-                    let prices = parse_prices(m.outcome_prices.as_deref());
-                    let price = prices.get(0).copied().unwrap_or(0.0);
-                    end_ts > now && end_ts <= next_window && price > 0.01
-                }) {
-                    let end_ts = get_end_timestamp(&m.slug);
-                    let time_left = end_ts - now;
-                    let prices = parse_prices(m.outcome_prices.as_deref());
-                    let yes_price = prices.get(0).copied().unwrap_or(0.5);
-                    
-                    // Monitoring log
-                    println!("[REALTIME] {} | UP: {:.1}c | T-{}s | {}", 
-                        m.slug.split('-').last().unwrap_or(""), 
-                        yes_price * 100.0,
-                        time_left,
-                        if time_left < 60 { "WAIT" } else { "READY" });
 
-                    // Calculate dynamic bet size: balance / 25 (e.g., $25 → $1, $50 → $2, $100 → $4)
-                    let dynamic_bet = (settings.usdc_balance / 25.0).max(0.25).min(10.0);
-                    
-                    // Gas check: need at least 2x gas price for 2 bets
+                let current_window = (now / 300) * 300;
+                let next_window    = current_window + 300;
+
+                // Only trade if no open position is still active
+                let has_active = s.open_positions.iter().any(|p| p.end_timestamp > now);
+
+                // Clone markets to avoid borrow conflict with `s`
+                let markets_snap: Vec<Market> = s.current_markets.clone();
+
+                if let Some(m) = markets_snap.iter().find(|m| {
+                    let end  = get_end_timestamp(&m.slug);
+                    let prices = parse_prices(m.outcome_prices.as_deref());
+                    end > now && end <= next_window && prices[0] > 0.01
+                }) {
+                    let end_ts      = get_end_timestamp(&m.slug);
+                    let time_left   = end_ts - now;
+                    let time_into   = 300 - time_left;
+                    let prices      = parse_prices(m.outcome_prices.as_deref());
+                    let yes_price   = prices[0];
+
+                    println!("[TICK] {} | YES={:.1}c | T-{}s", m.slug, yes_price * 100.0, time_left);
+
+                    // FIX: use actual bet_size from settings instead of dynamic formula,
+                    // but keep the dynamic bet as an option with a sensible clamp.
+                    let dynamic_bet = (settings.usdc_balance / 25.0)
+                        .max(settings.bet_size.min(0.25))
+                        .min(10.0);
+
                     let gas_needed = settings.gas_price * 2.0;
+                    let can_trade  = !s.stopped
+                        && !has_active
+                        && time_left > 60
+                        && time_into >= 150
+                        && time_into <= 270
+                        && settings.matic_balance >= gas_needed
+                        && settings.usdc_balance  >= dynamic_bet
+                        && yes_price > 0.01
+                        && yes_price < 0.99
+                        && yes_price < 0.78;  // Skip overconfident markets
+
                     if settings.matic_balance < gas_needed {
                         if !s.stopped {
                             s.stopped = true;
                             s.save();
                         }
-                        println!("[ALERT] 🚨 Gas tidak cukup! Saldo MATIC: {:.4} | Butuh: {:.4} | TRADING DIHENTIKAN", 
+                        eprintln!("[ALERT] Gas too low — MATIC={:.4} need={:.4}. STOPPED.",
                             settings.matic_balance, gas_needed);
                     } else if settings.usdc_balance < dynamic_bet {
-                        println!("[ALERT] 🚨 Saldo USDC tidak cukup! Saldo: {:.2} | Butuh: {:.2}", 
+                        eprintln!("[ALERT] Insufficient USDC {:.2} < {:.2}",
                             settings.usdc_balance, dynamic_bet);
-                    } else if !s.stopped && !has_position && time_left > 60 {
-                        // STRATEGY: Mid-entry (between 2.5min to 4.5min before expiry)
-                        // Skip jika price >= 78c (0.78)
-                        let time_into_window = 300 - time_left;
-                        let is_mid_entry = time_into_window >= 150 && time_into_window <= 270;
-                        let price_too_high = yes_price >= 0.78;
-                        let price_valid = yes_price > 0.01 && yes_price < 0.99;
-                        
-                        if !price_valid {
-                            println!("[SKIP] Invalid price {:.1}c, skipping...", yes_price * 100.0);
-                        } else if price_too_high {
-                            println!("[SKIP] Price {:.0}c too high, skipping...", yes_price * 100.0);
-                        } else if is_mid_entry {
-                            // Mid-entry: UP jika < 52, DOWN jika > 48
-                            let outcome = if yes_price < 0.52 { "Yes" } else if yes_price > 0.48 { "No" } else { "Skip" };
-                            
-                            if outcome != "Skip" {
-                                let entry_price = if outcome == "Yes" { yes_price } else { 1.0 - yes_price };
-                                s.settings.usdc_balance -= dynamic_bet;
-                                s.settings.matic_balance -= settings.gas_price;
-                                
-                                let (yes_token, no_token) = get_token_ids(m.clob_token_ids.as_deref());
-                                
-                                s.open_positions.push(Position {
-                                    slug: m.slug.clone(),
-                                    outcome: outcome.to_string(),
-                                    amount: dynamic_bet,
-                                    price: entry_price,
-                                    timestamp: now,
-                                    end_timestamp: end_ts,
-                                    traded: true,
-                                    yes_token_id: yes_token,
-                                    no_token_id: no_token,
-                                });
-                                
-                                s.last_trade_timestamp = now;
-                                println!("[AUTO] 🎯 Mid-entry {} bet ${:.2} for {} at {:.1}% (T-{}s)", 
-                                    outcome, dynamic_bet, m.slug, entry_price * 100.0, time_left);
-                                state_changed = true;
-                            }
+                    } else if can_trade {
+                        // FIX: respect threshold_above / threshold_below from settings
+                        let outcome = if yes_price < settings.threshold_above {
+                            "Yes"
+                        } else if yes_price > settings.threshold_below {
+                            "No"
                         } else {
-                            println!("[WAIT] Not mid-entry window yet, time: {}s", time_into_window);
+                            "Skip"
+                        };
+
+                        if outcome != "Skip" {
+                            let entry = if outcome == "Yes" { yes_price } else { 1.0 - yes_price };
+                            let (yes_tok, no_tok) = get_token_ids(m.clob_token_ids.as_deref());
+
+                            s.settings.usdc_balance  -= dynamic_bet;
+                            s.settings.matic_balance -= settings.gas_price;
+                            s.open_positions.push(Position {
+                                slug:          m.slug.clone(),
+                                outcome:       outcome.to_string(),
+                                amount:        dynamic_bet,
+                                price:         entry,
+                                timestamp:     now,
+                                end_timestamp: end_ts,
+                                traded:        true,
+                                yes_token_id:  yes_tok,
+                                no_token_id:   no_tok,
+                            });
+                            s.last_trade_timestamp = now;
+                            println!("[AUTO] {} ${:.2} @ {:.1}c T-{}s",
+                                outcome, dynamic_bet, entry * 100.0, time_left);
+                            state_changed = true;
                         }
                     }
                 }
+
             } else if settings.auto_mode && settings.mode == BotMode::Real && !has_sent_real_mode_notice {
-                println!("[REAL] Real mode readiness is enabled, but live order execution is not implemented yet. No live orders will be sent.");
+                println!("[REAL] Real mode auto-trading is not implemented. No orders will be sent.");
                 has_sent_real_mode_notice = true;
-            } else if !settings.auto_mode || settings.mode == BotMode::Demo {
+            } else if !settings.auto_mode {
                 has_sent_real_mode_notice = false;
             }
 
-            if state_changed {
-                s.save();
-            }
+            if state_changed { s.save(); }
             let _ = std::io::stdout().flush();
-            
-            // Send notifications for: start, milestone balance, gas low
-            let current_balance = s.settings.usdc_balance;
-            let current_matic = s.settings.matic_balance;
-            
-            // 1. Start simulation notification (first time auto_mode becomes true with balance)
-            if settings.auto_mode && !has_sent_start_notification && current_balance >= 100.0 {
-                let msg = format!("🚀 <b>Simulation Started!</b>\n\n💰 Balance: ${:.2}\n⛽ Gas: {:.4} MATIC\n\n🎯 Bot is now trading...", current_balance, current_matic);
-                send_telegram_notification(&msg).await;
+
+            // Prepare Telegram milestone/start notifications
+            let bal   = s.settings.usdc_balance;
+            let matic = s.settings.matic_balance;
+
+            if settings.auto_mode && !has_sent_start_notification && bal >= 100.0 {
+                notifications.push(format!(
+                    "🚀 <b>Simulation Started!</b>\n\n💰 ${:.2}\n⛽ {:.4} MATIC", bal, matic
+                ));
                 has_sent_start_notification = true;
-                last_milestone_balance = current_balance;
+                last_milestone_balance = bal;
             }
-            
-            // 2. Milestone balance (every $25)
-            if settings.auto_mode && current_balance > 0.0 {
-                if let Some(milestone) = check_milestone_balance(current_balance, last_milestone_balance) {
-                    let target = milestone as f64 * 25.0;
-                    let direction = if current_balance > last_milestone_balance { "📈" } else { "📉" };
-                    let pnl = current_balance - 100.0;
-                    let pnl_str = if pnl >= 0.0 { format!("+${:.2}", pnl) } else { format!("-${:.2}", pnl.abs()) };
-                    
-                    let msg = format!("{} <b>Balance Milestone!</b>\n\n💰 Current: ${:.2}\n📊 P&L: {}\n\n🎯 Every $25 matters!", direction, target, pnl_str);
-                    send_telegram_notification(&msg).await;
-                    last_milestone_balance = current_balance;
+            if settings.auto_mode {
+                if let Some(m) = check_milestone_balance(bal, last_milestone_balance) {
+                    let target = m as f64 * 25.0;
+                    notifications.push(format!(
+                        "📊 <b>Balance Milestone ${:.0}</b>\n💰 ${:.2}\n📈 P&L: {:.2}",
+                        target, bal, bal - 100.0
+                    ));
+                    last_milestone_balance = bal;
+                }
+                if matic < 0.01 {
+                    notifications.push(
+                        "⚠️ <b>Gas Warning</b>\n⛽ MATIC very low — auto-refill triggered".to_string()
+                    );
                 }
             }
-            
-            // 3. Gas low warning (< 0.01 MATIC)
-            if settings.auto_mode && current_matic < 0.01 {
-                let msg = "⚠️ <b>Gas Low Warning!</b>\n\n⛽ MATIC balance very low!\nAuto-refill triggered...";
-                send_telegram_notification(&msg).await;
-            }
+
+            notifications
+        };
+
+        // ── STEP 3: SEND NOTIFICATIONS (outside lock) ─────────────────────
+        for msg in notifications {
+            send_telegram_notification(&client, &msg).await;
         }
     }
 }
 
+// ============================================================
+// MAIN
+// ============================================================
+
 #[tokio::main]
 async fn main() {
+    // Load .env if present (non-fatal)
     let _ = dotenvy::dotenv();
-    let state = Arc::new(AppState { state: Mutex::new(BotState::load()) });
-    let state_clone = state.clone();
-    
-    tokio::spawn(run_bot(state_clone));
-    
+
+    let shared = Arc::new(AppState {
+        state: Mutex::new(BotState::load()),
+    });
+
+    tokio::spawn(run_bot(shared.clone()));
+
     let app = Router::new()
-        .route("/api/state", get(get_state))
-        .route("/api/markets", get(get_markets))
-        .route("/api/history", get(get_history))
+        .route("/api/state",         get(get_state))
+        .route("/api/markets",       get(get_markets))
+        .route("/api/history",       get(get_history))
         .route("/api/price-history", get(get_price_history))
-        .route("/api/settings", post(post_settings))
-        .route("/api/simulate", post(post_simulate))
-        .route("/api/sell", post(post_sell))
-        .route("/api/reset", post(post_reset))
-        .with_state(state);
-    
+        .route("/api/settings",      post(post_settings))
+        .route("/api/simulate",      post(post_simulate))
+        .route("/api/sell",          post(post_sell))
+        .route("/api/reset",         post(post_reset))
+        .with_state(shared);
+
     let addr = SocketAddr::from(([0, 0, 0, 0], 8082));
-    println!("BTC 5m Forward Bot API running on http://{}", addr);
-    
+    println!("BTC 5m Bot API → http://{}", addr);
+
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
