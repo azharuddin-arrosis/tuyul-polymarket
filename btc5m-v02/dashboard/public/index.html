@@ -717,6 +717,8 @@
                 auto_mode: formData.get('auto_mode') ? 'on' : ''
             };
             
+            console.log('[FRONTEND] Sending settings:', JSON.stringify(data));
+            
             const btn = document.getElementById('sim-btn');
             const originalText = btn.innerText;
             btn.innerText = 'Saving...';
@@ -727,7 +729,10 @@
                 body: JSON.stringify(data)
             });
             
+            console.log('[FRONTEND] Response status:', response.status);
             const result = await response.json();
+            console.log('[FRONTEND] Response body:', JSON.stringify(result));
+            
             if (result.status === 'ok') {
                 isSimulating = true;
                 btn.innerText = 'Stop Simulation';

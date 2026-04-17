@@ -571,6 +571,9 @@ async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<Sett
     let was_auto_mode = s.settings.auto_mode;
     let is_starting = !was_auto_mode && form.auto_mode.as_ref().map(|v| v == "on").unwrap_or(false);
     
+    println!("[POST_SETTINGS] was_auto={}, form_auto={}, is_starting={}", was_auto_mode, form.auto_mode.as_ref().map(|v| v == "on").unwrap_or(false), is_starting);
+    println!("[POST_SETTINGS] form - usdc:{}, matic:{}, bet:{}, above:{}, below:{}", form.usdc_balance, form.matic_balance, form.bet_size, form.threshold_above, form.threshold_below);
+    
     // Always use form balance when starting simulation
     if is_starting {
         // Use form values if provided, otherwise use defaults
@@ -579,6 +582,8 @@ async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<Sett
         s.settings.usdc_balance = usdc;
         s.settings.matic_balance = matic;
         println!("[INIT] Starting simulation with balance ${:.2} USDC, {:.4} MATIC", usdc, matic);
+    } else {
+        println!("[SETTINGS] Not starting - preserving balance ${:.2}", s.settings.usdc_balance);
     }
     
     // Update trading params
