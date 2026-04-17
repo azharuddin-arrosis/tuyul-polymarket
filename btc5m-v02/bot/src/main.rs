@@ -442,6 +442,44 @@ fn check_milestone_balance(current_balance: f64, last_notified: f64) -> Option<i
     }
 }
 
+// Helper function for consistent PnL calculation
+fn calculate_pnl(amount: f64, entry_price: f64, exit_price: f64) -> f64 {
+    let shares = amount / entry_price;
+    (shares * exit_price) - amount
+}
+
+// Fetch market resolution from Gamma API
+async fn fetch_market_resolution(client: &Client, slug: &str) -> Option<String> {
+    let url = format!("https://gamma-api.polymarket.com/markets?slug={}", slug);
+    
+    match client.get(&url).timeout(Duration::from_secs(3)).send().await {
+        Ok(resp) => {
+            if let Ok(markets) = resp.json::<Vec<serde_json::Value>>().await {
+                if let Some(market) = markets.first() {
+                    // Check for "outcome" field
+                    if let Some(outcome) = market.get("outcome").and_then(|v| v.as_str()) {
+                        if !outcome.is_empty() {
+                            return Some(outcome.to_string());
+                        }
+                    }
+                    // Check for "resolved" field
+                    if let Some(resolved) = market.get("resolved").and_then(|v| v.as_bool()) {
+                        if resolved {
+                            return market.get("outcome")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            println!("[WARN] Failed to fetch resolution for {}: {}", slug, e);
+        }
+    }
+    None
+}
+
 async fn fetch_clob_price(client: &Client, token_id: &str) -> f64 {
     let url = format!("https://clob.polymarket.com/price?token_id={}&side=buy", token_id);
     
@@ -604,6 +642,23 @@ struct SettingsForm {
 }
 
 async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<SettingsForm>) -> Json<serde_json::Value> {
+    // Validate inputs
+    if form.threshold_above < 0.4 || form.threshold_above > 0.9 {
+        return Json(serde_json::json!({"status": "error", "message": "threshold_above must be between 0.4 and 0.9"}));
+    }
+    if form.threshold_below < 0.1 || form.threshold_below > 0.6 {
+        return Json(serde_json::json!({"status": "error", "message": "threshold_below must be between 0.1 and 0.6"}));
+    }
+    if form.max_above < form.threshold_above || form.max_above > 0.95 {
+        return Json(serde_json::json!({"status": "error", "message": "max_above must be >= threshold_above and <= 0.95"}));
+    }
+    if form.min_below > form.threshold_below || form.min_below < 0.05 {
+        return Json(serde_json::json!({"status": "error", "message": "min_below must be <= threshold_below and >= 0.05"}));
+    }
+    if form.bet_size <= 0.0 || form.bet_size > 100.0 {
+        return Json(serde_json::json!({"status": "error", "message": "bet_size must be between 0.01 and 100"}));
+    }
+    
     let mut s = state.state.lock().await;
     
     // If starting simulation (auto_mode changing from false to true), use form values
@@ -768,6 +823,8 @@ async fn run_bot(state: Arc<AppState>) {
     // Track last notified balance for milestone alerts
     let mut last_milestone_balance: f64 = 0.0;
     let mut has_sent_start_notification = false;
+    let mut last_market_fetch: i64 = 0;
+    const MARKET_FETCH_INTERVAL: i64 = 10; // Fetch markets every 10 ticks (5 seconds)
 
     loop {
         ticker.tick().await;
@@ -783,13 +840,25 @@ async fn run_bot(state: Arc<AppState>) {
             }
         }
 
+        // --- RATE LIMITING: Only fetch markets every MARKET_FETCH_INTERVAL ticks ---
+        let should_fetch_markets = (now - last_market_fetch) >= MARKET_FETCH_INTERVAL;
+        
         // --- STEP 1: GATHER DATA (OUTSIDE LOCK) ---
         
-        // 1a. Fetch BTC 5m markets
-        let btc_markets = fetch_btc5m_markets(&client).await;
+        // 1a. Fetch BTC 5m markets (with rate limiting)
+        let btc_markets = if should_fetch_markets {
+            last_market_fetch = now;
+            fetch_btc5m_markets(&client).await
+        } else {
+            Vec::new()
+        };
         
-        // 1b. Fetch other markets (sports, etc)
-        let other_markets = fetch_other_markets(&client).await;
+        // 1b. Fetch other markets (with rate limiting)
+        let other_markets = if should_fetch_markets {
+            fetch_other_markets(&client).await
+        } else {
+            Vec::new()
+        };
         
         // Combine BTC + Other markets
         let mut markets = btc_markets;
@@ -877,16 +946,29 @@ async fn run_bot(state: Arc<AppState>) {
                             .unwrap_or(0.5)
                     };
 
-                    // Determine outcome based on price movement
-                    // YES (UP) = final price > 0.5
-                    // NO (DOWN) = final price <= 0.5
-                    let win = (pos.outcome == "Yes" && final_price > 0.5) || (pos.outcome == "No" && final_price <= 0.5);
+                    // Fetch resolution from Gamma API
+                    let resolution = fetch_market_resolution(&client, &pos.slug).await;
+                    
+                    // Determine win/loss from resolution or fallback to price-based
+                    let win = if let Some(res) = &resolution {
+                        let is_yes_winner = res.eq_ignore_ascii_case("Yes") || res.eq_ignore_ascii_case("1") || res.eq_ignore_ascii_case("true");
+                        (pos.outcome == "Yes" && is_yes_winner) || (pos.outcome == "No" && !is_yes_winner)
+                    } else {
+                        // Fallback to price-based logic
+                        (pos.outcome == "Yes" && final_price > 0.5) || (pos.outcome == "No" && final_price <= 0.5)
+                    };
                     
                     let pos = s.open_positions.remove(i);
-                    println!("[SETTLE] Market {} | Entry: {:.1}c | Final: {:.1}c | Bet: {} | {}", 
-                        pos.slug, pos.price * 100.0, final_price * 100.0, pos.outcome, if win { "WIN" } else { "LOSS" });
                     
-                    let pnl = if win { (pos.amount / pos.price) - pos.amount } else { -pos.amount };
+                    // Use helper function for PnL
+                    let pnl = if win { 
+                        calculate_pnl(pos.amount, pos.price, if pos.outcome == "Yes" { 1.0 } else { 0.0 }) 
+                    } else { 
+                        -pos.amount 
+                    };
+                    
+                    println!("[SETTLE] Market {} | Entry: {:.1}c | Resolution: {:?} | Bet: {} | {}", 
+                        pos.slug, pos.price * 100.0, resolution, pos.outcome, if win { "WIN" } else { "LOSS" });
                     
                     let trade = Trade {
                         slug: pos.slug,
@@ -920,7 +1002,8 @@ async fn run_bot(state: Arc<AppState>) {
                         let label = if tp_enabled { "AUTO-TP" } else { "AUTO-SL" };
                         println!("[{}] {} reached for {}: {:.1}%", label, label, pos.slug, pnl_pct * 100.0);
                         
-                        let pnl = (pos.amount / pos.price) * current_price - pos.amount;
+                        // Use helper function for PnL
+                        let pnl = calculate_pnl(pos.amount, pos.price, current_price);
                         let trade = Trade {
                             slug: pos.slug,
                             outcome: pos.outcome,
@@ -934,6 +1017,7 @@ async fn run_bot(state: Arc<AppState>) {
                         };
                         s.settings.usdc_balance += pos.amount + pnl;
                         s.history.insert(0, trade);
+                        if s.history.len() > 100 { s.history.truncate(100); }
                         state_changed = true;
                     } else {
                         i += 1;
