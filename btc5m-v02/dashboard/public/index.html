@@ -947,27 +947,27 @@
                 <div class="stat-cell">
                     <div class="s-label">Balance</div>
                     <div class="s-val" id="stat-balance">$0.00</div>
-                    <div class="s-sub">USDC balance</div>
+                    <div class="s-sub" id="stat-balance-idr">≈ Rp 0</div>
                 </div>
                 <div class="stat-cell">
                     <div class="s-label">Realized P&L</div>
                     <div class="s-val s-green" id="stat-rpnl">+$0.00</div>
-                    <div class="s-sub">Closed trades</div>
+                    <div class="s-sub" id="stat-rpnl-idr">≈ Rp 0</div>
                 </div>
                 <div class="stat-cell">
                     <div class="s-label">Floating P&L</div>
                     <div class="s-val s-yellow" id="stat-fpnl">+$0.00</div>
-                    <div class="s-sub">Open positions</div>
+                    <div class="s-sub" id="stat-fpnl-idr">≈ Rp 0</div>
                 </div>
                 <div class="stat-cell">
                     <div class="s-label">Total Profit</div>
                     <div class="s-val s-green" id="stat-tprofit">+$0.00</div>
-                    <div class="s-sub">Winning trades</div>
+                    <div class="s-sub" id="stat-tprofit-idr">≈ Rp 0</div>
                 </div>
                 <div class="stat-cell">
                     <div class="s-label">Total Loss</div>
                     <div class="s-val s-red" id="stat-tloss">-$0.00</div>
-                    <div class="s-sub">Losing trades</div>
+                    <div class="s-sub" id="stat-tloss-idr">≈ Rp 0</div>
                 </div>
                 <div class="stat-cell">
                     <div class="s-label">W / L</div>
@@ -1044,6 +1044,10 @@
                             <div class="wallet-row">
                                 <span class="wallet-key">USDC</span>
                                 <span class="wallet-val s-green" id="cfg-usdc">$0.00</span>
+                            </div>
+                            <div class="wallet-row">
+                                <span class="wallet-key">IDR</span>
+                                <span class="wallet-val" id="cfg-idr" style="color:var(--text-mid)">≈ Rp 0</span>
                             </div>
                             <div class="wallet-row">
                                 <span class="wallet-key">MATIC (Gas)</span>
@@ -1189,6 +1193,13 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        const USD_TO_IDR = 16500;
+        
+        function fmtIdr(usdVal) {
+            const sign = usdVal >= 0 ? '+' : '-';
+            return sign + '≈ Rp ' + Math.round(Math.abs(usdVal) * USD_TO_IDR).toLocaleString('id-ID');
+        }
+        
         const chartCanvas = document.getElementById('equity-chart');
         const ctx = chartCanvas.getContext('2d');
         let equityData = [];
@@ -1420,12 +1431,17 @@
             const tl = lossTrades.reduce((a, t) => a + Math.abs(t.pnl - (t.gas_cost || 0)), 0);
 
             document.getElementById('stat-balance').innerText = '$' + bal.toFixed(2);
+            document.getElementById('stat-balance').nextElementSibling.innerText = fmtIdr(bal);
             document.getElementById('stat-rpnl').innerText = fmt(rpnl, true);
             document.getElementById('stat-rpnl').className = 's-val ' + (rpnl >= 0 ? 's-green' : 's-red');
+            document.getElementById('stat-rpnl-idr').innerText = rpnl >= 0 ? '+' + fmtIdr(rpnl) : '-' + fmtIdr(Math.abs(rpnl));
             document.getElementById('stat-fpnl').innerText = fmt(fpnl, true);
             document.getElementById('stat-fpnl').className = 's-val ' + (fpnl >= 0 ? 's-green' : 's-red');
+            document.getElementById('stat-fpnl-idr').innerText = fpnl >= 0 ? '+' + fmtIdr(fpnl) : '-' + fmtIdr(Math.abs(fpnl));
             document.getElementById('stat-tprofit').innerText = '+$' + tp.toFixed(2);
+            document.getElementById('stat-tprofit-idr').innerText = fmtIdr(tp);
             document.getElementById('stat-tloss').innerText = '-$' + tl.toFixed(2);
+            document.getElementById('stat-tloss-idr').innerText = fmtIdr(tl);
             document.getElementById('stat-wins').innerText = wins;
             document.getElementById('stat-losses').innerText = losses;
             document.getElementById('stat-winbar').style.width = total > 0 ? (wins / total * 100) + '%' : '0%';
@@ -1434,6 +1450,7 @@
             document.getElementById('stat-wr-sub').innerText = total + ' closed';
             document.getElementById('stat-gas').innerText = _trades.reduce((a, t) => a + (t.gas_cost || 0), 0).toFixed(4);
             document.getElementById('cfg-usdc').innerText = '$' + bal.toFixed(2);
+            document.getElementById('cfg-idr').innerText = fmtIdr(bal);
             document.getElementById('cfg-matic').innerText = matic.toFixed(4);
             document.getElementById('cfg-mode').textContent = (s.settings?.mode || 'demo').toUpperCase();
 
@@ -1512,7 +1529,7 @@
                 const net = t.pnl - (t.gas_cost || 0);
                 const netCls = net >= 0 ? 'pnl-pos' : 'pnl-neg';
                 const ep = (t.price * 100).toFixed(0) + 'c';
-                const fp = t.final_price ? (t.final_price * 100).toFixed(0) + 'c' : '-';
+                const fp = t.final_price && t.final_price > 0 ? (t.final_price * 100).toFixed(0) + 'c' : '-';
                 const sideLabel = t.outcome === 'Yes' ? '▲ UP' : '▼ DN';
                 const sideCls = t.outcome === 'Yes' ? 'type-up' : 'type-down';
                 let statusEl = '';
