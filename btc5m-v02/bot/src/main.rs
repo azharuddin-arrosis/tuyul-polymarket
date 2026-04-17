@@ -194,6 +194,89 @@ async fn fetch_btc5m_markets(client: &Client) -> Vec<Market> {
         slugs_to_try.push(format!("btc-updown-5m-{}", start_window + (i * 300)));
     }
 
+    println!("[DEBUG] Fetching BTC markets. Now: {}, start_window: {}", now, start_window);
+    println!("[DEBUG] Trying slugs: {:?}", slugs_to_try);
+
+    for slug in slugs_to_try {
+        let url = format!("https://gamma-api.polymarket.com/markets?slug={}", slug);
+        if let Ok(resp) = client.get(&url).timeout(Duration::from_secs(2)).send().await {
+            if let Ok(m) = resp.json::<Vec<serde_json::Value>>().await {
+                if let Some(market) = m.into_iter().next() {
+                    let out_prices = market.get("outcomePrices").and_then(|v| v.as_str()).map(|s| s.to_string());
+                    let clob_ids = market.get("clobTokenIds").and_then(|v| v.as_str()).map(|s| s.to_string());
+                    
+                    markets.push(Market {
+                        slug: slug.clone(),
+                        icon: market.get("icon").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                        outcome_prices: out_prices,
+                        clob_token_ids: clob_ids,
+                        category: Some("BTC".to_string()),
+                    });
+                    println!("[DEBUG] Got market for slug: {}", slug);
+                } else {
+                    println!("[DEBUG] No market found for slug: {}", slug);
+                }
+            } else {
+                println!("[DEBUG] Failed to parse JSON for slug: {}", slug);
+            }
+        } else {
+            println!("[DEBUG] Failed to fetch for slug: {}", slug);
+        }
+    }
+
+    // Strategy 2: Broad Discovery (Backup)
+    if markets.len() < 3 {
+        println!("[DEBUG] Less than 3 markets found ({}), trying broad discovery", markets.len());
+        let discovery_url = "https://gamma-api.polymarket.com/markets?active=true&limit=200";
+        if let Ok(resp) = client.get(discovery_url).timeout(Duration::from_secs(2)).send().await {
+            if let Ok(m) = resp.json::<Vec<serde_json::Value>>().await {
+                for market in m {
+                    let slug = market.get("slug").and_then(|v| v.as_str()).unwrap_or("");
+                    if slug.contains("btc-updown-5m") && !markets.iter().any(|existing| existing.slug == slug) {
+                        let out_prices = market.get("outcomePrices").and_then(|v| v.as_str()).map(|s| s.to_string());
+                        let clob_ids = market.get("clobTokenIds").and_then(|v| v.as_str()).map(|s| s.to_string());
+                        
+                        markets.push(Market {
+                            slug: slug.to_string(),
+                            icon: market.get("icon").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            outcome_prices: out_prices,
+                            clob_token_ids: clob_ids,
+                            category: Some("BTC".to_string()),
+                        });
+                        println!("[DEBUG] Added market from broad discovery: {}", slug);
+                    }
+                }
+            } else {
+                println!("[DEBUG] Failed to parse JSON in broad discovery");
+            }
+        } else {
+            println!("[DEBUG] Failed to fetch in broad discovery");
+        }
+    }
+
+    markets.sort_by(|a, b| {
+        let ts_a = a.slug.split('-').last().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0);
+        let ts_b = b.slug.split('-').last().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0);
+        ts_a.cmp(&ts_b)
+    });
+
+    // Only return current (ongoing) and future ones
+    let initial_len = markets.len();
+    markets.retain(|m| {
+        let ts = m.slug.split('-').last().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0);
+        let keep = (ts + 300) > now;
+        if !keep { 
+            println!("[DEBUG] Filtering out expired market: {} (ends {}, now {})", m.slug, ts + 300, now); 
+        }
+        keep
+    });
+    println!("[DEBUG] After filtering expired: {} -> {}", initial_len, markets.len());
+
+    markets.truncate(3);
+    println!("[DEBUG] Fetched {} BTC markets (after truncate)", markets.len());
+    markets
+}
+
     for slug in slugs_to_try {
         let url = format!("https://gamma-api.polymarket.com/markets?slug={}", slug);
         if let Ok(resp) = client.get(&url).timeout(Duration::from_secs(2)).send().await {
