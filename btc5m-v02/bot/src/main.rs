@@ -50,6 +50,7 @@ struct Trade {
     timestamp: i64,
     gas_cost: f64,
     status: String, // "Won" or "Lost"
+    final_price: f64, // Price when market resolved
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -645,6 +646,7 @@ async fn post_sell(State(state): State<Arc<AppState>>, Json(form): Json<serde_js
             timestamp: now,
             gas_cost: s.settings.gas_price,
             status: "Sold Early".to_string(),
+            final_price: current_price,
         };
 
         s.settings.usdc_balance += pos.amount + pnl;
@@ -829,6 +831,7 @@ async fn run_bot(state: Arc<AppState>) {
                         timestamp: now,
                         gas_cost: s.settings.gas_price,
                         status: if win { "Won".to_string() } else { "Lost".to_string() },
+                        final_price: final_price,
                     };
 
                     if win { s.settings.usdc_balance += pos.amount + pnl; }
@@ -861,6 +864,7 @@ async fn run_bot(state: Arc<AppState>) {
                             timestamp: now,
                             gas_cost: s.settings.gas_price,
                             status: "Auto Exit".to_string(),
+                            final_price: current_price,
                         };
                         s.settings.usdc_balance += pos.amount + pnl;
                         s.history.insert(0, trade);

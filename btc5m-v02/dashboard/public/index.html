@@ -369,7 +369,7 @@
                                 <th>Market</th>
                                 <th>Type</th>
                                 <th>Entry</th>
-                                <th>Amount</th>
+                                <th>Final</th>
                                 <th>P&L</th>
                             </tr>
                         </thead>
@@ -523,7 +523,7 @@
                     const floatingPnl = (p.amount / p.price) * currentPrice - p.amount;
                     const pnlColor = floatingPnl >= 0 ? '#10b981' : '#ef4444';
   
-                    const typeLabel = p.outcome === 'Yes' ? 'BUY (UP)' : 'SELL (DOWN)';
+                    const typeLabel = p.outcome === 'Yes' ? 'LONG (UP)' : 'SHORT (DOWN)';
                     posHtml += `<tr>
                         <td style="font-size:10px;color:#888">${countdown}</td>
                         <td title="${p.slug}"><a href="https://polymarket.com/market/${p.slug}" target="_blank" style="color:#f59e0b">${p.slug.slice(-10)}</a></td>
@@ -581,13 +581,15 @@
                     const pnlColor = t.pnl >= 0 ? '#10b981' : '#ef4444';
                     const netPnl = t.pnl - t.gas_cost;
                     const netColor = netPnl >= 0 ? '#10b981' : '#ef4444';
-                    const typeLabel = t.outcome === 'Yes' ? 'BUY (UP)' : 'SELL (DOWN)';
+                    const typeLabel = t.outcome === 'Yes' ? 'LONG (UP)' : 'SHORT (DOWN)';
+                    const finalPrice = t.final_price ? (t.final_price * 100).toFixed(0) + 'c' : '-';
+                    const entryPrice = (t.price * 100).toFixed(0) + 'c';
                     html += `<tr class="history-row" onclick="openTradeModal(${idx})">
                         <td>${time}</td>
                         <td><a href="https://polymarket.com/market/${t.slug}" target="_blank" title="${t.slug}" style="color:#6b7280;">${t.slug.slice(-10)}</a></td>
                         <td><span class="badge ${t.outcome === 'Yes' ? 'badge-won' : 'badge-lost'}">${typeLabel}</span></td>
-                        <td>${(t.price * 100).toFixed(0)}c</td>
-                        <td>$${t.amount.toFixed(2)}</td>
+                        <td>${entryPrice}</td>
+                        <td>${finalPrice}</td>
                         <td style="color:${netColor}; font-weight: bold;">${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(4)}</td>
                     </tr>`;
                 });
