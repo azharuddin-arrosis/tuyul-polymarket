@@ -34,6 +34,10 @@ struct Position {
     end_timestamp: i64,
     #[serde(default)]
     traded: bool,
+    #[serde(default)]
+    yes_token_id: Option<String>,
+    #[serde(default)]
+    no_token_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -519,6 +523,8 @@ async fn post_simulate(State(state): State<Arc<AppState>>, Json(form): Json<Simu
         timestamp: Utc::now().timestamp(),
         end_timestamp: end_ts,
         traded: true,
+        yes_token_id: None,
+        no_token_id: None,
     };
 
     s.settings.usdc_balance -= form.amount;
@@ -660,32 +666,35 @@ async fn run_bot(state: Arc<AppState>) {
             m.outcome_prices = Some(format!("[\"{}\", \"{}\"]", y, n));
         }
         
-        // 1b. Identify positions needing checks
-        let mut expiring_slugs = Vec::new();
+        // 1b. Identify positions needing settlement + get token IDs
+        let mut expiring_positions: Vec<(String, Option<String>, Option<String>)> = Vec::new();
         {
             let s = state.state.lock().await;
             for pos in &s.open_positions {
                 if now > pos.end_timestamp {
-                    expiring_slugs.push(pos.slug.clone());
+                    expiring_positions.push((pos.slug.clone(), pos.yes_token_id.clone(), pos.no_token_id.clone()));
                 }
             }
         }
         
-        // 1c. Fetch outcomes for expiring positions concurrently
-        let mut outcome_futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = (String, Option<String>)> + Send>>> = Vec::new();
-        for slug in expiring_slugs {
-            let slug_clone = slug.clone();
+        // 1c. Fetch CLOB final prices for expiring positions (not Gamma API!)
+        let mut final_price_futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = (String, f64)> + Send>>> = Vec::new();
+        for (slug, yes_token, no_token) in expiring_positions {
+            let yes_token = yes_token.unwrap_or_default();
+            let no_token = no_token.unwrap_or_default();
             let client_clone = client.clone();
-            outcome_futures.push(Box::pin(async move {
-                let outcome = check_settlement(&client_clone, &slug_clone).await;
-                (slug_clone, outcome)
+            final_price_futures.push(Box::pin(async move {
+                let (yes_price, no_price) = tokio::join!(
+                    fetch_clob_price(&client_clone, &yes_token),
+                    fetch_clob_price(&client_clone, &no_token)
+                );
+                // YES price = price at settlement
+                (slug, yes_price)
             }));
         }
         
-        let resolved_outcomes = futures::future::join_all(outcome_futures).await;
-        let outcomes_map: std::collections::HashMap<String, String> = resolved_outcomes
+        let final_prices: std::collections::HashMap<String, f64> = futures::future::join_all(final_price_futures).await
             .into_iter()
-            .filter_map(|(s, o)| o.map(|res| (s, res)))
             .collect();
 
         // --- STEP 2: APPLY CHANGES (INSIDE LOCK) ---
@@ -703,49 +712,43 @@ async fn run_bot(state: Arc<AppState>) {
 
                 // Check for expired positions (market end time passed)
                 if now > pos.end_timestamp {
-                    // Try to get resolution from API, if not available treat as expired
-                    if let Some(outcome) = outcomes_map.get(&pos.slug) {
-                        let pos = s.open_positions.remove(i);
-                        println!("[SETTLE] Market {} resolved as {}", pos.slug, outcome);
-                        
-                        let win = (pos.outcome == "Yes" && outcome == "Yes") || (pos.outcome == "No" && outcome == "No");
-                        let pnl = if win { (pos.amount / pos.price) - pos.amount } else { -pos.amount };
-                        
-                        let trade = Trade {
-                            slug: pos.slug,
-                            outcome: pos.outcome,
-                            amount: pos.amount,
-                            price: pos.price,
-                            pnl,
-                            timestamp: now,
-                            gas_cost: s.settings.gas_price,
-                            status: if win { "Won".to_string() } else { "Lost".to_string() },
-                        };
-
-                        if win { s.settings.usdc_balance += pos.amount + pnl; }
-                        s.history.insert(0, trade);
-                        if s.history.len() > 100 { s.history.truncate(100); }
-                        state_changed = true;
+                    // Use pre-fetched CLOB final price (more reliable than Gamma API)
+                    let final_price = if let Some(&price) = final_prices.get(&pos.slug) {
+                        price
                     } else {
-                        // Market expired without resolution - check if we already traded this position
-                        let pos = s.open_positions.remove(i);
-                        println!("[EXPIRE] Market {} expired without resolution", pos.slug);
-                        
-                        let trade = Trade {
-                            slug: pos.slug,
-                            outcome: pos.outcome,
-                            amount: pos.amount,
-                            price: pos.price,
-                            pnl: -pos.amount,
-                            timestamp: now,
-                            gas_cost: s.settings.gas_price,
-                            status: "Expired".to_string(),
-                        };
+                        // Fallback: try to find in current markets (clone to avoid borrow)
+                        s.current_markets.iter()
+                            .find(|m| m.slug == pos.slug)
+                            .map(|m| parse_prices(m.outcome_prices.as_deref()).get(0).copied().unwrap_or(0.5))
+                            .unwrap_or(0.5)
+                    };
 
-                        s.history.insert(0, trade);
-                        if s.history.len() > 100 { s.history.truncate(100); }
-                        state_changed = true;
-                    }
+                    // Determine outcome based on price movement
+                    // YES (UP) = final price > 0.5
+                    // NO (DOWN) = final price <= 0.5
+                    let win = (pos.outcome == "Yes" && final_price > 0.5) || (pos.outcome == "No" && final_price <= 0.5);
+                    
+                    let pos = s.open_positions.remove(i);
+                    println!("[SETTLE] Market {} | Entry: {:.1}c | Final: {:.1}c | Bet: {} | {}", 
+                        pos.slug, pos.price * 100.0, final_price * 100.0, pos.outcome, if win { "WIN" } else { "LOSS" });
+                    
+                    let pnl = if win { (pos.amount / pos.price) - pos.amount } else { -pos.amount };
+                    
+                    let trade = Trade {
+                        slug: pos.slug,
+                        outcome: pos.outcome,
+                        amount: pos.amount,
+                        price: pos.price,
+                        pnl,
+                        timestamp: now,
+                        gas_cost: s.settings.gas_price,
+                        status: if win { "Won".to_string() } else { "Lost".to_string() },
+                    };
+
+                    if win { s.settings.usdc_balance += pos.amount + pnl; }
+                    s.history.insert(0, trade);
+                    if s.history.len() > 100 { s.history.truncate(100); }
+                    state_changed = true;
                 }
                 // Check TP/SL for active markets (only if position hasn't expired)
                 else if let Some(m) = s.current_markets.iter().find(|m| m.slug == pos.slug) {
@@ -822,6 +825,8 @@ async fn run_bot(state: Arc<AppState>) {
                             s.settings.usdc_balance -= settings.bet_size;
                             s.settings.matic_balance -= settings.gas_price;
                             
+                            let (yes_token, no_token) = get_token_ids(m.clob_token_ids.as_deref());
+                            
                             s.open_positions.push(Position {
                                 slug: m.slug.clone(),
                                 outcome: outcome.to_string(),
@@ -830,6 +835,8 @@ async fn run_bot(state: Arc<AppState>) {
                                 timestamp: now,
                                 end_timestamp: end_ts,
                                 traded: true,
+                                yes_token_id: yes_token,
+                                no_token_id: no_token,
                             });
                             
                             s.last_trade_timestamp = now;
