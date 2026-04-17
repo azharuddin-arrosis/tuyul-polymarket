@@ -53,8 +53,17 @@ struct Trade {
     final_price: f64, // Price when market resolved
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum BotMode {
+    Demo,
+    Real,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct BotSettings {
+    #[serde(default = "default_bot_mode")]
+    mode: BotMode,
     usdc_balance: f64,
     matic_balance: f64,
     bet_size: f64,
@@ -70,12 +79,14 @@ struct BotSettings {
     sl_threshold: f64,
 }
 
+fn default_bot_mode() -> BotMode { BotMode::Demo }
 fn default_max_above() -> f64 { 0.65 }
 fn default_min_below() -> f64 { 0.35 }
 
 impl Default for BotSettings {
     fn default() -> Self {
         Self {
+            mode: BotMode::Demo,
             usdc_balance: 25.0,  // Default: smallest test
             matic_balance: 0.5,
             bet_size: 1.0,
@@ -255,99 +266,6 @@ async fn fetch_btc5m_markets(client: &Client) -> Vec<Market> {
     markets
 }
 
-async fn fetch_other_markets(client: &Client) -> Vec<Market> {
-    let now = Utc::now().timestamp();
-    
-    let mut markets = Vec::new();
-    
-    // Fetch active markets and include all (no endDate filter since most are far out)
-    let url = "https://gamma-api.polymarket.com/markets?active=true&limit=200";
-    match client.get(url).timeout(Duration::from_secs(3)).send().await {
-        Ok(resp) => {
-            match resp.json::<Vec<serde_json::Value>>().await {
-                Ok(m) => {
-                    println!("[DEBUG] Found {} total active markets", m.len());
-                    for market in m {
-                        let slug = market.get("slug").and_then(|v| v.as_str()).unwrap_or("");
-                        
-                        // Skip BTC 5m markets
-                        if slug.contains("btc-updown-5m") {
-                            continue;
-                        }
-                        
-                        // Check if market is closed
-                        let closed = market.get("closed").and_then(|v| v.as_bool()).unwrap_or(false);
-                        if closed {
-                            continue;
-                        }
-                        
-                        // Get endDate - if null, use a default (market never ends or TBD)
-                        let end_ts = market.get("endDate")
-                            .and_then(|v| v.as_str())
-                            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
-                            .map(|dt| dt.timestamp())
-                            .unwrap_or(now + 86400 * 365); // Default to 1 year if no endDate
-                        
-                        // Include all non-expired markets (end date in the future)
-                        if end_ts > now {
-                            let out_prices = market.get("outcomePrices").and_then(|v| v.as_str()).map(|s| s.to_string());
-                            let clob_ids = market.get("clobTokenIds").and_then(|v| v.as_str()).map(|s| s.to_string());
-                            
-                            // Extract category from question/slug
-                            let question = market.get("question").and_then(|v| v.as_str()).unwrap_or("");
-                            let category = if question.to_lowercase().contains("soccer") || question.to_lowercase().contains("football") {
-                                "SOCCER"
-                            } else if question.to_lowercase().contains("nba") || question.to_lowercase().contains("basketball") {
-                                "NBA"
-                            } else if question.to_lowercase().contains("nhl") || question.to_lowercase().contains("hockey") {
-                                "NHL"
-                            } else if question.to_lowercase().contains("nfl") || (question.to_lowercase().contains("football") && question.to_lowercase().contains("game")) {
-                                "NFL"
-                            } else if question.to_lowercase().contains("tennis") {
-                                "TENNIS"
-                            } else if question.to_lowercase().contains("mma") || question.to_lowercase().contains("ufc") {
-                                "MMA"
-                            } else if question.to_lowercase().contains("cricket") {
-                                "CRICKET"
-                            } else if question.to_lowercase().contains("esports") {
-                                "ESPORTS"
-                            } else if slug.contains("sport") {
-                                "SPORTS"
-                            } else if question.to_lowercase().contains("election") || question.to_lowercase().contains("trump") || question.to_lowercase().contains("politics") {
-                                "POLITICS"
-                            } else {
-                                "OTHER"
-                            };
-                            
-                            markets.push(Market {
-                                slug: slug.to_string(),
-                                icon: market.get("icon").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                                outcome_prices: out_prices,
-                                clob_token_ids: clob_ids,
-                                category: Some(category.to_string()),
-                            });
-                        }
-                    }
-                    println!("[DEBUG] Found {} other markets (non-expired)", markets.len());
-                },
-                Err(e) => println!("[DEBUG] Failed to parse markets: {}", e)
-            }
-        },
-        Err(e) => println!("[DEBUG] Failed to fetch markets: {}", e)
-    }
-    
-    // Sort by end date and limit to 15
-    markets.sort_by(|a, b| {
-        let end_a = a.slug.split('-').last().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0) + 300;
-        let end_b = b.slug.split('-').last().and_then(|s| s.parse::<i64>().ok()).unwrap_or(0) + 300;
-        end_a.cmp(&end_b)
-    });
-    
-    markets.truncate(15);
-    println!("[DEBUG] Other markets after filter: {}", markets.len());
-    markets
-}
-
 #[allow(dead_code)]
 async fn check_settlement(client: &Client, slug: &str) -> Option<String> {
     // Try with active=false first to find resolved markets
@@ -480,6 +398,89 @@ fn parse_prices(prices_str: Option<&str>) -> Vec<f64> {
     vec![0.5, 0.5]
 }
 
+fn parse_bot_mode(mode: Option<&str>) -> BotMode {
+    match mode.unwrap_or("demo").trim().to_ascii_lowercase().as_str() {
+        "real" => BotMode::Real,
+        _ => BotMode::Demo,
+    }
+}
+
+fn required_real_env_vars() -> [&'static str; 8] {
+    [
+        "PRIVATE_KEY",
+        "FUNDER_ADDRESS",
+        "POLY_FUNDER_ADDRESS",
+        "POLY_API_KEY",
+        "POLY_API_SECRET",
+        "POLY_API_PASSPHRASE",
+        "RPC_URL",
+        "CLOB_HTTP_URL",
+    ]
+}
+
+fn missing_real_env_vars() -> Vec<&'static str> {
+    required_real_env_vars()
+        .into_iter()
+        .filter(|key| std::env::var(key).map(|v| v.trim().is_empty()).unwrap_or(true))
+        .collect()
+}
+
+async fn validate_http_endpoint(client: &Client, url: &str, label: &str) -> Result<(), String> {
+    client
+        .get(url)
+        .timeout(Duration::from_secs(4))
+        .send()
+        .await
+        .map_err(|e| format!("{} connection failed: {}", label, e))?
+        .error_for_status()
+        .map_err(|e| format!("{} returned error: {}", label, e))?;
+    Ok(())
+}
+
+async fn validate_rpc_endpoint(client: &Client, url: &str) -> Result<(), String> {
+    let payload = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "eth_chainId",
+        "params": [],
+        "id": 1
+    });
+
+    let resp = client
+        .post(url)
+        .json(&payload)
+        .timeout(Duration::from_secs(4))
+        .send()
+        .await
+        .map_err(|e| format!("RPC connection failed: {}", e))?
+        .error_for_status()
+        .map_err(|e| format!("RPC returned error: {}", e))?;
+
+    let body = resp.json::<serde_json::Value>()
+        .await
+        .map_err(|e| format!("RPC response parse failed: {}", e))?;
+    if body.get("result").and_then(|v| v.as_str()).is_none() {
+        return Err("RPC endpoint did not return chain id".to_string());
+    }
+    Ok(())
+}
+
+async fn validate_real_mode(client: &Client) -> Result<(), String> {
+    let missing = missing_real_env_vars();
+    if !missing.is_empty() {
+        return Err(format!("Missing real mode env: {}", missing.join(", ")));
+    }
+
+    let gamma_url = "https://gamma-api.polymarket.com/markets?slug=btc-updown-5m";
+    let clob_base = std::env::var("CLOB_HTTP_URL").unwrap_or_else(|_| "https://clob.polymarket.com".to_string());
+    let clob_url = format!("{}/health", clob_base.trim_end_matches('/'));
+    let rpc_url = std::env::var("RPC_URL").unwrap_or_default();
+
+    validate_http_endpoint(client, gamma_url, "Gamma API").await?;
+    validate_http_endpoint(client, &clob_url, "CLOB API").await?;
+    validate_rpc_endpoint(client, &rpc_url).await?;
+    Ok(())
+}
+
 async fn get_state(State(state): State<Arc<AppState>>) -> Json<ApiState> {
     let s = state.state.lock().await;
     
@@ -535,7 +536,7 @@ async fn get_markets(State(state): State<Arc<AppState>>) -> Json<ApiMarkets> {
             yes_price: prices.get(0).copied().unwrap_or(0.5),
             no_price: prices.get(1).copied().unwrap_or(0.5),
             icon: m.icon.clone().unwrap_or_default(),
-            category: m.category.clone().unwrap_or_else(|| "OTHER".to_string()),
+            category: m.category.clone().unwrap_or_else(|| "BTC".to_string()),
         }
     }).collect();
     
@@ -561,17 +562,32 @@ struct SettingsForm {
     min_below: f64,
     tp_threshold: f64,
     sl_threshold: f64,
+    mode: Option<String>,
     auto_mode: Option<String>,
 }
 
 async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<SettingsForm>) -> Json<serde_json::Value> {
+    let requested_auto_mode = form.auto_mode.as_ref().map(|v| v == "on").unwrap_or(false);
+    let requested_mode = parse_bot_mode(form.mode.as_deref());
+    let was_auto_mode = {
+        let s = state.state.lock().await;
+        s.settings.auto_mode
+    };
+    let is_starting = !was_auto_mode && requested_auto_mode;
+
+    if requested_mode == BotMode::Real {
+        let client = Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build()
+            .unwrap();
+        if let Err(message) = validate_real_mode(&client).await {
+            return Json(serde_json::json!({"status": "error", "message": message}));
+        }
+    }
+
     let mut s = state.state.lock().await;
-    
-    // If starting simulation (auto_mode changing from false to true), use form values
-    let was_auto_mode = s.settings.auto_mode;
-    let is_starting = !was_auto_mode && form.auto_mode.as_ref().map(|v| v == "on").unwrap_or(false);
-    
-    println!("[POST_SETTINGS] was_auto={}, form_auto={}, is_starting={}", was_auto_mode, form.auto_mode.as_ref().map(|v| v == "on").unwrap_or(false), is_starting);
+
+    println!("[POST_SETTINGS] was_auto={}, form_auto={}, is_starting={}", was_auto_mode, requested_auto_mode, is_starting);
     println!("[POST_SETTINGS] form - usdc:{}, matic:{}, bet:{}, above:{}, below:{}", form.usdc_balance, form.matic_balance, form.bet_size, form.threshold_above, form.threshold_below);
     
     // Always use form balance when starting simulation
@@ -587,6 +603,7 @@ async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<Sett
     }
     
     // Update trading params
+    s.settings.mode = requested_mode.clone();
     s.settings.bet_size = form.bet_size;
     s.settings.gas_price = form.gas_price;
     s.settings.threshold_above = form.threshold_above;
@@ -595,12 +612,21 @@ async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<Sett
     s.settings.min_below = form.min_below;
     s.settings.tp_threshold = form.tp_threshold;
     s.settings.sl_threshold = form.sl_threshold;
-    s.settings.auto_mode = form.auto_mode.as_ref().map(|s| s == "on").unwrap_or(false);
+    s.settings.auto_mode = requested_auto_mode;
+    if !requested_auto_mode {
+        s.stopped = false;
+    }
     s.save();
     
-    println!("[SETTINGS] Updated - auto_mode: {}, balance: {:.2}", s.settings.auto_mode, s.settings.usdc_balance);
+    println!("[SETTINGS] Updated - mode: {:?}, auto_mode: {}, balance: {:.2}", s.settings.mode, s.settings.auto_mode, s.settings.usdc_balance);
     
-    Json(serde_json::json!({"status": "ok"}))
+    let message = if s.settings.mode == BotMode::Real {
+        "Real mode readiness passed. Live order execution is not implemented yet."
+    } else {
+        "Demo mode settings updated."
+    };
+
+    Json(serde_json::json!({"status": "ok", "mode": s.settings.mode, "message": message}))
 }
 
 #[derive(Deserialize)]
@@ -613,6 +639,10 @@ struct SimulateForm {
 
 async fn post_simulate(State(state): State<Arc<AppState>>, Json(form): Json<SimulateForm>) -> Json<serde_json::Value> {
     let mut s = state.state.lock().await;
+
+    if s.settings.mode == BotMode::Real {
+        return Json(serde_json::json!({"status": "error", "message": "Manual simulate is disabled in real mode"}));
+    }
     
     // Check if already have position in this market
     if s.open_positions.iter().any(|p| p.slug == form.slug) {
@@ -688,6 +718,7 @@ async fn post_reset(State(state): State<Arc<AppState>>) -> Json<serde_json::Valu
     let mut s = state.state.lock().await;
     
     // Reset to fresh state - balances to 0, stop simulation
+    s.settings.mode = BotMode::Demo;
     s.settings.usdc_balance = 0.0;
     s.settings.matic_balance = 0.0;
     s.settings.bet_size = 1.0;
@@ -729,6 +760,7 @@ async fn run_bot(state: Arc<AppState>) {
     // Track last notified balance for milestone alerts
     let mut last_milestone_balance: f64 = 0.0;
     let mut has_sent_start_notification = false;
+    let mut has_sent_real_mode_notice = false;
 
     loop {
         ticker.tick().await;
@@ -737,7 +769,7 @@ async fn run_bot(state: Arc<AppState>) {
         // --- STEP 0: AUTO GAS REFILL (SIMULATION ONLY) ---
         {
             let mut s = state.state.lock().await;
-            if s.settings.matic_balance < 0.01 {
+            if s.settings.mode == BotMode::Demo && s.settings.matic_balance < 0.01 {
                 s.settings.matic_balance += 0.5;
                 println!("[GAS] ⛽ Refilling gas balance. Current: {:.4} MATIC", s.settings.matic_balance);
                 s.save();
@@ -749,12 +781,7 @@ async fn run_bot(state: Arc<AppState>) {
         // 1a. Fetch BTC 5m markets
         let btc_markets = fetch_btc5m_markets(&client).await;
         
-        // 1b. Fetch other markets (sports, etc)
-        let other_markets = fetch_other_markets(&client).await;
-        
-        // Combine BTC + Other markets
         let mut markets = btc_markets;
-        markets.extend(other_markets);
         
         // Fetch all CLOB prices concurrently
         let mut price_futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = (f64, f64)> + Send>>> = Vec::new();
@@ -905,7 +932,8 @@ async fn run_bot(state: Arc<AppState>) {
             }
 
             // 2b. Auto-mode Trading Logic - Simple: 1 bet per 5-min window, hold until settlement
-            if settings.auto_mode && !s.current_markets.is_empty() {
+            if settings.auto_mode && !s.current_markets.is_empty() && settings.mode == BotMode::Demo {
+                has_sent_real_mode_notice = false;
                 // Get current 5-minute window
                 let current_window = (now / 300) * 300;
                 let next_window = current_window + 300;
@@ -987,6 +1015,11 @@ async fn run_bot(state: Arc<AppState>) {
                         }
                     }
                 }
+            } else if settings.auto_mode && settings.mode == BotMode::Real && !has_sent_real_mode_notice {
+                println!("[REAL] Real mode readiness is enabled, but live order execution is not implemented yet. No live orders will be sent.");
+                has_sent_real_mode_notice = true;
+            } else if !settings.auto_mode || settings.mode == BotMode::Demo {
+                has_sent_real_mode_notice = false;
             }
 
             if state_changed {
@@ -1031,6 +1064,7 @@ async fn run_bot(state: Arc<AppState>) {
 
 #[tokio::main]
 async fn main() {
+    let _ = dotenvy::dotenv();
     let state = Arc::new(AppState { state: Mutex::new(BotState::load()) });
     let state_clone = state.clone();
     
