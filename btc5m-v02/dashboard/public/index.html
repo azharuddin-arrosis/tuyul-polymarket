@@ -368,6 +368,7 @@
                                 <th>Time</th>
                                 <th>Market</th>
                                 <th>Type</th>
+                                <th>Predict</th>
                                 <th>Entry</th>
                                 <th>Final</th>
                                 <th>P&L</th>
@@ -597,6 +598,21 @@
                     const finalPrice = t.final_price ? (t.final_price * 100).toFixed(0) + 'c' : '-';
                     const entryPrice = (t.price * 100).toFixed(0) + 'c';
                     
+                    // Prediction: show arrow based on outcome type and final price
+                    // LONG (UP): predicts price goes UP (>50%)
+                    // SHORT (DOWN): predicts price goes DOWN (<50%)
+                    let predictArrow = '-';
+                    if (t.final_price) {
+                        if (t.outcome === 'Yes') {
+                            // LONG: predicts up
+                            predictArrow = t.final_price > 0.5 ? '↑' : '↓';
+                        } else {
+                            // SHORT: predicts down
+                            predictArrow = t.final_price < 0.5 ? '↓' : '↑';
+                        }
+                    }
+                    const predictColor = (t.pnl >= 0) ? '#10b981' : '#ef4444';
+                    
                     // Format market name - extract category and time from slug
                     let marketName = t.slug;
                     if (t.slug.includes('btc-updown-5m')) {
@@ -612,12 +628,13 @@
                         <td>${time}</td>
                         <td><a href="https://polymarket.com/market/${t.slug}" target="_blank" title="${t.slug}" style="color:#f59e0b;font-weight:600;">${marketName}</a></td>
                         <td><span class="badge ${t.outcome === 'Yes' ? 'badge-won' : 'badge-lost'}">${typeLabel}</span></td>
+                        <td style="font-size:16px;font-weight:bold;color:${predictColor}">${predictArrow}</td>
                         <td>${entryPrice}</td>
                         <td>${finalPrice}</td>
                         <td style="color:${netColor}; font-weight: bold;">${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(4)}</td>
                     </tr>`;
                 });
-                if (!html) html = '<tr><td colspan="6" style="text-align:center">No trades yet</td></tr>';
+                if (!html) html = '<tr><td colspan="7" style="text-align:center">No trades yet</td></tr>';
                 document.getElementById('history').innerHTML = html;
                 
                 // Cumulative gas stat
