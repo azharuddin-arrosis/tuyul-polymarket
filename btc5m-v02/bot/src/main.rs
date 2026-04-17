@@ -554,18 +554,10 @@ struct SettingsForm {
 async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<SettingsForm>) -> Json<serde_json::Value> {
     let mut s = state.state.lock().await;
     
+    // If starting simulation with balance=0, use form values
     let was_auto_mode = s.settings.auto_mode;
-    let is_starting_simulation = !was_auto_mode && form.auto_mode.as_ref().map(|v| v == "on").unwrap_or(false);
+    let is_starting = !was_auto_mode && form.auto_mode.as_ref().map(|v| v == "on").unwrap_or(false) && s.settings.usdc_balance <= 0.0;
     
-    // If starting simulation and balance is 0, set initial balance
-    if is_starting_simulation && s.settings.usdc_balance <= 0.0 {
-        s.settings.usdc_balance = 100.0;
-        s.settings.matic_balance = 0.5;
-        println!("[INIT] Starting simulation with initial balance $100 USDC, 0.5 MATIC");
-    }
-    
-    // If starting simulation with balance=0, use form values or defaults
-    let is_starting = s.settings.usdc_balance <= 0.0 && form.usdc_balance > 0.0;
     if is_starting {
         s.settings.usdc_balance = form.usdc_balance;
         s.settings.matic_balance = form.matic_balance;
