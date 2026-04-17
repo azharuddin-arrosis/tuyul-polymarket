@@ -995,9 +995,12 @@ async fn run_bot(state: Arc<AppState>) {
                 let markets_clone: Vec<Market> = s.current_markets.clone();
                 
                 // Find the active market (current window that's still open)
+                // Must have valid price > 0.01 to trade
                 if let Some(m) = markets_clone.into_iter().find(|m| {
                     let end_ts = get_end_timestamp(&m.slug);
-                    end_ts > now && end_ts <= next_window
+                    let prices = parse_prices(m.outcome_prices.as_deref());
+                    let price = prices.get(0).copied().unwrap_or(0.0);
+                    end_ts > now && end_ts <= next_window && price > 0.01
                 }) {
                     let end_ts = get_end_timestamp(&m.slug);
                     let time_left = end_ts - now;
@@ -1032,8 +1035,11 @@ async fn run_bot(state: Arc<AppState>) {
                         let time_into_window = 300 - time_left;
                         let is_mid_entry = time_into_window >= 150 && time_into_window <= 270;
                         let price_too_high = yes_price >= 0.78;
+                        let price_valid = yes_price > 0.01 && yes_price < 0.99;
                         
-                        if price_too_high {
+                        if !price_valid {
+                            println!("[SKIP] Invalid price {:.1}c, skipping...", yes_price * 100.0);
+                        } else if price_too_high {
                             println!("[SKIP] Price {:.0}c too high, skipping...", yes_price * 100.0);
                         } else if is_mid_entry {
                             // Mid-entry: UP jika < 52, DOWN jika > 48
