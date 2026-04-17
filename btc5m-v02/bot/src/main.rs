@@ -567,14 +567,18 @@ struct SettingsForm {
 async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<SettingsForm>) -> Json<serde_json::Value> {
     let mut s = state.state.lock().await;
     
-    // If starting simulation with balance=0, use form values
+    // If starting simulation (auto_mode changing from false to true), use form values
     let was_auto_mode = s.settings.auto_mode;
-    let is_starting = !was_auto_mode && form.auto_mode.as_ref().map(|v| v == "on").unwrap_or(false) && s.settings.usdc_balance <= 0.0;
+    let is_starting = !was_auto_mode && form.auto_mode.as_ref().map(|v| v == "on").unwrap_or(false);
     
+    // Always use form balance when starting simulation
     if is_starting {
-        s.settings.usdc_balance = form.usdc_balance;
-        s.settings.matic_balance = form.matic_balance;
-        println!("[INIT] Starting simulation with balance ${:.2} USDC, {:.4} MATIC", form.usdc_balance, form.matic_balance);
+        // Use form values if provided, otherwise use defaults
+        let usdc = if form.usdc_balance > 0.0 { form.usdc_balance } else { 100.0 };
+        let matic = if form.matic_balance > 0.0 { form.matic_balance } else { 0.5 };
+        s.settings.usdc_balance = usdc;
+        s.settings.matic_balance = matic;
+        println!("[INIT] Starting simulation with balance ${:.2} USDC, {:.4} MATIC", usdc, matic);
     }
     
     // Update trading params
@@ -588,6 +592,8 @@ async fn post_settings(State(state): State<Arc<AppState>>, Json(form): Json<Sett
     s.settings.sl_threshold = form.sl_threshold;
     s.settings.auto_mode = form.auto_mode.as_ref().map(|s| s == "on").unwrap_or(false);
     s.save();
+    
+    println!("[SETTINGS] Updated - auto_mode: {}, balance: {:.2}", s.settings.auto_mode, s.settings.usdc_balance);
     
     Json(serde_json::json!({"status": "ok"}))
 }
