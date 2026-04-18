@@ -375,6 +375,108 @@ fn parse_prices(prices_str: Option<&str>) -> [f64; 2] {
     [0.5, 0.5]
 }
 
+#[derive(Debug, Clone)]
+struct Prediction {
+    direction: String,
+    confidence: i32,
+    reason: String,
+}
+
+fn analyze_market(markets: &[Market], yes_price: f64, time_into: i64, time_left: i64) -> Prediction {
+    let mut score = 0;
+    let mut reasons = Vec::new();
+
+    // === CONDITION 1: Price in sweet spot (40-52%) ===
+    if yes_price >= 0.40 && yes_price <= 0.52 {
+        score += 25;
+        reasons.push("Sweet spot price".to_string());
+    } else if yes_price >= 0.35 && yes_price <= 0.58 {
+        score += 15;
+        reasons.push("Acceptable range".to_string());
+    }
+
+    // === CONDITION 2: Check recent price movement from history ===
+    if markets.len() >= 2 {
+        let prev_price = parse_prices(markets[1].outcome_prices.as_deref())[0];
+        let price_change = yes_price - prev_price;
+
+        // UP TREND: price going up → bet YES
+        if price_change > 0.01 && price_change < 0.10 {
+            score += 20;
+            reasons.push(format!("Rising {:.1}%", price_change * 100.0));
+        }
+        // DOWN TREND: price going down → bet NO (mean reversion)
+        else if price_change < -0.01 && price_change > -0.10 {
+            score += 20;
+            reasons.push(format!("Falling {:.1}%", price_change * 100.0));
+        }
+        // TOO VOLATILE: skip
+        else if price_change.abs() > 0.15 {
+            return Prediction {
+                direction: "Skip".to_string(),
+                confidence: 0,
+                reason: "Too volatile".to_string(),
+            };
+        }
+    }
+
+    // === CONDITION 3: Time-based entry (best 60-180 seconds in) ===
+    if time_into >= 60 && time_into <= 180 {
+        score += 15;
+        reasons.push("Optimal entry time".to_string());
+    } else if time_into >= 30 && time_into <= 240 {
+        score += 5;
+        reasons.push("Acceptable entry time".to_string());
+    }
+
+    // === CONDITION 4: Mean reversion (price far from 0.5) ===
+    let deviation = (yes_price - 0.5).abs();
+    if deviation > 0.08 {
+        score += 10;
+        reasons.push(format!("Deviation {:.1}%", deviation * 100.0));
+    }
+
+    // === CONDITION 5: Check if price is moving toward 0.5 (trend confirmation) ===
+    if markets.len() >= 3 {
+        let prev_price = parse_prices(markets[1].outcome_prices.as_deref())[0];
+        let prev_prev_price = parse_prices(markets[2].outcome_prices.as_deref())[0];
+        let prev_change = prev_price - prev_prev_price;
+        let current_change = yes_price - prev_price;
+
+        // If trend is reversing toward 0.5, it's more predictable
+        if (prev_change > 0.0 && current_change > 0.0 && yes_price < 0.5)
+            || (prev_change < 0.0 && current_change < 0.0 && yes_price > 0.5)
+        {
+            score += 15;
+            reasons.push("Trend confirming".to_string());
+        }
+    }
+
+    // === DETERMINE DIRECTION ===
+    let direction = if yes_price < 0.50 { "Yes" } else { "No" };
+    let confidence = score.min(95);
+
+    let reason = if reasons.is_empty() {
+        "Low confidence".to_string()
+    } else {
+        reasons.join(", ")
+    };
+
+    if confidence < 40 {
+        return Prediction {
+            direction: "Skip".to_string(),
+            confidence: 0,
+            reason: reason,
+        };
+    }
+
+    Prediction {
+        direction: direction.to_string(),
+        confidence,
+        reason,
+    }
+}
+
 fn parse_bot_mode(mode: Option<&str>) -> BotMode {
     match mode.unwrap_or("demo").trim().to_ascii_lowercase().as_str() {
         "real" => BotMode::Real,
@@ -1057,15 +1159,10 @@ async fn run_bot(state: Arc<AppState>) {
                         eprintln!("[ALERT] Insufficient USDC {:.2} < {:.2}",
                             settings.usdc_balance, dynamic_bet);
                     } else if can_trade {
-                        // STRATEGY: Only go UP when price is low (40-52%), expect bounce
-                        // Skip if price too high (> 52%) or too low (< 30%)
-                        let outcome = if yes_price >= 0.40 && yes_price < 0.52 {
-                            "Yes"  // Bet UP - expecting bounce
-                        } else {
-                            "Skip" // Skip otherwise
-                        };
-
-                        if outcome != "Skip" {
+                        let prediction = analyze_market(&markets_snap, yes_price, time_into, time_left);
+                        
+                        if prediction.confidence >= 70 {
+                            let outcome = prediction.direction;
                             let entry = if outcome == "Yes" { yes_price } else { 1.0 - yes_price };
                             let (yes_tok, no_tok) = get_token_ids(m.clob_token_ids.as_deref());
 
@@ -1083,8 +1180,8 @@ async fn run_bot(state: Arc<AppState>) {
                                 no_token_id:   no_tok,
                             });
                             s.last_trade_timestamp = now;
-                            println!("[AUTO] {} ${:.2} @ {:.1}c T-{}s",
-                                outcome, dynamic_bet, entry * 100.0, time_left);
+                            println!("[AUTO] {} ${:.2} @ {:.1}c T-{}s | {}",
+                                outcome, dynamic_bet, entry * 100.0, time_left, prediction.reason);
                             state_changed = true;
                         }
                     }
