@@ -1117,21 +1117,32 @@ async fn run_bot(state: Arc<AppState>) {
                 // Clone markets to avoid borrow conflict with `s`
                 let markets_snap: Vec<Market> = s.current_markets.clone();
 
-                if let Some(m) = markets_snap.iter().find(|m| {
-                    let end  = get_end_timestamp(&m.slug);
-                    let prices = parse_prices(m.outcome_prices.as_deref());
-                    end > now && end <= next_window && prices[0] > 0.01
-                }) {
-                    let end_ts      = get_end_timestamp(&m.slug);
+                // Find ALL markets that are trading in the current window
+                let eligible_markets: Vec<_> = markets_snap.iter()
+                    .filter(|m| {
+                        let end  = get_end_timestamp(&m.slug);
+                        let prices = parse_prices(m.outcome_prices.as_deref());
+                        end > now && end <= next_window && prices[0] > 0.01
+                    })
+                    .collect();
+
+                // Check each market for trading opportunity
+                for m in eligible_markets {
+                    let slug = m.slug.clone();
+                    
+                    // Skip if we already have a position in this market
+                    if s.open_positions.iter().any(|p| p.slug == slug) {
+                        continue;
+                    }
+
+                    let end_ts      = get_end_timestamp(&slug);
                     let time_left   = end_ts - now;
                     let time_into   = 300 - time_left;
                     let prices      = parse_prices(m.outcome_prices.as_deref());
                     let yes_price   = prices[0];
 
-                    println!("[TICK] {} | YES={:.1}c | T-{}s", m.slug, yes_price * 100.0, time_left);
+                    println!("[TICK] {} | YES={:.1}c | T-{}s", slug, yes_price * 100.0, time_left);
 
-                    // FIX: use actual bet_size from settings instead of dynamic formula,
-                    // but keep the dynamic bet as an option with a sensible clamp.
                     let dynamic_bet = (settings.usdc_balance / 25.0)
                         .max(settings.bet_size.min(0.25))
                         .min(10.0);
@@ -1140,28 +1151,18 @@ async fn run_bot(state: Arc<AppState>) {
                     let can_trade  = !s.stopped
                         && !has_active
                         && time_left > 30
-                        && time_into >= 60       // Entry after 1 min (give time for price to settle)
-                        && time_into <= 270     // Entry before 5 min (almost end of window)
+                        && time_into >= 30
+                        && time_into <= 270
                         && settings.matic_balance >= gas_needed
-                        && settings.usdc_balance  >= dynamic_bet
+                        && settings.usdc_balance >= dynamic_bet
                         && yes_price > 0.01
                         && yes_price < 0.99
-                        && yes_price < 0.78;  // Skip overconfident markets
+                        && yes_price < 0.78;
 
-                    if settings.matic_balance < gas_needed {
-                        if !s.stopped {
-                            s.stopped = true;
-                            s.save();
-                        }
-                        eprintln!("[ALERT] Gas too low — MATIC={:.4} need={:.4}. STOPPED.",
-                            settings.matic_balance, gas_needed);
-                    } else if settings.usdc_balance < dynamic_bet {
-                        eprintln!("[ALERT] Insufficient USDC {:.2} < {:.2}",
-                            settings.usdc_balance, dynamic_bet);
-                    } else if can_trade {
+                    if can_trade {
                         let prediction = analyze_market(&markets_snap, yes_price, time_into, time_left);
                         
-                        if prediction.confidence >= 70 {
+                        if prediction.confidence >= 50 {
                             let outcome = prediction.direction;
                             let entry = if outcome == "Yes" { yes_price } else { 1.0 - yes_price };
                             let (yes_tok, no_tok) = get_token_ids(m.clob_token_ids.as_deref());
@@ -1169,7 +1170,7 @@ async fn run_bot(state: Arc<AppState>) {
                             s.settings.usdc_balance  -= dynamic_bet;
                             s.settings.matic_balance -= settings.gas_price;
                             s.open_positions.push(Position {
-                                slug:          m.slug.clone(),
+                                slug:          slug.clone(),
                                 outcome:       outcome.to_string(),
                                 amount:        dynamic_bet,
                                 price:         entry,
