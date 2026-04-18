@@ -67,8 +67,12 @@ Confidence dihitung: `score.min(95)` (maksimal 95%)
 
 ---
 
-## Risk Management
+## Risk Management (DISABLED - Hold to End)
 
-- **TP (Take Profit)**: +20% dari entry price
-- **SL (Stop Loss)**: -20% dari entry price  
-- **Profit Lock**: Auto exit saat +20% (ambil profit)
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `tp_threshold` | 0.0 | Disabled - hold to end |
+| `sl_threshold` | -1.0 | Disabled - hold to end |
+| `profit_lock_pct` | 0.0 | Disabled - hold to end |
+
+> **Note**: TP/SL sekarang dinonaktifkan. Position akan dihold sampai market selesai (expired) untuk mendapat profit maksimal.

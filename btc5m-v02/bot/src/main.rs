@@ -108,9 +108,9 @@ impl Default for BotSettings {
             threshold_below: 0.48,
             max_above: 0.65,
             min_below: 0.35,
-            tp_threshold: 0.20,
-            sl_threshold: -0.20,
-            profit_lock_pct: 0.20,
+            tp_threshold: 0.0,       // Disabled - hold to end
+            sl_threshold: -1.0,       // Disabled - hold to end
+            profit_lock_pct: 0.0,     // Disabled - hold to end
         }
     }
 }
