@@ -422,7 +422,9 @@ async def close_position(pos: dict, won: bool):
     pos["exit_price"] = 1.0 if won else 0.0
     pos["closed_at"]  = datetime.now(timezone.utc).isoformat()
     if won:
-        S.capital = round(S.capital + pos["size"] + pnl, 4)
+        S.capital = round(S.capital + pos["size"] + pnl, 4)  # return bet + profit
+    else:
+        S.capital = round(S.capital - pos["size"], 4)  # lose bet only
     S.daily_pnl = round(S.daily_pnl + pnl, 4)
     S.positions.remove(pos)
     S.closed_trades.append(pos)
