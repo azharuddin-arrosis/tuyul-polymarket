@@ -3,7 +3,7 @@ POLYMARKET BOT v2 — BACKEND
 FastAPI + WebSocket real-time
 Gas alert + auto-stop + compound engine
 """
-import asyncio, json, os, random, math, re
+import asyncio, json, os, random, math
 from datetime import datetime, timezone
 from typing import Optional
 import aiohttp
@@ -192,49 +192,28 @@ async def broadcast(msg: dict):
 
 # ─── MARKET SCANNER (REAL API) ──────────────────────────────
 async def fetch_gamma_markets() -> list:
-    """Fetch real markets from Gamma API — diverse mix for signal opportunities"""
+    """Fetch real markets from Gamma API — ALL categories"""
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as sess:
             all_markets = []
-            
-            # Fetch without order param (gives default mix)
-            async with sess.get(f"{GAMMA}/markets", params={
-                "active": "true", "closed": "false",
-                "limit": 100,
-            }) as r:
-                if r.status == 200:
-                    data = await r.json()
-                    items = data if isinstance(data, list) else data.get("markets", [])
-                    all_markets.extend(items[:40])
-            
-            # Assign category based on question keywords
-            for m in all_markets:
-                q = m.get("question", "").lower()
-                if "btc" in q or "bitcoin" in q or "eth" in q or "crypto" in q:
-                    m["_fetched_cat"] = "crypto"
-                elif "election" in q or "trump" in q or "harris" in q or "congress" in q:
-                    m["_fetched_cat"] = "politics"
-                elif "fed" in q or "rate" in q or "inflation" in q or "cpi" in q:
-                    m["_fetched_cat"] = "economics"
-                elif "game" in q or "win" in q or "score" in q or "match" in q or "nba" in q or "nfl" in q:
-                    m["_fetched_cat"] = "sports"
-                else:
-                    m["_fetched_cat"] = "other"
-            
+            for cat in ALL_CATEGORIES:
+                try:
+                    async with sess.get(f"{GAMMA}/markets", params={
+                        "active": "true", "closed": "false",
+                        "limit": 20, "order": "volume24hr",
+                        "ascending": "false", "category": cat,
+                    }) as r:
+                        if r.status == 200:
+                            data = await r.json()
+                            items = data if isinstance(data, list) else data.get("markets", [])
+                            for m in items:
+                                m["_fetched_cat"] = cat
+                            all_markets.extend(items[:10])
+                except: pass
             return all_markets
     except Exception as e:
         S.errors.append(f"Gamma: {str(e)[:60]}")
         return []
-
-def make_slug(question: str) -> str:
-    """Generate URL-friendly slug from question text"""
-    # Remove special chars, replace spaces with hyphens, lowercase
-    s = question.lower()
-    s = re.sub(r'[^a-z0-9\s]', '', s)  # keep only alphanumeric
-    s = re.sub(r'\s+', '-', s)  # spaces to hyphens
-    s = re.sub(r'-+', '-', s)  # no double hyphens
-    s = s.strip('-')[:80]  # limit length
-    return s
 
 def parse_market(m: dict) -> Optional[dict]:
     """Parse raw Gamma market into bot format - handles both old and new API format"""
@@ -286,11 +265,9 @@ def parse_market(m: dict) -> Optional[dict]:
         return None
 
     vol = float(m.get("volume", 0) or 0)
-    question = m.get("question", "")[:80]
     return {
         "id": m.get("id", ""),
-        "question": question,
-        "slug": make_slug(question),
+        "question": m.get("question", "")[:80],
         "category": (m.get("category") or m.get("_fetched_cat", "other")).lower(),
         "yes_price": round(yes_p, 4),
         "no_price": round(no_p, 4),
@@ -302,18 +279,18 @@ def parse_market(m: dict) -> Optional[dict]:
 def build_market_rows(markets: list) -> list:
     """Build rows for Excel-style table (all categories, all markets)"""
     rows = []
-    for p in markets:
-        if not p: continue
-        # p is already parsed market dict
-        sig = detect_signal(p)
-        # Always include market even if no signal
+    for m in markets:
+        parsed = parse_market(m)
+        if not parsed: continue
+        # determine signal
+        sig = detect_signal(parsed)
         rows.append({
-            **p,
+            **parsed,
             "signal":    sig["strategy"] if sig else "—",
             "ev":        round(sig["ev"], 4) if sig else 0,
             "true_prob": round(sig["true_prob"], 4) if sig else 0,
             "outcome":   sig["outcome"] if sig else "—",
-            "fee":       TAKER_FEE.get(p["category"], 0.01),
+            "fee":       TAKER_FEE.get(parsed["category"], 0.01),
         })
     # sort by volume desc
     rows.sort(key=lambda r: r["volume"], reverse=True)
@@ -343,8 +320,8 @@ def detect_signal(m: dict) -> Optional[dict]:
                 return {"strategy": "no_bias", "outcome": "NO",
                         "ev": round(e, 4), "true_prob": tp_no, "price": no_p}
 
-    # 3. High-prob YES (widen range from 40% to 92%)
-    if 0.40 <= yes_p <= 0.92:
+    # 3. High-prob YES
+    if PROB_MIN <= yes_p <= PROB_MAX:
         tp = min(yes_p + 0.06, 0.90)
         e  = ev(tp, yes_p)
         if e >= MIN_EV:
@@ -632,7 +609,6 @@ async def ws_endpoint(ws: WebSocket):
             "config":    get_config(),
             "markets":   S.market_rows[:80],
             "gas":       get_gas_info(),
-            "history":   S.closed_trades[-20:][::-1],
         }}, default=str))
         while True: await ws.receive_text()
     except WebSocketDisconnect: pass

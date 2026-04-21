@@ -61,6 +61,86 @@ function usePnlHistory(capital, initial) {
   return hist
 }
 
+/* ─── TRADE MODAL ─────────────────────────────── */
+function TradeModal({ trade, onClose }) {
+  if (!trade) return null
+  const won = trade.status === 'won'
+  const marketUrl = trade.market_id ? `https://polymarket.com/event/${trade.market_id}` : null
+
+  return (
+    <div style={{
+      position:'fixed',inset:0,zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',
+      background:'rgba(0,0,0,.7)',
+    }} onClick={onClose}>
+      <div style={{
+        background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',
+        padding:'20px 24px',minWidth:380,maxWidth:480,boxShadow:'0 20px 60px rgba(0,0,0,.5)',
+      }} onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}}>
+          <div>
+            <div style={{fontFamily:'var(--mono)',fontSize:10,color:'var(--text3)',marginBottom:4}}>{trade.id}</div>
+            <div style={{fontSize:14,fontWeight:600,color:'var(--text)',maxWidth:400,lineHeight:1.4}}>{trade.question}</div>
+          </div>
+          <button onClick={onClose} style={{
+            background:'transparent',border:'none',color:'var(--text3)',cursor:'pointer',
+            fontSize:18,padding:'4px 8px',lineHeight:1,
+          }}>x</button>
+        </div>
+
+        {marketUrl && (
+          <a href={marketUrl} target="_blank" rel="noopener noreferrer" style={{
+            display:'inline-block',marginBottom:16,fontSize:11,color:'var(--blue)',
+            fontFamily:'var(--mono)',textDecoration:'none',
+          }}>
+            View on Polymarket
+          </a>
+        )}
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+          <div style={{background:'var(--bg3)',borderRadius:'var(--r)',padding:'12px'}}>
+            <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:4}}>OUTCOME</div>
+            <div style={{
+              fontSize:16,fontWeight:700,color: trade.outcome==='YES'?'var(--green)':'var(--amber)',
+            }}>{trade.outcome}</div>
+          </div>
+          <div style={{background:'var(--bg3)',borderRadius:'var(--r)',padding:'12px'}}>
+            <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:4}}>ENTRY PRICE</div>
+            <div style={{fontSize:16,fontWeight:700,color:'var(--text)',fontFamily:'var(--mono)'}}>
+              ${Number(trade.price).toFixed(4)}
+            </div>
+          </div>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:16}}>
+          {[
+            ['Bet Size', `$${Number(trade.size).toFixed(2)}`, 'var(--text)'],
+            ['Shares', trade.shares?.toFixed(2) || '-', 'var(--text2)'],
+            ['Est. EV', `${(trade.ev*100).toFixed(0)}%`, trade.ev > 0.05 ? 'var(--green)' : 'var(--amber)'],
+          ].map(([label, value, color])=>(
+            <div key={label} style={{textAlign:'center'}}>
+              <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:2}}>{label}</div>
+              <div style={{fontSize:14,fontWeight:600,color,fontFamily:'var(--mono)'}}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{
+          background: won ? 'rgba(0,214,143,.1)' : 'rgba(255,69,96,.1)',
+          border: `1px solid ${won ? 'var(--green)' : 'var(--red)'}33`,
+          borderRadius:'var(--r)',padding:'12px',textAlign:'center',
+        }}>
+          <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:4}}>
+            {won ? 'PROFIT' : 'LOSS'}
+          </div>
+          <div style={{fontSize:24,fontWeight:700,color:won?'var(--green)':'var(--red)',fontFamily:'var(--mono)'}}>
+            {won ? '+' : ''}{Number(trade.pnl).toFixed(4)}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ─── Real-mode info panel ─────────────────────────── */
 function RealModeInfo({ config }) {
   const req = config?.real_requirements
@@ -174,8 +254,9 @@ const TABS = ['overview','markets','compound','history','config','real']
 
 /* ─── MAIN APP ─────────────────────────────────────── */
 export default function App() {
-  const { stats, positions, log, markets, config, gas, connected, lastUpd, notify, resumeGas } = usePolyBot()
+  const { stats, positions, log, markets, config, gas, connected, lastUpd, notify, resumeGas, history } = usePolyBot()
   const [tab, setTab] = useState('overview')
+  const [selectedTrade, setSelectedTrade] = useState(null)
   const pnlHist = usePnlHistory(stats?.capital, stats?.initial)
   const pnl  = stats?.pnl ?? 0
   const isPos = pnl >= 0
@@ -183,6 +264,7 @@ export default function App() {
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',flexDirection:'column'}}>
       <Toast notify={notify} onDismiss={()=>{}} onResume={resumeGas}/>
+      <TradeModal trade={selectedTrade} onClose={()=>setSelectedTrade(null)}/>
 
       {/* ─── HEADER ─── */}
       <header style={{
@@ -255,7 +337,7 @@ export default function App() {
                   ? <div style={{padding:'16px 14px',color:'var(--text3)',fontSize:11,fontFamily:'var(--mono)'}}>_ tidak ada posisi terbuka</div>
                   : <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
                     <thead><tr style={{background:'var(--bg3)'}}>
-                      {['ID','Market','Side','Price','Size','EV','Strat','Cat'].map(h=>(
+                      {['ID','Market','Side','Price','Bet','Shares','EV','Strat','Cat'].map(h=>(
                         <th key={h} style={{padding:'5px 10px',textAlign:'left',fontSize:9,fontFamily:'var(--mono)',color:'var(--text3)',fontWeight:400,letterSpacing:'.06em',textTransform:'uppercase',borderBottom:'1px solid var(--border2)'}}>{h}</th>
                       ))}
                     </tr></thead>
@@ -269,6 +351,7 @@ export default function App() {
                           </td>
                           <td style={{padding:'6px 10px',fontFamily:'var(--mono)',color:'var(--text2)'}}>{p.price?.toFixed(3)}</td>
                           <td style={{padding:'6px 10px',fontFamily:'var(--mono)',color:'var(--text)'}}>${p.size?.toFixed(2)}</td>
+                          <td style={{padding:'6px 10px',fontFamily:'var(--mono)',color:'var(--text2)'}}>{p.shares?.toFixed(2)}</td>
                           <td style={{padding:'6px 10px',fontFamily:'var(--mono)',color:p.ev>0.10?'var(--green)':'var(--amber)'}}>{(p.ev*100).toFixed(0)}%</td>
                           <td style={{padding:'6px 10px'}}>
                             <span style={{fontSize:9,fontFamily:'var(--mono)',color:'var(--blue)'}}>{p.strategy?.replace('_','-')}</span>
@@ -314,7 +397,66 @@ export default function App() {
         {tab==='compound' && <CompoundPanel stats={stats}/>}
 
         {/* ── HISTORY ── */}
-        {tab==='history' && <ActivityLog log={log.filter(e=>['CLOSE','COMPOUND_UP','GAS_WARN','GAS_STOP'].includes(e.event))} maxH="calc(100vh - 120px)"/>}
+        {tab==='history' && (
+          <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
+            <div style={{padding:'9px 14px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',background:'var(--bg3)'}}>
+              <span style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase'}}>Trade History ({history.length})</span>
+              <span style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--mono)'}}>
+                {stats?.wins??0}W / {stats?.losses??0}L | {pct(stats?.win_rate)} win rate
+              </span>
+            </div>
+            {history.length===0 ? (
+              <div style={{padding:'20px 14px',color:'var(--text3)',fontSize:11,fontFamily:'var(--mono)'}}>_ no trade history yet</div>
+            ) : (
+              <div style={{maxHeight:'calc(100vh - 140px)',overflowY:'auto'}}>
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+                  <thead>
+                    <tr style={{background:'var(--bg3)',position:'sticky',top:0,zIndex:10}}>
+                      {['ID','Market','Result','Outcome','Price','Bet','Shares','PnL','EV'].map(h=>(
+                        <th key={h} style={{padding:'6px 12px',textAlign:'left',fontSize:9,fontFamily:'var(--mono)',color:'var(--text3)',fontWeight:400,letterSpacing:'.06em',textTransform:'uppercase',borderBottom:'2px solid var(--border2)'}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((t,i)=>{
+                      const won = t.status === 'won'
+                      return (
+                        <tr key={t.id||i} onClick={()=>setSelectedTrade(t)} style={{
+                          borderBottom:'1px solid var(--border)',
+                          cursor:'pointer',
+                        }}>
+                          <td style={{padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:'var(--text3)'}}>{t.id}</td>
+                          <td style={{padding:'6px 12px',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={t.question}>{t.question}</td>
+                          <td style={{padding:'6px 12px'}}>
+                            <span style={{fontSize:9,fontFamily:'var(--mono)',padding:'2px 6px',borderRadius:3,
+                              background:(won?'#00d68f':'#ff4560')+'22',color:won?'var(--green)':'var(--red)'}}>
+                              {won?'WON':'LOST'}
+                            </span>
+                          </td>
+                          <td style={{padding:'6px 12px'}}>
+                            <span style={{fontSize:10,fontFamily:'var(--mono)',padding:'2px 6px',borderRadius:3,
+                              background:(t.outcome==='YES'?'#00d68f':'#ffaa00')+'22',color:t.outcome==='YES'?'var(--green)':'var(--amber)'}}>
+                              {t.outcome}
+                            </span>
+                          </td>
+                          <td style={{padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:'var(--text2)'}}>{t.price?.toFixed(3)}</td>
+                          <td style={{padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:'var(--text)'}}>${Number(t.size||0).toFixed(2)}</td>
+                          <td style={{padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:'var(--text2)'}}>{Number(t.shares||0).toFixed(2)}</td>
+                          <td style={{padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:won?'var(--green)':'var(--red)'}}>
+                            {won?'+':''}{Number(t.pnl||0).toFixed(4)}
+                          </td>
+                          <td style={{padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:t.ev>0.10?'var(--green)':'var(--amber)'}}>
+                            {((t.ev||0)*100).toFixed(0)}%
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── CONFIG ── */}
         {tab==='config' && <ConfigTable config={config}/>}

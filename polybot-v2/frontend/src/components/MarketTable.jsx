@@ -30,6 +30,7 @@ export function MarketTable({ markets }) {
   const [cat,   setCat]   = useState('all')
   const [sigF,  setSigF]  = useState('all')
   const [search,setSearch]= useState('')
+  const [selectedMarket, setSelectedMarket] = useState(null)
 
   const cats = useMemo(() => ['all',...new Set(markets.map(m=>m.category).filter(Boolean))], [markets])
 
@@ -51,8 +52,87 @@ export function MarketTable({ markets }) {
   const toggle = key => setSort(s=>s.key===key?{key,dir:-s.dir}:{key,dir:-1})
   const arrow  = key => sort.key===key ? (sort.dir>0?'↑':'↓') : ''
 
+  // Build a map from market question to its market_id for links
+  const marketUrl = row => row.id ? `https://polymarket.com/event/${row.id}` : null
+
   return (
     <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden',display:'flex',flexDirection:'column'}}>
+      {/* market detail modal */}
+      {selectedMarket && (
+        <div style={{
+          position:'fixed',inset:0,zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',
+          background:'rgba(0,0,0,.7)',
+        }} onClick={()=>setSelectedMarket(null)}>
+          <div style={{
+            background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',
+            padding:'20px 24px',minWidth:400,maxWidth:520,boxShadow:'0 20px 60px rgba(0,0,0,.5)',
+          }} onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
+              <div style={{fontSize:13,fontWeight:600,color:'var(--text)',maxWidth:440,lineHeight:1.4}}>
+                {selectedMarket.question}
+              </div>
+              <button onClick={()=>setSelectedMarket(null)} style={{
+                background:'transparent',border:'none',color:'var(--text3)',cursor:'pointer',
+                fontSize:18,padding:'4px 8px',lineHeight:1,
+              }}>×</button>
+            </div>
+
+            <a href={marketUrl(selectedMarket)} target="_blank" rel="noopener noreferrer" style={{
+              display:'inline-block',marginBottom:16,fontSize:11,color:'var(--blue)',
+              fontFamily:'var(--mono)',textDecoration:'none',
+            }}>
+              → View on Polymarket ↗
+            </a>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:16}}>
+              {[
+                ['YES', selectedMarket.yes_price?.toFixed(4) || '—', selectedMarket.yes_price >= 0.6 ? 'var(--green)' : 'var(--text2)'],
+                ['NO', selectedMarket.no_price?.toFixed(4) || '—', 'var(--text2)'],
+                ['Volume', selectedMarket.volume >= 1e6 ? `$${(selectedMarket.volume/1e6).toFixed(1)}M` : `$${(selectedMarket.volume/1e3).toFixed(0)}K`, 'var(--text2)'],
+              ].map(([label, value, color])=>(
+                <div key={label} style={{textAlign:'center',background:'var(--bg3)',borderRadius:'var(--r)',padding:'10px'}}>
+                  <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:2}}>{label}</div>
+                  <div style={{fontSize:14,fontWeight:700,color,fontFamily:'var(--mono)'}}>{value}</div>
+                </div>
+              ))}
+            </div>
+
+            {selectedMarket.signal !== '—' && (
+              <div style={{background:'var(--bg3)',borderRadius:'var(--r)',padding:'12px',marginBottom:16}}>
+                <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:8}}>SIGNAL DETECTED</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:8}}>
+                  {[
+                    ['Strategy', selectedMarket.signal.replace('_','-')],
+                    ['Side', selectedMarket.outcome],
+                    ['EV', `${(selectedMarket.ev*100).toFixed(1)}%`],
+                    ['True Prob', `${(selectedMarket.true_prob*100).toFixed(1)}%`],
+                  ].map(([label, value])=>(
+                    <div key={label} style={{textAlign:'center'}}>
+                      <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:2}}>{label}</div>
+                      <div style={{fontSize:12,fontWeight:600,color:'var(--text)',fontFamily:'var(--mono)'}}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              {[
+                ['Category', selectedMarket.category?.toUpperCase() || '—'],
+                ['End Date', selectedMarket.end_date ? new Date(selectedMarket.end_date).toLocaleDateString() : '—'],
+              ].map(([label, value])=>(
+                <div key={label} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+                  <span style={{fontSize:11,color:'var(--text3)'}}>{label}</span>
+                  <span style={{fontSize:11,color:'var(--text2)',fontFamily:'var(--mono)'}}>{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* main table wrapper */}
+      <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden',display:'flex',flexDirection:'column'}}>
       {/* toolbar */}
       <div style={{padding:'10px 14px',borderBottom:'1px solid var(--border)',display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',background:'var(--bg3)'}}>
         <span style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--mono)',marginRight:4}}>
@@ -123,18 +203,27 @@ export function MarketTable({ markets }) {
               const catC   = CAT_COLOR[row.category] || '#94a3b8'
               const sigC   = STRAT_COLOR[row.signal]  || 'transparent'
               return (
-                <tr key={row.id||i} style={{
+                <tr key={row.id||i} onClick={()=>setSelectedMarket(row)} style={{
                   borderBottom:'1px solid var(--border)',
                   background: hasSig ? sigC+'11' : i%2===0?'transparent':'rgba(255,255,255,.012)',
                   animation: hasSig ? 'flash .5s ease' : 'none',
+                  cursor:'pointer',
                 }}>
                   {/* category */}
                   <td style={{padding:'6px 10px'}}>
                     <Tag text={row.category?.toUpperCase()} color={catC}/>
                   </td>
                   {/* question */}
-                  <td style={{padding:'6px 10px',fontSize:11,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={row.question}>
-                    {row.question}
+                  <td style={{padding:'6px 10px',fontSize:11,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    <span title={row.question}>{row.question}</span>
+                    {row.id && (
+                      <a href={`https://polymarket.com/event/${row.id}`} target="_blank" rel="noopener noreferrer"
+                        onClick={e=>e.stopPropagation()}
+                        style={{marginLeft:6,color:'var(--blue)',fontSize:10,textDecoration:'none'}}
+                        title="View on Polymarket">
+                        ↗
+                      </a>
+                    )}
                   </td>
                   {/* yes */}
                   <td style={{padding:'6px 10px',fontFamily:'var(--mono)',fontSize:11,
@@ -183,10 +272,11 @@ export function MarketTable({ markets }) {
                   </td>
                 </tr>
               )
-            })}
+})}
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   )
 }
