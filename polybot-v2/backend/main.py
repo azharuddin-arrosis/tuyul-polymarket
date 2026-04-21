@@ -4,6 +4,9 @@ FastAPI + WebSocket real-time
 Gas alert + auto-stop + compound engine
 """
 import asyncio, json, os, random, math, re
+
+# Lock to prevent double-entry race conditions
+_bot_lock = asyncio.Lock()
 from datetime import datetime, timezone
 from typing import Optional
 import aiohttp
@@ -474,23 +477,24 @@ async def scanner_loop():
 
             # Act on signals (only if not gas-paused)
             if not S.gas_paused:
-                scanned = set()  # dedup within this scan
-                for row in S.market_rows:
-                    if row["signal"] == "—": continue
-                    mid = row["id"]
-                    if mid in scanned: continue  # skip duplicate markets in same scan
-                    scanned.add(mid)
-                    already = any(p["market_id"] == mid and p["status"]=="open" for p in S.positions)
-                    if already: continue
-                    if random.random() < 0.20:  # 20% act rate
-                        sig = {
-                            "strategy":  row["signal"],
-                            "outcome":   row["outcome"],
-                            "ev":        row["ev"],
-                            "true_prob": row["true_prob"],
-                            "price":     row["yes_price"] if row["outcome"] in ("YES","YES+NO") else row["no_price"],
-                        }
-                        await open_position(row, sig)
+                async with _bot_lock:  # prevent race conditions
+                    scanned = set()  # dedup within this scan
+                    for row in S.market_rows:
+                        if row["signal"] == "—": continue
+                        mid = row["id"]
+                        if mid in scanned: continue  # skip duplicate markets in same scan
+                        scanned.add(mid)
+                        already = any(p["market_id"] == mid and p["status"]=="open" for p in S.positions)
+                        if already: continue
+                        if random.random() < 0.20:  # 20% act rate
+                            sig = {
+                                "strategy":  row["signal"],
+                                "outcome":   row["outcome"],
+                                "ev":        row["ev"],
+                                "true_prob": row["true_prob"],
+                                "price":     row["yes_price"] if row["outcome"] in ("YES","YES+NO") else row["no_price"],
+                            }
+                            await open_position(row, sig)
 
             await broadcast({"type":"stats",   "data": get_stats()})
             await broadcast({"type":"markets",  "data": S.market_rows[:80]})
