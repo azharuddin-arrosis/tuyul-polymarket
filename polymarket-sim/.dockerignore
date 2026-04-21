@@ -1,0 +1,32 @@
+# Build artifacts
+target/
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*
+
+# Docs
+README.md
+LICENSE
+
+# OS
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.*
+*.local.yaml
+
+# Misc
+*.log
