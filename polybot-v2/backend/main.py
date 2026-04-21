@@ -372,6 +372,9 @@ def risk_ok(sig: dict) -> tuple[bool, str]:
 
 # ─── POSITION MANAGEMENT ───────────────────────────────────
 async def open_position(market: dict, sig: dict):
+    # Guard: skip if market already has open position
+    if any(p["market_id"] == market["id"] and p["status"] == "open" for p in S.positions):
+        return
     ok, reason = risk_ok(sig)
     if not ok:
         add_log("REJECTED", {"reason": reason, "question": market["question"][:50]})
@@ -469,9 +472,13 @@ async def scanner_loop():
 
             # Act on signals (only if not gas-paused)
             if not S.gas_paused:
+                scanned = set()  # dedup within this scan
                 for row in S.market_rows:
                     if row["signal"] == "—": continue
-                    already = any(p["market_id"] == row["id"] and p["status"]=="open" for p in S.positions)
+                    mid = row["id"]
+                    if mid in scanned: continue  # skip duplicate markets in same scan
+                    scanned.add(mid)
+                    already = any(p["market_id"] == mid and p["status"]=="open" for p in S.positions)
                     if already: continue
                     if random.random() < 0.20:  # 20% act rate
                         sig = {
