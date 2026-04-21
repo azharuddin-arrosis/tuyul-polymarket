@@ -12,6 +12,7 @@ target/
 # Docker
 Dockerfile*
 docker-compose*
+.dockerignore
 
 # Docs
 README.md

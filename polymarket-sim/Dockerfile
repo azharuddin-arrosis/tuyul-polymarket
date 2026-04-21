@@ -9,22 +9,10 @@ RUN apk add --no-cache musl-dev openssl-dev pkgconfig
 # Create app directory
 WORKDIR /app
 
-# Copy manifest first for better caching
-COPY Cargo.toml Cargo.lock ./
-
-# Create dummy main.rs to build dependencies
-RUN mkdir src && \
-    echo "fn main() {}" > src/main.rs
-
-# Build dependencies
-RUN cargo build --release
-RUN rm -rf src
-
-# Copy source code
+# Copy all source code
 COPY . .
 
-# Build the application
-RUN touch src/main.rs src/models.rs src/polymarket.rs
+# Build the application (dependencies will be downloaded and compiled)
 RUN cargo build --release
 
 # -----------------------------------------------------------------------
@@ -43,14 +31,8 @@ WORKDIR /home/appuser
 # Copy binary from builder
 COPY --from=builder /app/target/release/polymarket-sim .
 
-# Create directory for static files
-RUN mkdir -p /home/appuser/static
-
-# Copy static files
-COPY static/ ./static/
-
 # Ensure proper permissions
-RUN chown -R appuser:appuser /home/appuser
+RUN chown appuser:appuser /home/appuser/polymarket-sim
 
 # Switch to non-root user
 USER appuser
