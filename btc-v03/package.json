@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-btc-v03",
+  "version": "1.0.0",
+  "description": "Polymarket Scanner Bot - Single File",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node --watch bot.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "xlsx": "^0.18.5",
+    "node-cron": "^3.0.3"
+  }
+}

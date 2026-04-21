@@ -41,6 +41,213 @@ struct Market {
     #[serde(rename = "outcomePrices")] outcome_prices: Option<String>,
 }
 
+// ========== NEW: MOMENTUM TRADING SYSTEM ==========
+
+#[derive(Debug, Clone)]
+struct PricePoint {
+    timestamp: i64,
+    yes_price: f64,
+    no_price: f64,
+}
+
+impl Default for PricePoint {
+    fn default() -> Self {
+        Self {
+            timestamp: 0,
+            yes_price: 0.5,
+            no_price: 0.5,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct MarketMomentum {
+    slug: String,
+    history: Vec<PricePoint>,
+}
+
+impl MarketMomentum {
+    fn new(slug: &str) -> Self {
+        Self {
+            slug: slug.to_string(),
+            history: Vec::with_capacity(20),
+        }
+    }
+    
+    fn add_point(&mut self, yes_price: f64, no_price: f64) {
+        let now = chrono::Utc::now().timestamp();
+        
+        // Remove old points (>10 minutes)
+        self.history.retain(|p| now - p.timestamp < 600);
+        
+        self.history.push(PricePoint {
+            timestamp: now,
+            yes_price,
+            no_price,
+        });
+    }
+    
+    fn calculate_momentum(&self) -> MomentumData {
+        if self.history.len() < 3 {
+            return MomentumData {
+                direction: Direction::SIDEWAYS,
+                speed: 0.0,
+                speed_class: SpeedClass::SLOW,
+                acceleration: 0.0,
+                signal: MomentumSignal::insufficient_data,
+                current_price: 0.5,
+            };
+        }
+        
+        let first = &self.history.first().unwrap();
+        let last = &self.history.last().unwrap();
+        let time_diff = (last.timestamp - first.timestamp) as f64 / 60.0; // dalam menit
+        
+        if time_diff < 0.5 {
+            return MomentumData {
+                direction: Direction::SIDEWAYS,
+                speed: 0.0,
+                speed_class: SpeedClass::SLOW,
+                acceleration: 0.0,
+                signal: MomentumSignal::insufficient_data,
+                current_price: last.yes_price,
+            };
+        }
+        
+        let price_change = last.yes_price - first.yes_price;
+        let speed = price_change / time_diff; // perubahan per menit
+        
+        // Direction
+        let direction = if price_change > 0.03 {
+            Direction::UP
+        } else if price_change < -0.03 {
+            Direction::DOWN
+        } else {
+            Direction::SIDEWAYS
+        };
+        
+        // Speed classification
+        let speed_class = speed.abs().into();
+        
+        // Calculate acceleration (changes in speed)
+        let acceleration = if self.history.len() >= 5 {
+            let mid = self.history.len() / 2;
+            let first_half = &self.history[..mid];
+            let second_half = &self.history[mid..];
+            
+            let first_avg: f64 = first_half.iter().map(|p| p.yes_price).sum::<f64>() / first_half.len() as f64;
+            let second_avg: f64 = second_half.iter().map(|p| p.yes_price).sum::<f64>() / second_half.len() as f64;
+            
+            second_avg - first_avg
+        } else {
+            0.0
+        };
+        
+        let signal = match (direction, speed_class) {
+            (Direction::UP, SpeedClass::FAST) if last.yes_price < 0.40 => MomentumSignal::STRONG_BUY_YES,
+            (Direction::UP, SpeedClass::MODERATE) if last.yes_price < 0.35 => MomentumSignal::BUY_YES,
+            (Direction::UP, SpeedClass::SLOW) if last.yes_price < 0.25 => MomentumSignal::BUY_YES,
+            (Direction::DOWN, SpeedClass::FAST) if last.yes_price > 0.60 => MomentumSignal::STRONG_BUY_NO,
+            (Direction::DOWN, SpeedClass::MODERATE) if last.yes_price > 0.65 => MomentumSignal::BUY_NO,
+            (Direction::DOWN, SpeedClass::SLOW) if last.yes_price > 0.75 => MomentumSignal::BUY_NO,
+            (Direction::SIDEWAYS, _) => MomentumSignal::WAIT,
+            _ => MomentumSignal::WAIT,
+        };
+        
+        MomentumData {
+            direction,
+            speed,
+            speed_class,
+            acceleration,
+            signal,
+            current_price: last.yes_price,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Direction {
+    UP,
+    DOWN,
+    SIDEWAYS,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum SpeedClass {
+    FAST,
+    MODERATE,
+    SLOW,
+}
+
+impl From<f64> for SpeedClass {
+    fn from(speed: f64) -> Self {
+        let abs_speed = speed.abs();
+        if abs_speed > 0.05 {
+            SpeedClass::FAST
+        } else if abs_speed > 0.02 {
+            SpeedClass::MODERATE
+        } else {
+            SpeedClass::SLOW
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[allow(non_camel_case_types)]
+enum MomentumSignal {
+    // BUY signals
+    STRONG_BUY_YES,  // Strong momentum up, price low
+    BUY_YES,        // Moderate momentum up, price low
+    BUY_NO,         // Moderate momentum down, price high
+    STRONG_BUY_NO,  // Strong momentum down, price high
+    WAIT,          // No clear signal
+    insufficient_data,
+}
+
+// Struct to hold computed momentum data
+#[derive(Debug, Clone)]
+struct MomentumData {
+    direction: Direction,
+    speed: f64,
+    speed_class: SpeedClass,
+    acceleration: f64,
+    signal: MomentumSignal,
+    current_price: f64,
+}
+
+impl MomentumSignal {
+    fn to_string(&self) -> &str {
+        match self {
+            MomentumSignal::STRONG_BUY_YES => "STRONG YES ↑",
+            MomentumSignal::BUY_YES => "BUY YES ↑",
+            MomentumSignal::STRONG_BUY_NO => "STRONG NO ↓",
+            MomentumSignal::BUY_NO => "BUY NO ↓",
+            MomentumSignal::WAIT => "WAIT",
+            MomentumSignal::insufficient_data => "-",
+        }
+    }
+    
+    fn to_outcome(&self) -> Option<&str> {
+        match self {
+            MomentumSignal::STRONG_BUY_YES |
+            MomentumSignal::BUY_YES => Some("Yes"),
+            MomentumSignal::STRONG_BUY_NO |
+            MomentumSignal::BUY_NO => Some("No"),
+            _ => None,
+        }
+    }
+    
+    fn to_action_color(&self) -> &str {
+        match self {
+            MomentumSignal::STRONG_BUY_YES |
+            MomentumSignal::BUY_YES => "#10b981",
+            MomentumSignal::STRONG_BUY_NO |
+            MomentumSignal::BUY_NO => "#ef4444",
+            _ => "#888888",
+        }
+    }
+}
+
 #[derive(Clone)]
 struct AppState {
     user_address: String,
@@ -88,6 +295,7 @@ struct DashboardState {
     app: AppState,
     simulate_history: std::sync::Mutex<Vec<SimulateTrade>>,
     sim_settings: std::sync::Mutex<SimSettings>,
+    momentum_history: std::sync::Mutex<Vec<MarketMomentum>>,  // NEW: track price history
 }
 
 impl Clone for DashboardState {
@@ -96,6 +304,7 @@ impl Clone for DashboardState {
             app: self.app.clone(),
             simulate_history: std::sync::Mutex::new(Vec::new()),
             sim_settings: std::sync::Mutex::new(SimSettings::default()),
+            momentum_history: std::sync::Mutex::new(Vec::new()),
         }
     }
 }
@@ -181,6 +390,30 @@ async fn fetch_btc5m_markets() -> Vec<Market> {
     markets
 }
 
+// Fungsi helper untuk update momentum history
+fn update_momentum_state(state: &Arc<DashboardState>, markets: &[Market]) {
+    let mut momentum_state = state.momentum_history.lock().unwrap();
+    
+    for market in markets {
+        let prices: Vec<String> = serde_json::from_str(market.outcome_prices.as_ref().unwrap_or(&"[]".to_string())).unwrap_or_default();
+        let yes_price = prices.get(0).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.5);
+        let no_price = prices.get(1).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.5);
+        
+        // Find or create momentum tracker for this market
+        if let Some(m) = momentum_state.iter_mut().find(|m| m.slug == market.slug) {
+            m.add_point(yes_price, no_price);
+        } else {
+            let mut new_m = MarketMomentum::new(&market.slug);
+            new_m.add_point(yes_price, no_price);
+            momentum_state.push(new_m);
+        }
+    }
+    
+    // Clean up old markets
+    let current_slugs: Vec<String> = markets.iter().map(|m| m.slug.clone()).collect();
+    momentum_state.retain(|m| current_slugs.contains(&m.slug));
+}
+
 async fn dashboard_handler(State(state): State<Arc<DashboardState>>) -> Html<String> {
     let _user = state.app.user_address.clone();
     
@@ -189,41 +422,78 @@ async fn dashboard_handler(State(state): State<Arc<DashboardState>>) -> Html<Str
     let current_time = chrono::Utc::now().timestamp() as u64;
     let mut settings = state.sim_settings.lock().unwrap();
     
+    // ========== NEW: MOMENTUM-BASED TRADING ==========
+    // First, update momentum history for all markets
+    {
+        let mut momentum_state = state.momentum_history.lock().unwrap();
+        for market in &markets {
+            let prices: Vec<String> = serde_json::from_str(market.outcome_prices.as_ref().unwrap_or(&"[]".to_string())).unwrap_or_default();
+            let yes_price = prices.get(0).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.5);
+            let no_price = prices.get(1).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.5);
+            
+            if let Some(m) = momentum_state.iter_mut().find(|m| m.slug == market.slug) {
+                m.add_point(yes_price, no_price);
+            } else {
+                let mut new_m = MarketMomentum::new(&market.slug);
+                new_m.add_point(yes_price, no_price);
+                momentum_state.push(new_m);
+            }
+        }
+        
+        // Clean up old markets
+        let current_slugs: Vec<String> = markets.iter().map(|m| m.slug.clone()).collect();
+        momentum_state.retain(|m| current_slugs.contains(&m.slug));
+    }
+    
     if settings.auto_mode && !markets.is_empty() {
         let time_since_last = current_time.saturating_sub(settings.last_trade_timestamp);
         
         // Only trade once per 5 minutes (300 seconds)
         if time_since_last >= 300 {
             let m = &markets[0]; // Trade on first market
-            let prices: Vec<String> = serde_json::from_str(m.outcome_prices.as_ref().unwrap_or(&"[]".to_string())).unwrap_or_default();
-            let yes_price = prices.get(0).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.5);
             
-            let should_trade = yes_price >= settings.threshold_above || yes_price <= settings.threshold_below;
+            // Get momentum signal
+            let momentum_state = state.momentum_history.lock().unwrap();
+            let momentum = momentum_state.iter()
+                .find(|mt| mt.slug == m.slug)
+                .map(|mt| mt.calculate_momentum());
             
-            if should_trade {
-                let outcome = if yes_price >= settings.threshold_above { "Yes" } else { "No" };
-                let pnl = if outcome == "Yes" {
-                    settings.bet_size * (1.0 - yes_price) - settings.gas_price
+            if let Some(mom) = momentum {
+                let signal = mom.signal;
+                
+                // Only trade on STRONG signals, skip weak signals
+                if let Some(outcome) = signal.to_outcome() {
+                    let prices: Vec<String> = serde_json::from_str(m.outcome_prices.as_ref().unwrap_or(&"[]".to_string())).unwrap_or_default();
+                    let yes_price = prices.get(0).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.5);
+                    
+                    // Calculate PnL based on outcome
+                    let pnl = if outcome == "Yes" {
+                        settings.bet_size * (1.0 - yes_price) - settings.gas_price
+                    } else {
+                        -settings.bet_size * yes_price - settings.gas_price
+                    };
+                    
+                    let trade = SimulateTrade {
+                        slug: m.slug.clone(),
+                        outcome: outcome.to_string(),
+                        amount: settings.bet_size,
+                        price: yes_price,
+                        pnl,
+                        timestamp: current_time,
+                        gas_cost: settings.gas_price,
+                    };
+                    
+                    state.simulate_history.lock().unwrap().push(trade);
+                    settings.last_trade_timestamp = current_time;
+                    settings.usdc_balance += pnl;
+                    settings.matic_balance -= settings.gas_price;
+                    
+                    println!("[MOMENTUM-TRADE] {} {} ${:.2} price={:.3} signal={:?} -> P&L: {:.2}", 
+                        m.slug, outcome, settings.bet_size, yes_price, signal, pnl);
                 } else {
-                    -settings.bet_size * yes_price - settings.gas_price
-                };
-                
-                let trade = SimulateTrade {
-                    slug: m.slug.clone(),
-                    outcome: outcome.to_string(),
-                    amount: settings.bet_size,
-                    price: yes_price,
-                    pnl,
-                    timestamp: current_time,
-                    gas_cost: settings.gas_price,
-                };
-                
-                state.simulate_history.lock().unwrap().push(trade);
-                settings.last_trade_timestamp = current_time;
-                settings.usdc_balance += pnl;
-                settings.matic_balance -= settings.gas_price;
-                
-                println!("[AUTO-SIMULATE] {} {} ${:.2} price={:.3} -> P&L: {:.2}", m.slug, outcome, settings.bet_size, yes_price, pnl);
+                    println!("[MOMENTUM-WAIT] {} price={:.3} signal={:?} -> Waiting for better entry", 
+                        m.slug, mom.current_price, signal);
+                }
             }
         }
     }
@@ -644,6 +914,7 @@ async fn main() {
         },
         simulate_history: std::sync::Mutex::new(Vec::new()),
         sim_settings: std::sync::Mutex::new(SimSettings::default()),
+        momentum_history: std::sync::Mutex::new(Vec::new()),
     });
     
     let app = Router::new()
