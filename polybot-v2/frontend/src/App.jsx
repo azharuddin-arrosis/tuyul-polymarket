@@ -1,468 +1,303 @@
 import { useState, useEffect } from 'react'
 import { usePolyBot } from './hooks/usePolyBot.js'
-import { Toast } from './components/Toast.jsx'
-import { GasPanel } from './components/GasPanel.jsx'
-import { MarketTable } from './components/MarketTable.jsx'
-import { CompoundPanel } from './components/CompoundPanel.jsx'
-import { ActivityLog } from './components/ActivityLog.jsx'
-import { usd, pct, signUsd, CAT_COLOR } from './utils.js'
+import { SetupWizard } from './components/SetupWizard.jsx'
+import { SalaryPanel } from './components/SalaryPanel.jsx'
+import { PositionCard } from './components/PositionCard.jsx'
+import { MarketTable, GasPanel, Toast, ActivityLog, XTag } from './components/Widgets.jsx'
+import { usd, pct, CAT_COLOR, STRAT_COLOR } from './utils.js'
 
-/* ─── tiny shared UI ─────────────────────────────── */
-function Dot({ on }) {
-  return <span style={{
-    display:'inline-block',width:6,height:6,borderRadius:'50%',marginRight:5,
-    background: on?'var(--green)':'var(--red)',
-    boxShadow: on?'0 0 5px var(--green)':'0 0 5px var(--red)',
-    animation: on?'pulse 2s infinite':'none',
-  }}/>
-}
-function Badge({ text, color }) {
-  return <span style={{
-    fontSize:9,fontFamily:'var(--mono)',padding:'2px 8px',borderRadius:4,letterSpacing:'.08em',
-    background:color+'22',color,border:`1px solid ${color}44`,
-  }}>{text}</span>
-}
-function StatCard({ label, value, sub, color, mono }) {
-  return (
-    <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'12px 14px'}}>
-      <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:2}}>{label}</div>
-      <div style={{fontSize:20,fontWeight:600,color:color||'var(--text)',fontFamily:mono?'var(--mono)':'var(--sans)'}}>{value}</div>
-      {sub && <div style={{fontSize:10,color:'var(--text3)',marginTop:1}}>{sub}</div>}
+/* ─── Primitive UI ──────────────────────────── */
+function Dot({on}){return <span style={{display:'inline-block',width:5,height:5,borderRadius:'50%',marginRight:4,background:on?'var(--green)':'var(--red)',boxShadow:on?'0 0 4px var(--green)':'none',animation:on?'pulse 2s infinite':'none'}}/>}
+
+/* Stat card — Excel cell style */
+function Stat({label,value,sub,color,mono,accent}){
+  return(
+    <div style={{background:'var(--bg2)',border:`1px solid ${accent||'var(--border)'}`,borderRadius:'var(--r3)',padding:'6px 10px',minWidth:0}}>
+      <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:1}}>{label}</div>
+      <div style={{fontSize:15,fontWeight:600,color:color||'var(--text)',fontFamily:mono?'var(--mono)':'var(--sans)',lineHeight:1.2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{value}</div>
+      {sub&&<div style={{fontSize:'var(--fsxs)',color:'var(--text3)',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{sub}</div>}
     </div>
   )
 }
-function PnlSparkline({ history }) {
-  if (history.length < 2) return null
-  const min = Math.min(...history.map(h=>h.v))
-  const max = Math.max(...history.map(h=>h.v))
-  const range = max - min || 1
-  const W=200, H=40, pad=4
-  const pts = history.map((h,i)=>{
-    const x = pad + (i/(history.length-1))*(W-2*pad)
-    const y = H-pad - ((h.v-min)/range)*(H-2*pad)
-    return `${x},${y}`
-  }).join(' ')
-  const last = history[history.length-1].v
-  const color = last>=0?'#00d68f':'#ff4560'
-  return (
-    <svg width={W} height={H} style={{display:'block'}}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round"/>
+
+/* Mini compound row */
+function CompoundRow({stats}){
+  if(!stats) return null
+  const t=stats.compound_tier??0, b=stats.compound_bet??1, p=stats.compound_prog??0
+  return(
+    <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'6px 10px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:4,alignItems:'center'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.05em'}}>Compound</span>
+        <span style={{fontFamily:'var(--mono)',fontSize:'var(--fss)',color:'var(--green)',fontWeight:600}}>T{t} · ${b}/bet</span>
+      </div>
+      <div style={{display:'flex',gap:6,marginBottom:4,fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>
+        <span style={{color:'var(--text3)'}}>Next:</span>
+        <span style={{color:'var(--amber)'}}>${stats.compound_next??20}</span>
+        <span style={{color:'var(--text3)',marginLeft:'auto'}}>{p}%</span>
+      </div>
+      <div style={{height:3,background:'var(--border2)',borderRadius:1,overflow:'hidden'}}>
+        <div style={{height:'100%',width:`${p}%`,background:'linear-gradient(90deg,var(--amber),var(--green))',borderRadius:1,transition:'width .6s'}}/>
+      </div>
+    </div>
+  )
+}
+
+/* Mini salary row */
+function SalaryRow({salary}){
+  if(!salary) return null
+  return(
+    <div style={{background:'var(--bg2)',border:'1px solid rgba(200,168,32,.2)',borderRadius:'var(--r3)',padding:'6px 10px'}}>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:4,alignItems:'center'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--gold)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.05em'}}>💰 Salary</span>
+        <span style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:'var(--text3)'}}>{salary.salary_count||0}x · {usd(salary.total_withdrawn)}</span>
+      </div>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:4,fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>
+        <span style={{color:'var(--text3)'}}>Next:</span>
+        <span style={{color:'var(--gold)'}}>{usd(salary.next_target)}</span>
+        <span style={{color:'var(--text3)'}}>−{usd(salary.to_next)}</span>
+      </div>
+      <div style={{height:3,background:'var(--border2)',borderRadius:1,overflow:'hidden'}}>
+        <div style={{height:'100%',width:`${salary.progress_pct||0}%`,background:'linear-gradient(90deg,rgba(200,168,32,.4),var(--gold))',borderRadius:1,transition:'width .8s'}}/>
+      </div>
+    </div>
+  )
+}
+
+/* PnL sparkline */
+function Spark({history}){
+  if(history.length<2) return <div style={{height:36,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)',fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>_ no data</div>
+  const vals=history.map(h=>h.v)
+  const mn=Math.min(...vals),mx=Math.max(...vals),rng=mx-mn||1
+  const W=400,H=36,p=2
+  const pts=history.map((h,i)=>`${p+(i/(history.length-1))*(W-2*p)},${H-p-((h.v-mn)/rng)*(H-2*p)}`).join(' ')
+  const last=vals[vals.length-1]
+  const col=last>=0?'#00c87a':'#f04060'
+  return(
+    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      <polyline points={pts} fill="none" stroke={col} strokeWidth="1.5" strokeLinejoin="round"/>
     </svg>
   )
 }
-
-/* ─── PnL history hook ────────────────────────────── */
-function usePnlHistory(capital, initial) {
-  const [hist, setHist] = useState([{t:0,v:0}])
-  useEffect(()=>{
-    if (capital==null) return
-    setHist(h=>[...h,{t:h.length,v:Number((capital-(initial||10)).toFixed(4))}].slice(-80))
-  },[capital])
-  return hist
+function usePnlHistory(cap,init){
+  const [h,setH]=useState([{t:0,v:0}])
+  useEffect(()=>{ if(cap==null) return; setH(p=>[...p,{t:p.length,v:Number((cap-(init||10)).toFixed(4))}].slice(-120)) },[cap])
+  return h
 }
 
-/* ─── TRADE MODAL ─────────────────────────────── */
-function TradeModal({ trade, onClose }) {
-  if (!trade) return null
-  const won = trade.status === 'won'
-  const marketUrl = trade.market_id ? `https://polymarket.com/event/${trade.market_id}` : null
-
-  return (
-    <div style={{
-      position:'fixed',inset:0,zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',
-      background:'rgba(0,0,0,.7)',
-    }} onClick={onClose}>
-      <div style={{
-        background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',
-        padding:'20px 24px',minWidth:380,maxWidth:480,boxShadow:'0 20px 60px rgba(0,0,0,.5)',
-      }} onClick={e=>e.stopPropagation()}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}}>
-          <div>
-            <div style={{fontFamily:'var(--mono)',fontSize:10,color:'var(--text3)',marginBottom:4}}>{trade.id}</div>
-            <div style={{fontSize:14,fontWeight:600,color:'var(--text)',maxWidth:400,lineHeight:1.4}}>{trade.question}</div>
-          </div>
-          <button onClick={onClose} style={{
-            background:'transparent',border:'none',color:'var(--text3)',cursor:'pointer',
-            fontSize:18,padding:'4px 8px',lineHeight:1,
-          }}>x</button>
-        </div>
-
-        {marketUrl && (
-          <a href={marketUrl} target="_blank" rel="noopener noreferrer" style={{
-            display:'inline-block',marginBottom:16,fontSize:11,color:'var(--blue)',
-            fontFamily:'var(--mono)',textDecoration:'none',
-          }}>
-            View on Polymarket
-          </a>
-        )}
-
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
-          <div style={{background:'var(--bg3)',borderRadius:'var(--r)',padding:'12px'}}>
-            <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:4}}>OUTCOME</div>
-            <div style={{
-              fontSize:16,fontWeight:700,color: trade.outcome==='YES'?'var(--green)':'var(--amber)',
-            }}>{trade.outcome}</div>
-          </div>
-          <div style={{background:'var(--bg3)',borderRadius:'var(--r)',padding:'12px'}}>
-            <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:4}}>ENTRY PRICE</div>
-            <div style={{fontSize:16,fontWeight:700,color:'var(--text)',fontFamily:'var(--mono)'}}>
-              ${Number(trade.price).toFixed(4)}
-            </div>
-          </div>
-        </div>
-
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:16}}>
-          {[
-            ['Bet Size', `$${Number(trade.size).toFixed(2)}`, 'var(--text)'],
-            ['Shares', trade.shares?.toFixed(2) || '-', 'var(--text2)'],
-            ['Est. EV', `${(trade.ev*100).toFixed(0)}%`, trade.ev > 0.05 ? 'var(--green)' : 'var(--amber)'],
-          ].map(([label, value, color])=>(
-            <div key={label} style={{textAlign:'center'}}>
-              <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:2}}>{label}</div>
-              <div style={{fontSize:14,fontWeight:600,color,fontFamily:'var(--mono)'}}>{value}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{
-          background: won ? 'rgba(0,214,143,.1)' : 'rgba(255,69,96,.1)',
-          border: `1px solid ${won ? 'var(--green)' : 'var(--red)'}33`,
-          borderRadius:'var(--r)',padding:'12px',textAlign:'center',
-        }}>
-          <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:4}}>
-            {won ? 'PROFIT' : 'LOSS'}
-          </div>
-          <div style={{fontSize:24,fontWeight:700,color:won?'var(--green)':'var(--red)',fontFamily:'var(--mono)'}}>
-            {won ? '+' : ''}{Number(trade.pnl).toFixed(4)}
-          </div>
-        </div>
+/* History table */
+function HistoryTable({history}){
+  return(
+    <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
+      <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.06em'}}>Trade History</span>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>{history.length} trades</span>
       </div>
-    </div>
-  )
-}
-
-/* ─── Real-mode info panel ─────────────────────────── */
-function RealModeInfo({ config }) {
-  const req = config?.real_requirements
-  return (
-    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-      {/* vs sim */}
-      <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
-        <div style={{padding:'9px 14px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',fontSize:10,color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.07em'}}>SIM vs REAL — Perbedaan</div>
-        <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
-          <thead>
-            <tr style={{background:'var(--bg3)'}}>
-              {['Aspek','SIM','REAL'].map(h=><th key={h} style={{padding:'7px 12px',textAlign:'left',fontSize:9,fontFamily:'var(--mono)',color:'var(--text3)',fontWeight:400,letterSpacing:'.06em',borderBottom:'1px solid var(--border)'}}>{h}</th>)}
+      <div style={{overflowX:'auto',overflowY:'auto',maxHeight:'calc(100vh - 180px)'}}>
+        <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed',minWidth:760}}>
+          <colgroup>
+            <col style={{width:90}}/><col style={{width:200}}/><col style={{width:55}}/><col style={{width:50}}/><col style={{width:50}}/><col style={{width:55}}/><col style={{width:75}}/><col style={{width:45}}/><col style={{width:70}}/><col style={{width:55}}/>
+          </colgroup>
+          <thead style={{position:'sticky',top:0}}>
+            <tr>
+              {['ID','Market','Result','Side','Price','Bet','PnL','EV','Strategy','Resolve'].map(h=>(
+                <th key={h} className="xls-th">{h}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {[
-              ['Kecepatan gerak','Auto-resolve 25-90s','Tergantung market resolusi (menit-minggu)'],
-              ['Data market','Real dari Gamma API','Real dari Gamma API (sama)'],
-              ['Order eksekusi','Virtual, tidak dikirim','Kirim ke CLOB via EIP-712'],
-              ['Gas','Simulasi counter','POL nyata dari wallet'],
-              ['PnL','Virtual (tidak nyata)','USDC nyata di wallet'],
-              ['API key','Tidak perlu','Wajib: POLY_API_KEY + SECRET'],
-              ['Private key','Tidak perlu','EVM private key (bukan Phantom)'],
-              ['USDC','Tidak perlu','Harus ada di Polygon wallet'],
-              ['Risiko','Nol','Nyata — bisa rugi'],
-            ].map(([a,s,r])=>(
-              <tr key={a} style={{borderBottom:'1px solid var(--border)'}}>
-                <td style={{padding:'7px 12px',color:'var(--text2)'}}>{a}</td>
-                <td style={{padding:'7px 12px',fontFamily:'var(--mono)',fontSize:10,color:'var(--text3)'}}>{s}</td>
-                <td style={{padding:'7px 12px',fontFamily:'var(--mono)',fontSize:10,color:'var(--amber)'}}>{r}</td>
-              </tr>
-            ))}
+            {history.length===0&&<tr><td colSpan={10} style={{padding:'12px',textAlign:'center',color:'var(--text3)',fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>_ belum ada trade selesai</td></tr>}
+            {history.map((t,i)=>{
+              const won=t.status==='won'
+              return(
+                <tr key={t.id||i} className="xls-tr" style={{borderBottom:'1px solid var(--border)'}}>
+                  <td className="xls-td" style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:'var(--text3)'}}>{t.id}</td>
+                  <td className="xls-td" style={{color:'var(--text)'}} title={t.question}>{t.question}</td>
+                  <td className="xls-td">
+                    <span style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',padding:'0 4px',borderRadius:'var(--r)',background:won?'var(--gbg)':'var(--rbg)',color:won?'var(--green)':'var(--red)',border:`1px solid ${won?'#00c87a':'#f04060'}33`}}>{t.status?.toUpperCase()}</span>
+                  </td>
+                  <td className="xls-td"><span style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:t.outcome==='YES'?'var(--green)':'var(--amber)'}}>{t.outcome}</span></td>
+                  <td className="xls-td" style={{fontFamily:'var(--mono)',color:'var(--text2)',textAlign:'right'}}>{t.price?.toFixed(3)}</td>
+                  <td className="xls-td" style={{fontFamily:'var(--mono)',color:'var(--text)',textAlign:'right'}}>${t.size?.toFixed(2)}</td>
+                  <td className="xls-td" style={{fontFamily:'var(--mono)',fontWeight:600,textAlign:'right',color:Number(t.pnl)>=0?'var(--green)':'var(--red)'}}>{Number(t.pnl)>=0?'+':'-'}${Math.abs(Number(t.pnl)).toFixed(4)}</td>
+                  <td className="xls-td" style={{fontFamily:'var(--mono)',textAlign:'right',color:'var(--text3)',fontSize:'var(--fsxs)'}}>{(t.ev*100).toFixed(0)}%</td>
+                  <td className="xls-td" style={{fontSize:'var(--fsxs)',color:'var(--text3)'}}>{t.strategy?.replace('_','-')}</td>
+                  <td className="xls-td" style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:'var(--text3)'}}>{t.resolve_fmt||'—'}</td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
-      </div>
-
-      {/* requirements */}
-      <div style={{display:'flex',flexDirection:'column',gap:12}}>
-        <div style={{background:'rgba(255,69,96,.06)',border:'1px solid rgba(255,69,96,.3)',borderRadius:'var(--r3)',padding:'14px 16px'}}>
-          <div style={{fontSize:11,fontWeight:600,color:'var(--red)',marginBottom:8}}>⚠ PENTING: Phantom Tidak Kompatibel</div>
-          <div style={{fontSize:11,color:'var(--text2)',lineHeight:1.7}}>
-            <strong style={{color:'var(--text)'}}>Phantom</strong> adalah wallet Solana. Polymarket berjalan di <strong style={{color:'var(--text)'}}>Polygon (EVM/Ethereum-compatible)</strong>.<br/><br/>
-            Kamu butuh wallet EVM seperti <strong style={{color:'var(--green)'}}>MetaMask</strong> atau export private key ke format EVM.<br/><br/>
-            Phantom wallet tidak bisa digunakan untuk sign order EIP-712 di Polygon.
-          </div>
-        </div>
-
-        <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
-          <div style={{padding:'9px 14px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',fontSize:10,color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.07em'}}>Requirements untuk REAL mode</div>
-          <div style={{padding:'12px 16px',display:'flex',flexDirection:'column',gap:6}}>
-            {[
-              ['1. Wallet','MetaMask atau wallet EVM (bukan Phantom)'],
-              ['2. Private Key','EVM private key dari MetaMask → Export Account'],
-              ['3. POLY_API_KEY','Dari polymarket.com/profile > API Keys'],
-              ['4. POLY_SECRET','Didapat bersamaan dengan API Key'],
-              ['5. POLY_PASSPHRASE','Set saat buat API Key'],
-              ['6. USDC on Polygon','Deposit USDC ke alamat Polygon wallet kamu'],
-              ['7. POL for gas','Min 5 POL di wallet yang sama untuk gas fee'],
-              ['8. .env update','BOT_MODE=real + isi semua POLY_* vars'],
-            ].map(([k,v])=>(
-              <div key={k} style={{display:'flex',gap:12,padding:'5px 0',borderBottom:'1px solid var(--border)',fontSize:11}}>
-                <span style={{fontFamily:'var(--mono)',color:'var(--green)',minWidth:70,fontSize:10}}>{k}</span>
-                <span style={{color:'var(--text2)'}}>{v}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'12px 14px'}}>
-          <div style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:8,textTransform:'uppercase',letterSpacing:'.07em'}}>Checklist sebelum GO LIVE</div>
-          {['Min 50 sim trades selesai','Win rate sim > 55%','USDC & POL sudah ada di wallet','API key sudah di-generate','BOT_MODE=real di .env','Test dulu dengan bet $0.50'].map(item=>(
-            <div key={item} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',fontSize:11,color:'var(--text2)'}}>
-              <span style={{width:12,height:12,border:'1px solid var(--border2)',borderRadius:3,display:'inline-block',flexShrink:0}}/>
-              {item}
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   )
 }
 
-/* ─── CONFIG TABLE ─────────────────────────────────── */
-function ConfigTable({ config }) {
-  if (!config) return null
-  return (
-    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
-      {[
-        {title:'Bot Config',rows:[['Mode',config.mode],['Capital',`$${config.usdc_capital}`],['POL',`${config.pol_balance}`],['Scan',`${config.scan_sec}s`]]},
-        {title:'Risk Config',rows:[['Min EV',`${(config.min_ev*100).toFixed(0)}%`],['Prob Range',`${(config.prob_min*100).toFixed(0)}–${(config.prob_max*100).toFixed(0)}%`],['Daily Loss',`$${config.daily_loss}`],['Max Open',config.max_open],['Max Bet',`$${config.max_bet}`],['Min Bet',`$${config.min_bet}`]]},
-        {title:'Compound',rows:[['Base',`$${config.compound_base}`],['Step',`$${config.compound_step}`],['Increment',`+$${config.compound_inc}/tier`],['Max Bet',`$${config.compound_max_bet}`]]},
-      ].map(({title,rows})=>(
-        <div key={title} style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
-          <div style={{padding:'9px 14px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',fontSize:10,color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.07em'}}>{title}</div>
-          <div style={{padding:'10px 14px',display:'flex',flexDirection:'column',gap:6}}>
-            {rows.map(([k,v])=>(
-              <div key={k} style={{display:'flex',justifyContent:'space-between',fontSize:11,padding:'4px 0',borderBottom:'1px solid var(--border)'}}>
-                <span style={{color:'var(--text3)'}}>{k}</span>
-                <span style={{fontFamily:'var(--mono)',color:'var(--text)'}}>{v}</span>
-              </div>
-            ))}
+/* Config table */
+function ConfigTable({config}){
+  if(!config) return null
+  const sections=[
+    {t:'Bot',rows:[['Mode',config.mode],['Min Bet','$1.00'],['Max Open',config.max_open],['Min EV',`${((config.min_ev||.04)*100).toFixed(0)}%`],['Daily Loss',`$${config.daily_loss}`],['Scan',`${config.scan_sec}s`],['Markets','≤7d resolve only']]},
+    {t:'Compound',rows:[['Base',`$${config.compound_base}`],['Step',`$${config.compound_step}`],['Increment',`+$${config.compound_inc}/tier`],['Max Bet',`$${config.compound_max_bet}`],['$20→T1',`$1 · $40→T2 $2 · $60→T3 $3`]]},
+    {t:'Salary',rows:[['Threshold',`$${config.salary_threshold}`],['Tarik',`${((config.salary_withdraw_pct||.7)*100).toFixed(0)}%`],['Simpan',`${((config.salary_keep_pct||.3)*100).toFixed(0)}%`],['Formula','Equity $100 → tarik $70 → lanjut $30']]},
+    {t:'Gas',rows:[['Reserve','50% POL dikunci'],['Per TX','~$0.02'],['Alert',`<${config.gas_alert_tx} TX`],['Stop',`<${config.gas_stop_tx} TX`]]},
+    {t:'Real Mode',rows:[['Wallet','MetaMask (EVM/Polygon)'],['Phantom','❌ Tidak bisa (Solana)'],['POLY_PRIVATE_KEY','0x... dari MetaMask'],['POLY_API_KEY','dari polymarket.com/profile'],['USDC','Harus ada di Polygon wallet']]},
+  ]
+  return(
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:8}}>
+      {sections.map(({t,rows})=>(
+        <div key={t} style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
+          <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)'}}>
+            <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.06em'}}>{t}</span>
           </div>
+          <table style={{width:'100%',borderCollapse:'collapse'}}>
+            <tbody>
+              {rows.map(([k,v])=>(
+                <tr key={k} className="xls-tr" style={{borderBottom:'1px solid var(--border)'}}>
+                  <td className="xls-td" style={{fontFamily:'var(--mono)',color:'var(--text3)',fontSize:'var(--fsxs)',width:110,whiteSpace:'nowrap'}}>{k}</td>
+                  <td className="xls-td" style={{fontFamily:'var(--mono)',color:'var(--text)',fontSize:'var(--fsxs)',wordBreak:'break-all',whiteSpace:'normal'}}>{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ))}
     </div>
   )
 }
 
-/* ─── TABS ─────────────────────────────────────────── */
-const TABS = ['overview','markets','compound','history','config','real']
+/* ─── TABS ─────────────────────────────────── */
+const TABS=['overview','markets','positions','salary','history','config']
 
-/* ─── MAIN APP ─────────────────────────────────────── */
-export default function App() {
-  const { stats, positions, log, markets, config, gas, connected, lastUpd, notify, resumeGas, history } = usePolyBot()
-  const [tab, setTab] = useState('overview')
-  const [selectedTrade, setSelectedTrade] = useState(null)
-  const pnlHist = usePnlHistory(stats?.capital, stats?.initial)
-  const pnl  = stats?.pnl ?? 0
-  const isPos = pnl >= 0
+/* ─── MAIN APP ─────────────────────────────── */
+export default function App(){
+  const {stats,positions,log,markets,config,gas,salary,history,connected,lastUpd,notify,setup,resumeGas}=usePolyBot()
+  const [tab,setTab]=useState('overview')
+  const [ready,setReady]=useState(false)
+  const hist=usePnlHistory(stats?.capital, stats?.initial)
+  const pnl=stats?.pnl??0, isPos=pnl>=0
 
-  return (
+  const doSetup=async(usdc,pol,mode)=>{ await setup(usdc,pol,mode); setReady(true) }
+  useEffect(()=>{ if(stats?.capital) setReady(true) },[stats])
+
+  if(!ready) return <SetupWizard onSetup={doSetup}/>
+
+  return(
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',flexDirection:'column'}}>
       <Toast notify={notify} onDismiss={()=>{}} onResume={resumeGas}/>
-      <TradeModal trade={selectedTrade} onClose={()=>setSelectedTrade(null)}/>
 
-      {/* ─── HEADER ─── */}
-      <header style={{
-        height:48,background:'var(--bg1)',borderBottom:'1px solid var(--border)',
-        display:'flex',alignItems:'center',padding:'0 20px',gap:16,
-        position:'sticky',top:0,zIndex:100,flexShrink:0,
-      }}>
-        <span style={{fontFamily:'var(--mono)',fontSize:13,fontWeight:700,color:'var(--green)',letterSpacing:'.1em'}}>
-          POLY<span style={{color:'var(--text3)'}}>BOT</span>
+      {/* ── HEADER ── */}
+      <header style={{height:32,background:'var(--bg1)',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',padding:'0 10px',gap:8,position:'sticky',top:0,zIndex:100,flexShrink:0}}>
+        <span style={{fontFamily:'var(--mono)',fontSize:11,fontWeight:700,color:'var(--green)',letterSpacing:'.1em'}}>
+          POLY<span style={{color:'var(--text3)'}}>BOT</span><span style={{fontSize:'var(--fsxs)',color:'var(--text3)',marginLeft:3}}>v3</span>
         </span>
-        <div style={{width:1,height:18,background:'var(--border)'}}/>
-        <div style={{display:'flex',alignItems:'center'}}>
-          <Dot on={connected}/>
-          <span style={{fontFamily:'var(--mono)',fontSize:10,color:connected?'var(--green)':'var(--red)'}}>{connected?'LIVE':'RECONNECTING'}</span>
-        </div>
-        {stats && <Badge text={stats.mode} color={stats.mode==='SIM'?'var(--amber)':'var(--green)'}/>}
-        {(stats?.compound_tier??0)>0 && (
-          <Badge text={`TIER ${stats.compound_tier} · $${stats.compound_bet}/bet`} color="var(--green)"/>
-        )}
-        {gas?.status==='critical' && <Badge text="⛽ GAS CRITICAL" color="var(--red)"/>}
-        {gas?.status==='low'      && <Badge text="⚠ GAS LOW" color="var(--amber)"/>}
-        {gas?.paused              && <Badge text="🛑 BOT PAUSED" color="var(--red)"/>}
-
-        <div style={{marginLeft:'auto',display:'flex',gap:2}}>
+        <div style={{width:1,height:12,background:'var(--border)'}}/>
+        <Dot on={connected}/><span style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:connected?'var(--green)':'var(--red)'}}>{connected?'LIVE':'···'}</span>
+        {stats&&<XTag t={stats.mode} c={stats.mode==='SIM'?'var(--amber)':'var(--green)'}/>}
+        {(stats?.compound_tier??0)>0&&<XTag t={`T${stats.compound_tier}·$${stats.compound_bet}`} c="var(--green)"/>}
+        {gas?.status==='critical'&&<XTag t="GAS CRIT" c="var(--red)"/>}
+        {gas?.status==='low'&&<XTag t="GAS LOW" c="var(--amber)"/>}
+        {stats?.daily_stopped&&<XTag t="DAILY STOP" c="var(--red)"/>}
+        {(salary?.salary_count||0)>0&&<XTag t={`💰${salary.salary_count}x`} c="var(--gold)"/>}
+        <div style={{marginLeft:'auto',display:'flex',gap:1}}>
           {TABS.map(t=>(
             <button key={t} onClick={()=>setTab(t)} style={{
               background:tab===t?'var(--bg3)':'transparent',
               border:`1px solid ${tab===t?'var(--border2)':'transparent'}`,
               color:tab===t?'var(--text)':'var(--text3)',
-              fontFamily:'var(--mono)',fontSize:9,padding:'4px 10px',
-              borderRadius:'var(--r)',textTransform:'uppercase',letterSpacing:'.07em',
-              transition:'all .15s',
+              fontFamily:'var(--mono)',fontSize:'var(--fsxs)',padding:'2px 8px',
+              borderRadius:'var(--r)',textTransform:'uppercase',letterSpacing:'.06em',
             }}>{t}</button>
           ))}
+          <button onClick={()=>setReady(false)} style={{background:'transparent',border:'1px solid var(--border)',color:'var(--text3)',fontFamily:'var(--mono)',fontSize:'var(--fsxs)',padding:'2px 7px',borderRadius:'var(--r)',marginLeft:4,textTransform:'uppercase',letterSpacing:'.06em'}}>RST</button>
         </div>
-        {lastUpd && <span style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)'}}>{lastUpd.toLocaleTimeString()}</span>}
+        {lastUpd&&<span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>{lastUpd.toLocaleTimeString()}</span>}
       </header>
 
-      {/* ─── BODY ─── */}
-      <main style={{flex:1,padding:'16px 20px',maxWidth:1600,width:'100%',margin:'0 auto',display:'flex',flexDirection:'column',gap:12}}>
+      {/* ── BODY ── */}
+      <main style={{flex:1,padding:'8px 10px',display:'flex',flexDirection:'column',gap:8,maxWidth:1600,width:'100%',margin:'0 auto'}}>
 
-        {/* ── OVERVIEW ── */}
-        {tab==='overview' && (<>
-          {/* stat row */}
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:10}}>
-            <StatCard label="Capital"    value={usd(stats?.capital)} sub={`start ${usd(stats?.initial)}`} mono/>
-            <StatCard label="Total PnL"  value={`${pnl>=0?'+':''}${usd(pnl)}`} sub={`${pct(stats?.roi_pct)} ROI`} color={isPos?'var(--green)':'var(--red)'} mono/>
-            <StatCard label="Win Rate"   value={pct(stats?.win_rate)} sub={`${stats?.wins??0}W / ${stats?.losses??0}L`} color={stats?.win_rate>=60?'var(--green)':stats?.win_rate>=45?'var(--amber)':'var(--red)'}/>
-            <StatCard label="Compound"   value={`T${stats?.compound_tier??0}`} sub={`$${stats?.compound_bet??2}/bet`} color="var(--green)" mono/>
-            <StatCard label="Open"       value={stats?.open_count??0} sub={`max ${config?.max_open??5}`} color="var(--blue)"/>
-            <StatCard label="Daily PnL"  value={`${(stats?.daily_pnl??0)>=0?'+':''}${usd(stats?.daily_pnl)}`} color={(stats?.daily_pnl??0)>=0?'var(--green)':'var(--red)'} mono/>
-            <StatCard label="Scans"      value={(stats?.scan_count??0).toLocaleString()} sub={`${stats?.signals_found??0} signals`}/>
-            <StatCard label="Gas TX left" value={gas?.tx_left??'—'} sub={`${(gas?.pol_left??0).toFixed(2)} POL`} color={gas?.status==='ok'?'var(--green)':gas?.status==='low'?'var(--amber)':'var(--red)'} mono/>
+        {/* OVERVIEW */}
+        {tab==='overview'&&(<>
+          {/* stat grid — compact */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(120px,1fr))',gap:6}}>
+            <Stat label="Equity"   value={usd(stats?.capital)} sub={`avail ${usd(stats?.available)} + ${usd(stats?.locked)} locked`} mono/>
+            <Stat label="PnL"      value={`${pnl>=0?'+':''}${usd(pnl)}`} sub={`${pct(stats?.roi_pct)} ROI`} color={isPos?'var(--green)':'var(--red)'} mono/>
+            <Stat label="Win Rate" value={pct(stats?.win_rate)} sub={`${stats?.wins??0}W ${stats?.losses??0}L`} color={stats?.win_rate>=60?'var(--green)':stats?.win_rate>=45?'var(--amber)':'var(--red)'}/>
+            <Stat label="Daily"    value={`${(stats?.daily_pnl??0)>=0?'+':''}${usd(stats?.daily_pnl)}`} color={(stats?.daily_pnl??0)>=0?'var(--green)':'var(--red)'} mono/>
+            <Stat label="Salary"   value={usd(salary?.total_withdrawn)} sub={`${salary?.salary_count??0}x gajian`} color="var(--gold)" accent="rgba(200,168,32,.2)"/>
+            <Stat label="Open"     value={stats?.open_count??0} sub={`/${config?.max_open??3}`} color="var(--blue)"/>
+            <Stat label="Compound" value={`T${stats?.compound_tier??0}`} sub={`$${stats?.compound_bet??1}/bet`} color="var(--green)" mono/>
+            <Stat label="Gas TX"   value={gas?.tx_left??'—'} sub={`${(gas?.pol_left??0).toFixed(2)} POL`} color={gas?.status==='ok'?'var(--text)':gas?.status==='low'?'var(--amber)':'var(--red)'} mono/>
           </div>
 
-          {/* chart + gas + positions */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 280px',gap:12}}>
-            <div style={{display:'flex',flexDirection:'column',gap:12}}>
-              {/* PnL sparkline */}
-              <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'14px'}}>
-                <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.07em'}}>PnL Curve</div>
-                <PnlSparkline history={pnlHist}/>
+          {/* 2-col: chart+log | sidebar */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 200px',gap:8,flex:1}}>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {/* PnL chart */}
+              <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'6px 10px'}}>
+                <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:4}}>PNL CURVE · {usd(pnl)} ({pct(stats?.roi_pct)})</div>
+                <Spark history={hist}/>
               </div>
-              {/* open positions mini table */}
+
+              {/* positions mini-table */}
               <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
-                <div style={{padding:'9px 14px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',fontSize:10,color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.07em'}}>
-                  Posisi Terbuka ({positions.length})
+                <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between'}}>
+                  <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.06em'}}>Open Positions ({positions.length})</span>
                 </div>
                 {positions.length===0
-                  ? <div style={{padding:'16px 14px',color:'var(--text3)',fontSize:11,fontFamily:'var(--mono)'}}>_ tidak ada posisi terbuka</div>
-                  : <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
-                    <thead><tr style={{background:'var(--bg3)'}}>
-                      {['ID','Market','Side','Price','Bet','Shares','EV','Strat','Cat'].map(h=>(
-                        <th key={h} style={{padding:'5px 10px',textAlign:'left',fontSize:9,fontFamily:'var(--mono)',color:'var(--text3)',fontWeight:400,letterSpacing:'.06em',textTransform:'uppercase',borderBottom:'1px solid var(--border2)'}}>{h}</th>
-                      ))}
+                  ?<div style={{padding:'8px 10px',color:'var(--text3)',fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>_ tidak ada posisi terbuka</div>
+                  :<table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
+                    <colgroup><col style={{width:88}}/><col style={{width:'auto'}}/><col style={{width:48}}/><col style={{width:52}}/><col style={{width:55}}/><col style={{width:45}}/><col style={{width:60}}/></colgroup>
+                    <thead><tr>
+                      {['ID','Market','Side','@Price','Bet','EV','Remain'].map(h=><th key={h} className="xls-th">{h}</th>)}
                     </tr></thead>
                     <tbody>
-                      {positions.map((p,i)=>(
-                        <tr key={p.id} style={{borderBottom:'1px solid var(--border)',background:i%2===0?'transparent':'rgba(255,255,255,.01)'}}>
-                          <td style={{padding:'6px 10px',fontFamily:'var(--mono)',fontSize:10,color:'var(--text3)'}}>{p.id}</td>
-                          <td style={{padding:'6px 10px',maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={p.question}>{p.question}</td>
-                          <td style={{padding:'6px 10px'}}>
-                            <span style={{fontSize:9,fontFamily:'var(--mono)',padding:'1px 5px',borderRadius:3,background:(p.outcome==='YES'?'#00d68f':'#ffaa00')+'22',color:p.outcome==='YES'?'var(--green)':'var(--amber)'}}>{p.outcome}</span>
-                          </td>
-                          <td style={{padding:'6px 10px',fontFamily:'var(--mono)',color:'var(--text2)'}}>{p.price?.toFixed(3)}</td>
-                          <td style={{padding:'6px 10px',fontFamily:'var(--mono)',color:'var(--text)'}}>${p.size?.toFixed(2)}</td>
-                          <td style={{padding:'6px 10px',fontFamily:'var(--mono)',color:'var(--text2)'}}>{p.shares?.toFixed(2)}</td>
-                          <td style={{padding:'6px 10px',fontFamily:'var(--mono)',color:p.ev>0.10?'var(--green)':'var(--amber)'}}>{(p.ev*100).toFixed(0)}%</td>
-                          <td style={{padding:'6px 10px'}}>
-                            <span style={{fontSize:9,fontFamily:'var(--mono)',color:'var(--blue)'}}>{p.strategy?.replace('_','-')}</span>
-                          </td>
-                          <td style={{padding:'6px 10px'}}>
-                            <span style={{fontSize:9,fontFamily:'var(--mono)',color:CAT_COLOR[p.category]||'#888'}}>{p.category}</span>
-                          </td>
-                        </tr>
-                      ))}
+                      {positions.map((p,i)=>{
+                        const elapsed=(Date.now()-new Date(p.opened_at).getTime())/1000
+                        const remain=Math.max(0,(p.resolve_sec||86400)-elapsed)
+                        const bc=remain<60?'var(--red)':remain<600?'var(--amber)':'var(--text2)'
+                        return(
+                          <tr key={p.id} className="xls-tr" style={{borderBottom:'1px solid var(--border)',animation:'fadeUp .2s ease'}}>
+                            <td className="xls-td" style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:'var(--text3)'}}>{p.id}</td>
+                            <td className="xls-td" style={{color:'var(--text)',fontSize:'var(--fsxs)'}} title={p.question}>{p.question}</td>
+                            <td className="xls-td"><span style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:p.outcome==='YES'?'var(--green)':'var(--amber)'}}>{p.outcome}</span></td>
+                            <td className="xls-td" style={{fontFamily:'var(--mono)',textAlign:'right',color:'var(--text2)'}}>{p.price?.toFixed(3)}</td>
+                            <td className="xls-td" style={{fontFamily:'var(--mono)',textAlign:'right',color:'var(--text)'}}>${p.size?.toFixed(2)}</td>
+                            <td className="xls-td" style={{fontFamily:'var(--mono)',textAlign:'right',color:p.ev>.1?'var(--green)':'var(--amber)'}}>{(p.ev*100).toFixed(0)}%</td>
+                            <td className="xls-td" style={{fontFamily:'var(--mono)',textAlign:'right',color:bc,fontSize:'var(--fsxs)'}}>{remain<1?'res…':remain<3600?`${Math.round(remain/60)}m`:remain<86400?`${(remain/3600).toFixed(1)}h`:`${(remain/86400).toFixed(1)}d`}</td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 }
               </div>
+
+              <ActivityLog log={log} maxH="220px"/>
             </div>
 
-            {/* right sidebar */}
-            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {/* sidebar */}
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              <SalaryRow salary={salary}/>
+              <CompoundRow stats={stats}/>
               <GasPanel gas={gas} onResume={resumeGas}/>
-              {/* compound mini */}
-              <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'14px'}}>
-                <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:10,textTransform:'uppercase',letterSpacing:'.07em'}}>Compound</div>
-                {[['Tier',`T${stats?.compound_tier??0}`],['Max Bet',`$${stats?.compound_bet??2}`],['Next',`$${stats?.compound_next??20}`]].map(([k,v])=>(
-                  <div key={k} style={{display:'flex',justifyContent:'space-between',fontSize:11,marginBottom:5}}>
-                    <span style={{color:'var(--text2)'}}>{k}</span>
-                    <span style={{fontFamily:'var(--mono)',color:k==='Next'?'var(--amber)':'var(--green)',fontWeight:600}}>{v}</span>
-                  </div>
-                ))}
-                <div style={{height:4,background:'var(--border2)',borderRadius:2,overflow:'hidden',marginTop:8}}>
-                  <div style={{height:'100%',width:`${stats?.compound_prog??0}%`,background:'linear-gradient(90deg,var(--amber),var(--green))',transition:'width .6s ease',borderRadius:2}}/>
-                </div>
-                <div style={{fontSize:9,color:'var(--text3)',fontFamily:'var(--mono)',marginTop:3,textAlign:'right'}}>{stats?.compound_prog??0}%</div>
-              </div>
             </div>
           </div>
-
-          <ActivityLog log={log} maxH="260px"/>
         </>)}
 
-        {/* ── MARKETS (Excel table) ── */}
-        {tab==='markets' && <MarketTable markets={markets}/>}
+        {tab==='markets'&&<MarketTable markets={markets}/>}
 
-        {/* ── COMPOUND ── */}
-        {tab==='compound' && <CompoundPanel stats={stats}/>}
-
-        {/* ── HISTORY ── */}
-        {tab==='history' && (
-          <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
-            <div style={{padding:'9px 14px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',background:'var(--bg3)'}}>
-              <span style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase'}}>Trade History ({history.length})</span>
-              <span style={{fontSize:10,color:'var(--text3)',fontFamily:'var(--mono)'}}>
-                {stats?.wins??0}W / {stats?.losses??0}L | {pct(stats?.win_rate)} win rate
-              </span>
+        {tab==='positions'&&(
+          positions.length===0
+            ?<div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'20px',textAlign:'center',color:'var(--text3)',fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>_ tidak ada posisi terbuka</div>
+            :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))',gap:6}}>
+              {positions.map(p=><PositionCard key={p.id} pos={p}/>)}
             </div>
-            {history.length===0 ? (
-              <div style={{padding:'20px 14px',color:'var(--text3)',fontSize:11,fontFamily:'var(--mono)'}}>_ no trade history yet</div>
-            ) : (
-              <div style={{maxHeight:'calc(100vh - 140px)',overflowY:'auto'}}>
-                <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
-                  <thead>
-                    <tr style={{background:'var(--bg3)',position:'sticky',top:0,zIndex:10}}>
-                      {['ID','Market','Result','Outcome','Price','Bet','Shares','PnL','EV'].map(h=>(
-                        <th key={h} style={{padding:'6px 12px',textAlign:'left',fontSize:9,fontFamily:'var(--mono)',color:'var(--text3)',fontWeight:400,letterSpacing:'.06em',textTransform:'uppercase',borderBottom:'2px solid var(--border2)'}}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {history.map((t,i)=>{
-                      const won = t.status === 'won'
-                      return (
-                        <tr key={t.id||i} onClick={()=>setSelectedTrade(t)} style={{
-                          borderBottom:'1px solid var(--border)',
-                          cursor:'pointer',
-                        }}>
-                          <td style={{padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:'var(--text3)'}}>{t.id}</td>
-                          <td style={{padding:'6px 12px',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={t.question}>{t.question}</td>
-                          <td style={{padding:'6px 12px'}}>
-                            <span style={{fontSize:9,fontFamily:'var(--mono)',padding:'2px 6px',borderRadius:3,
-                              background:(won?'#00d68f':'#ff4560')+'22',color:won?'var(--green)':'var(--red)'}}>
-                              {won?'WON':'LOST'}
-                            </span>
-                          </td>
-                          <td style={{padding:'6px 12px'}}>
-                            <span style={{fontSize:10,fontFamily:'var(--mono)',padding:'2px 6px',borderRadius:3,
-                              background:(t.outcome==='YES'?'#00d68f':'#ffaa00')+'22',color:t.outcome==='YES'?'var(--green)':'var(--amber)'}}>
-                              {t.outcome}
-                            </span>
-                          </td>
-                          <td style={{padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:'var(--text2)'}}>{t.price?.toFixed(3)}</td>
-                          <td style={{padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:'var(--text)'}}>${Number(t.size||0).toFixed(2)}</td>
-                          <td style={{padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:'var(--text2)'}}>{Number(t.shares||0).toFixed(2)}</td>
-                          <td style={{padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:won?'var(--green)':'var(--red)'}}>
-                            {won?'+':''}{Number(t.pnl||0).toFixed(4)}
-                          </td>
-                          <td style={{padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:t.ev>0.10?'var(--green)':'var(--amber)'}}>
-                            {((t.ev||0)*100).toFixed(0)}%
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
         )}
 
-        {/* ── CONFIG ── */}
-        {tab==='config' && <ConfigTable config={config}/>}
-
-        {/* ── REAL INFO ── */}
-        {tab==='real' && <RealModeInfo config={config}/>}
+        {tab==='salary'&&<SalaryPanel salary={salary} stats={stats}/>}
+        {tab==='history'&&<HistoryTable history={history}/>}
+        {tab==='config'&&<ConfigTable config={config}/>}
 
       </main>
     </div>

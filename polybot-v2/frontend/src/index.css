@@ -1,25 +1,32 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0d0f14;--bg1:#111318;--bg2:#161a22;--bg3:#1c2130;--bg4:#222840;
-  --border:#1e2535;--border2:#28334a;
-  --text:#d0dce8;--text2:#8a9bb5;--text3:#4a5f7a;
-  --green:#00d68f;--green2:#00b377;--gbg:rgba(0,214,143,.07);
-  --red:#ff4560;--rbg:rgba(255,69,96,.07);
-  --amber:#ffaa00;--abg:rgba(255,170,0,.07);
-  --blue:#4d9fff;--bbg:rgba(77,159,255,.07);
-  --purple:#a78bfa;--pbg:rgba(167,139,250,.07);
-  --mono:'JetBrains Mono',monospace;
-  --sans:'Inter',sans-serif;
-  --r:5px;--r2:8px;--r3:12px;
+  --bg:#0a0c10;--bg1:#0e1117;--bg2:#12161e;--bg3:#171c26;--bg4:#1d2435;
+  --border:#1e2840;--border2:#253050;
+  --text:#b8ccd8;--text2:#6a82a0;--text3:#384d68;
+  --green:#00c87a;--gbg:rgba(0,200,122,.06);
+  --red:#f04060;--rbg:rgba(240,64,96,.06);
+  --amber:#e09000;--abg:rgba(224,144,0,.06);
+  --blue:#3a8fd8;--bbg:rgba(58,143,216,.06);
+  --gold:#c8a820;--goldbg:rgba(200,168,32,.06);
+  --mono:'Consolas','JetBrains Mono',monospace;
+  --sans:'Segoe UI',system-ui,sans-serif;
+  --fs:11px;--fss:10px;--fsxs:9px;
+  --r:2px;--r2:3px;--r3:5px;
+  --row:22px;--cell:3px 7px;
 }
-html,body,#root{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.5;overflow-x:hidden}
-::-webkit-scrollbar{width:3px;height:3px}
+html,body,#root{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:var(--fs);line-height:1.4}
+::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:var(--bg1)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-button{font-family:var(--sans);cursor:pointer}
-code,kbd,.mono{font-family:var(--mono)}
-@keyframes fadeUp{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+button{font-family:var(--sans);font-size:var(--fss);cursor:pointer;transition:all .12s}
+input,select{font-family:var(--mono);font-size:var(--fss);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);padding:4px 7px;outline:none}
+input:focus,select:focus{border-color:var(--blue)}
+.xls-th{background:var(--bg3);color:var(--text3);font-size:var(--fsxs);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;font-weight:500;padding:var(--cell);border-bottom:1px solid var(--border2);user-select:none;white-space:nowrap;cursor:pointer}
+.xls-th:hover{color:var(--text2)}
+.xls-td{padding:var(--cell);border-bottom:1px solid var(--border);font-size:var(--fs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:var(--row)}
+.xls-tr:hover{background:rgba(255,255,255,.03)!important}
+.xls-tr:nth-child(even){background:rgba(255,255,255,.01)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
-@keyframes flash{0%{background:rgba(0,214,143,.25)}100%{background:transparent}}
-@keyframes slideRight{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes flash{0%{background:rgba(0,200,122,.2)}100%{background:transparent}}

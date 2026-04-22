@@ -2,19 +2,19 @@ export const f2  = n => n==null?'—':Number(n).toFixed(2)
 export const f4  = n => n==null?'—':Number(n).toFixed(4)
 export const pct = n => n==null?'—':`${Number(n).toFixed(1)}%`
 export const usd = n => n==null?'—':`$${Number(n).toFixed(2)}`
-export const sign= n => Number(n)>=0?`+${f4(n)}`:`${f4(n)}`
-export const signUsd = n => Number(n)>=0?`+${usd(n)}`:`-${usd(Math.abs(n))}`
-
-export const CAT_COLOR = {
-  crypto:'#4d9fff', sports:'#00d68f', politics:'#ffaa00',
-  economics:'#a78bfa', finance:'#ff4560', culture:'#fb923c',
-  geopolitics:'#64748b', science:'#06b6d4', tech:'#8b5cf6',
-  weather:'#34d399', mentions:'#f472b6', other:'#94a3b8',
+export const signUsd = n => { const v=Number(n); return `${v>=0?'+':'-'}$${Math.abs(v).toFixed(2)}` }
+export const fmtDur = sec => {
+  if(!sec||sec<=0) return '—'
+  if(sec<60)    return `${Math.round(sec)}s`
+  if(sec<3600)  return `${Math.round(sec/60)}m`
+  if(sec<86400) return `${(sec/3600).toFixed(1)}h`
+  return `${(sec/86400).toFixed(1)}d`
 }
-export const STRAT_COLOR = {
-  arb:'#00d68f', no_bias:'#ffaa00', high_prob:'#4d9fff',
-  momentum:'#a78bfa',
+export const CAT_COLOR={
+  crypto:'#3a8fd8',sports:'#00c87a',politics:'#e09000',
+  economics:'#8878e0',finance:'#f04060',culture:'#d06820',
+  geopolitics:'#4a6080',science:'#0aa8c0',tech:'#7060d0',
+  weather:'#20c090',other:'#5a7090',
 }
-export const STRAT_LABEL = {
-  arb:'ARB', no_bias:'NO BIAS', high_prob:'HIGH PROB', momentum:'MOMENTUM',
-}
+export const STRAT_COLOR={arb:'#00c87a',no_bias:'#e09000',high_prob:'#3a8fd8',momentum:'#8878e0'}
+export const STRAT_LABEL={arb:'ARB',no_bias:'NO BIAS',high_prob:'HI PROB',momentum:'MOM'}

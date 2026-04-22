@@ -1,6 +1,6 @@
 {
-  "name": "polybot-dashboard",
-  "version": "2.0.0",
+  "name": "polybot-v3",
+  "version": "3.0.0",
   "private": true,
   "dependencies": {
     "react": "^18.3.1",

@@ -10,4 +10,4 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 3001
 HEALTHCHECK --interval=15s --timeout=5s CMD wget -qO- http://localhost:3001/ || exit 1
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["nginx","-g","daemon off;"]
