@@ -514,8 +514,6 @@ def build_market_rows(parsed: list) -> list:
 def risk_ok(market_id: str, sig: dict) -> tuple[bool, str]:
     if S.gas_paused:
         return False, f"Gas stop: {gas_tx_remaining()} tx tersisa"
-    if S.daily_pnl <= -C.daily_loss_limit:
-        return False, f"Daily loss limit ${C.daily_loss_limit}"
     open_pos = [p for p in S.positions if p["status"]=="open"]
     if len(open_pos) >= C.max_open_pos:
         return False, f"Max {C.max_open_pos} posisi"
