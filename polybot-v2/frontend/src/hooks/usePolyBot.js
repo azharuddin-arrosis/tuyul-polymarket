@@ -14,6 +14,7 @@ export function usePolyBot() {
   const [gas,      setGas]      = useState(null)
   const [salary,   setSalary]   = useState(null)
   const [history,  setHistory]  = useState([])
+  const [btc5m,    setBtc5m]    = useState(null)
   const [connected,setConn]     = useState(false)
   const [lastUpd,  setLastUpd]  = useState(null)
   const [notify,   setNotify]   = useState(null)
@@ -42,12 +43,14 @@ export function usePolyBot() {
               setLog(msg.data.log||[]); setConfig(msg.data.config)
               setMarkets(msg.data.markets||[]); setGas(msg.data.gas)
               setSalary(msg.data.salary); setHistory(msg.data.history||[])
+              if(msg.data.btc5m) setBtc5m(msg.data.btc5m)
               break
             case 'stats':   setStats(msg.data); setGas(msg.data.gas); setSalary(msg.data.salary); break
             case 'positions': setPos(msg.data); break
             case 'log':     setLog(p=>[msg.data,...p].slice(0,500)); break
             case 'markets': setMarkets(msg.data); break
             case 'gas':     setGas(msg.data); break
+            case 'btc5m':   setBtc5m(msg.data); break
             case 'compound_up': pushNotify('compound',msg.data); break
             case 'salary':      pushNotify('salary',msg.data);   break
             case 'setup':   break
@@ -93,5 +96,5 @@ export function usePolyBot() {
 
   const resumeGas = async()=>fetch('/api/gas/resume',{method:'POST'})
 
-  return {stats,positions,log,markets,config,gas,salary,history,connected,lastUpd,notify,setup,resumeGas}
+  return {stats,positions,log,markets,config,gas,salary,history,btc5m,connected,lastUpd,notify,setup,resumeGas}
 }

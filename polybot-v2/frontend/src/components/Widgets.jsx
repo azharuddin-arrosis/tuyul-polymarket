@@ -237,3 +237,90 @@ export function ActivityLog({ log, maxH='260px' }) {
     </div>
   )
 }
+
+/* ─── BTC5m Signal Panel ─────────────────────── */
+export function BTC5mPanel({ data }) {
+  if (!data) return (
+    <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'8px 10px'}}>
+      <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>BTC 5M _ connecting...</div>
+    </div>
+  )
+
+  const {slug,secs_left,btc_price,predicted_dir,confidence,entry_fired,in_entry_zone,signal,stats} = data
+  const dirColor = predicted_dir==='UP'?'var(--green)':predicted_dir==='DOWN'?'var(--red)':'var(--text3)'
+  const zoneColor = in_entry_zone?'var(--amber)':'var(--text3)'
+  const prog = secs_left>0 ? Math.round((300-secs_left)/300*100) : 100
+
+  const fmtConf = c => c ? `${(c*100).toFixed(0)}%` : '—'
+  const sig = signal || {}
+
+  return (
+    <div style={{background:'var(--bg2)',border:`1px solid ${predicted_dir?dirColor+'44':'var(--border)'}`,borderRadius:'var(--r3)',overflow:'hidden'}}>
+      {/* header */}
+      <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.06em'}}>⚡ BTC 5M Signal</span>
+        <div style={{display:'flex',gap:4,alignItems:'center'}}>
+          {in_entry_zone&&<span style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--amber)',padding:'0 4px',background:'var(--abg)',borderRadius:'var(--r)'}}>ENTRY ZONE</span>}
+          {entry_fired&&<span style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--green)',padding:'0 4px',background:'var(--gbg)',borderRadius:'var(--r)'}}>FIRED</span>}
+        </div>
+      </div>
+
+      <div style={{padding:'7px 10px'}}>
+        {/* price + countdown */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:7}}>
+          <div>
+            <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',marginBottom:1}}>BTC Price</div>
+            <div style={{fontFamily:'var(--mono)',fontSize:13,fontWeight:600,color:'var(--text)'}}>${btc_price?.toLocaleString()??'—'}</div>
+          </div>
+          <div style={{textAlign:'right'}}>
+            <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',marginBottom:1}}>Window closes</div>
+            <div style={{fontFamily:'var(--mono)',fontSize:13,fontWeight:600,color:zoneColor}}>{secs_left??'—'}s</div>
+          </div>
+        </div>
+
+        {/* window progress */}
+        <div style={{height:3,background:'var(--border2)',borderRadius:1,overflow:'hidden',marginBottom:7}}>
+          <div style={{height:'100%',width:`${prog}%`,background:in_entry_zone?'var(--amber)':predicted_dir?dirColor:'var(--blue)',borderRadius:1,transition:'width 1s linear'}}/>
+        </div>
+
+        {/* prediction */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:7}}>
+          <div style={{padding:'5px 8px',background:predicted_dir?dirColor+'11':'var(--bg3)',border:`1px solid ${predicted_dir?dirColor+'33':'var(--border)'}`,borderRadius:'var(--r2)',textAlign:'center'}}>
+            <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',marginBottom:1}}>Predict</div>
+            <div style={{fontFamily:'var(--mono)',fontSize:14,fontWeight:700,color:dirColor||'var(--text3)'}}>{predicted_dir||'—'}</div>
+          </div>
+          <div style={{padding:'5px 8px',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r2)',textAlign:'center'}}>
+            <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',marginBottom:1}}>Confidence</div>
+            <div style={{fontFamily:'var(--mono)',fontSize:14,fontWeight:700,color:confidence>=.7?'var(--green)':confidence>=.6?'var(--amber)':'var(--text3)'}}>{fmtConf(confidence)}</div>
+          </div>
+        </div>
+
+        {/* indicator grid */}
+        <table style={{width:'100%',borderCollapse:'collapse',marginBottom:7}}>
+          <tbody>
+            {[
+              ['EMA(3>8)',  sig.ema_up!==undefined ? (sig.ema_up?'▲ BULL':'▼ BEAR') : '—', sig.ema_up?'var(--green)':'var(--red)'],
+              ['RSI(7)',    sig.rsi!==undefined ? sig.rsi.toFixed(1) : '—', sig.rsi<35?'var(--green)':sig.rsi>65?'var(--red)':'var(--text2)'],
+              ['Vol Spike', sig.vol_spike!==undefined ? (sig.vol_spike?'YES':'no') : '—', sig.vol_spike?'var(--amber)':'var(--text3)'],
+              ['Candles',   sig.candle_bias||'—', sig.candle_bias==='up'?'var(--green)':'var(--red)'],
+              ['Score',     sig.up_score!==undefined?`▲${sig.up_score} ▼${sig.down_score}`:'—', 'var(--text2)'],
+            ].map(([k,v,c])=>(
+              <tr key={k} style={{borderBottom:'1px solid var(--border)'}}>
+                <td style={{padding:'2px 0',fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--text3)',width:70}}>{k}</td>
+                <td style={{padding:'2px 0',fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:c,textAlign:'right'}}>{String(v)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* BTC5m stats */}
+        {stats&&<div style={{display:'flex',justifyContent:'space-between',fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--text3)'}}>
+          <span>W:{stats.wins||0}</span>
+          <span>L:{stats.losses||0}</span>
+          <span>WR:{stats.total>0?`${Math.round(stats.wins/(stats.total||1)*100)}%`:'—'}</span>
+          <span style={{color:'var(--text3)',maxWidth:100,overflow:'hidden',textOverflow:'ellipsis'}}>{slug?.slice(-8)||''}</span>
+        </div>}
+      </div>
+    </div>
+  )
+}

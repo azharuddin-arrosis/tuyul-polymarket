@@ -3,10 +3,11 @@ POLYMARKET BOT v3 — BACKEND
 Forward-test mode: real market timing, locked capital tracking,
 salary feature (every 100x: withdraw 70%, keep 30% as new capital),
 fast-resolving markets only (BTC 5m, soccer, daily crypto bets),
+BTC5m special signal: deterministic slug + Binance TA predict,
 no max-bet-per-day limit (only gas 50% reserve),
 input modal + gas at startup via API.
 """
-import asyncio, json, os, random, re
+import asyncio, json, os, random, re, math
 from datetime import datetime, timezone, date, timedelta
 from typing import Optional
 import aiohttp
@@ -15,6 +16,414 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 _lock = asyncio.Lock()
+
+# ═══════════════════════════════════════════════════════════════
+# BTC 5M SIGNAL ENGINE
+# Slug: btc-updown-5m-{unix_ts} where ts = now - (now % 300)
+# Strategy: fetch Binance 1m klines → compute momentum → predict
+# Entry timing: T-30s before window close (highest accuracy zone)
+# ═══════════════════════════════════════════════════════════════
+
+BINANCE_API  = "https://api.binance.com/api/v3"
+BTC5M_WINDOW = 300   # seconds per window
+
+class BTC5mState:
+    """State for the dedicated BTC 5m signal engine"""
+    current_slug:   str   = ""
+    current_ts:     int   = 0
+    window_open_ts: int   = 0
+    window_close_ts:int   = 0
+    market_data:    dict  = {}   # parsed Gamma market
+    signal:         dict  = {}   # latest signal
+    last_predict:   int   = 0    # unix ts of last prediction
+    klines:         list  = []   # last 15 x 1m candles
+    btc_price:      float = 0.0
+    predicted_dir:  str   = ""   # "UP" | "DOWN" | ""
+    confidence:     float = 0.0
+    entry_fired:    bool  = False
+    wins:           int   = 0
+    losses:         int   = 0
+    total:          int   = 0
+    last_market_refresh: int = 0
+
+B5 = BTC5mState()
+
+def btc5m_current_window_ts(now_ts: int = 0) -> int:
+    """Return the start timestamp of the current 5m window"""
+    ts = now_ts or int(datetime.now(timezone.utc).timestamp())
+    return ts - (ts % BTC5M_WINDOW)
+
+def btc5m_next_window_ts(now_ts: int = 0) -> int:
+    return btc5m_current_window_ts(now_ts) + BTC5M_WINDOW
+
+def btc5m_slug(window_ts: int) -> str:
+    return f"btc-updown-5m-{window_ts}"
+
+def btc5m_seconds_to_close(now_ts: int = 0) -> int:
+    """Seconds remaining until current window closes"""
+    ts  = now_ts or int(datetime.now(timezone.utc).timestamp())
+    end = btc5m_current_window_ts(ts) + BTC5M_WINDOW
+    return max(0, end - ts)
+
+async def btc5m_fetch_market(slug: str, sess: aiohttp.ClientSession) -> Optional[dict]:
+    """Fetch market from Gamma API by slug"""
+    try:
+        # Try event slug first
+        async with sess.get(f"{GAMMA}/events", params={"slug": slug, "limit": 1}) as r:
+            if r.status == 200:
+                data = await r.json()
+                events = data if isinstance(data, list) else []
+                if events:
+                    ev = events[0]
+                    markets = ev.get("markets", [])
+                    # Find the Up/Down market (binary)
+                    for m in markets:
+                        outcomes = m.get("outcomes", [])
+                        if isinstance(outcomes, str):
+                            try: outcomes = json.loads(outcomes)
+                            except: outcomes = []
+                        if "Up" in outcomes or "up" in str(outcomes).lower():
+                            return m
+                    if markets:
+                        return markets[0]
+        # Fallback: market slug
+        async with sess.get(f"{GAMMA}/markets", params={"slug": slug, "limit": 1}) as r:
+            if r.status == 200:
+                data = await r.json()
+                items = data if isinstance(data, list) else data.get("markets", [])
+                if items:
+                    return items[0]
+    except Exception as e:
+        pass
+    return None
+
+async def btc5m_fetch_klines(sess: aiohttp.ClientSession, limit: int = 20) -> list:
+    """Fetch BTC/USDT 1m klines from Binance"""
+    try:
+        async with sess.get(f"{BINANCE_API}/klines", params={
+            "symbol": "BTCUSDT", "interval": "1m", "limit": limit
+        }) as r:
+            if r.status == 200:
+                data = await r.json()
+                # [open_time, open, high, low, close, volume, ...]
+                return [{
+                    "ts":     int(k[0]) // 1000,
+                    "open":   float(k[1]),
+                    "high":   float(k[2]),
+                    "low":    float(k[3]),
+                    "close":  float(k[4]),
+                    "volume": float(k[5]),
+                } for k in data]
+    except:
+        pass
+    return []
+
+async def btc5m_fetch_price(sess: aiohttp.ClientSession) -> float:
+    """Fetch current BTC price from Binance"""
+    try:
+        async with sess.get(f"{BINANCE_API}/ticker/price", params={"symbol":"BTCUSDT"}) as r:
+            if r.status == 200:
+                data = await r.json()
+                return float(data.get("price", 0))
+    except:
+        pass
+    return 0.0
+
+def btc5m_compute_signal(klines: list, current_price: float) -> dict:
+    """
+    Multi-indicator momentum signal for BTC 5m direction.
+
+    Indicators:
+    1. EMA(3) vs EMA(8) crossover      → trend direction
+    2. RSI(7)                           → overbought/oversold
+    3. Volume spike                     → momentum confirmation
+    4. Last 3 candle body direction     → short-term momentum
+    5. Price position in last 5m range  → near high/low bias
+
+    Returns: {dir: "UP"|"DOWN", confidence: 0-1, signals: {...}}
+    """
+    if len(klines) < 10:
+        return {"dir": "", "confidence": 0, "signals": {}}
+
+    closes  = [k["close"]  for k in klines]
+    volumes = [k["volume"] for k in klines]
+
+    # ── EMA ──────────────────────────────────────────────────
+    def ema(data: list, period: int) -> list:
+        k_mult = 2 / (period + 1)
+        result = [data[0]]
+        for p in data[1:]:
+            result.append(p * k_mult + result[-1] * (1 - k_mult))
+        return result
+
+    ema3 = ema(closes, 3)
+    ema8 = ema(closes, 8)
+    ema_up = ema3[-1] > ema8[-1]
+    ema_margin = abs(ema3[-1] - ema8[-1]) / ema8[-1]  # % separation
+
+    # ── RSI(7) ───────────────────────────────────────────────
+    gains, losses_r = [], []
+    for i in range(1, min(8, len(closes))):
+        diff = closes[i] - closes[i-1]
+        gains.append(max(diff, 0))
+        losses_r.append(max(-diff, 0))
+    avg_gain = sum(gains) / len(gains) if gains else 0
+    avg_loss = sum(losses_r) / len(losses_r) if losses_r else 1e-9
+    rs  = avg_gain / avg_loss if avg_loss else 999
+    rsi = 100 - (100 / (1 + rs))
+    rsi_bullish   = rsi < 50    # room to go up
+    rsi_oversold  = rsi < 35
+    rsi_overbought= rsi > 65
+
+    # ── Volume spike ─────────────────────────────────────────
+    vol_avg     = sum(volumes[-10:-1]) / 9 if len(volumes) >= 10 else sum(volumes) / len(volumes)
+    vol_current = volumes[-1]
+    vol_spike   = vol_current > vol_avg * 1.3
+
+    # ── Last 3 candles direction ──────────────────────────────
+    last3 = klines[-3:]
+    bull_candles = sum(1 for k in last3 if k["close"] >= k["open"])
+    bear_candles = len(last3) - bull_candles
+    candle_bias  = "up" if bull_candles >= 2 else "down"
+
+    # ── Price in recent range ─────────────────────────────────
+    recent   = klines[-6:]
+    hi5      = max(k["high"]  for k in recent)
+    lo5      = min(k["low"]   for k in recent)
+    rng      = hi5 - lo5 if hi5 > lo5 else 1
+    pos_pct  = (current_price - lo5) / rng  # 0=bottom, 1=top
+    near_top = pos_pct > 0.75
+    near_bot = pos_pct < 0.25
+
+    # ── Score ─────────────────────────────────────────────────
+    up_score   = 0
+    down_score = 0
+
+    # EMA
+    if ema_up:
+        up_score   += 2 + (3 if ema_margin > 0.001 else 0)
+    else:
+        down_score += 2 + (3 if ema_margin > 0.001 else 0)
+
+    # RSI
+    if rsi_oversold:  up_score   += 3
+    elif rsi_bullish: up_score   += 1
+    if rsi_overbought:down_score += 3
+
+    # Volume
+    if vol_spike:
+        if candle_bias == "up":   up_score   += 2
+        else:                     down_score += 2
+
+    # Candles
+    if candle_bias == "up":   up_score   += 2
+    else:                     down_score += 2
+
+    # Position
+    if near_bot: up_score   += 2
+    if near_top: down_score += 2
+
+    total_score = up_score + down_score
+    if total_score == 0:
+        return {"dir": "", "confidence": 0, "signals": {}}
+
+    if up_score > down_score:
+        direction   = "UP"
+        confidence  = up_score / total_score
+    else:
+        direction   = "DOWN"
+        confidence  = down_score / total_score
+
+    # Only fire if confidence > 0.60
+    if confidence < 0.60:
+        direction   = ""
+        confidence  = 0
+
+    return {
+        "dir":        direction,
+        "confidence": round(confidence, 3),
+        "signals": {
+            "ema_up":      ema_up,
+            "ema_margin":  round(ema_margin * 100, 3),
+            "rsi":         round(rsi, 1),
+            "vol_spike":   vol_spike,
+            "candle_bias": candle_bias,
+            "pos_pct":     round(pos_pct, 2),
+            "up_score":    up_score,
+            "down_score":  down_score,
+        }
+    }
+
+def btc5m_market_to_signal(market: dict, predicted_dir: str, confidence: float) -> Optional[dict]:
+    """
+    Convert Gamma market data + prediction into a tradeable signal.
+    predicted_dir: "UP" | "DOWN"
+    Returns signal dict compatible with open_position()
+    """
+    outcomes = market.get("outcomes", [])
+    prices   = market.get("outcomePrices", [])
+    if isinstance(outcomes, str):
+        try: outcomes = json.loads(outcomes)
+        except: outcomes = []
+    if isinstance(prices, str):
+        try: prices = json.loads(prices)
+        except: prices = []
+
+    if not outcomes or not prices or len(outcomes) != len(prices):
+        return None
+
+    # Find Up/Down token
+    target_outcome = None
+    target_price   = None
+
+    for i, o in enumerate(outcomes):
+        o_str = str(o).lower()
+        if predicted_dir == "UP"   and o_str in ("up", "yes"): target_outcome, target_price = o, float(prices[i])
+        if predicted_dir == "DOWN" and o_str in ("down", "no"):target_outcome, target_price = o, float(prices[i])
+
+    # Fallback if "Up"/"Down" not found — use Yes/No
+    if target_outcome is None:
+        for i, o in enumerate(outcomes):
+            o_str = str(o)
+            if predicted_dir == "UP"   and o_str in ("Yes","YES","yes"): target_outcome, target_price = o, float(prices[i])
+            if predicted_dir == "DOWN" and o_str in ("No","NO","no"):    target_outcome, target_price = o, float(prices[i])
+
+    if target_outcome is None or target_price is None:
+        return None
+
+    if target_price <= 0.01 or target_price >= 0.99:
+        return None
+
+    # True prob = our confidence (boosted slightly vs market price)
+    true_prob = min(0.88, max(confidence, target_price + 0.05))
+    ev        = ev_calc(true_prob, target_price)
+
+    if ev < 0.02:  # low bar for BTC5m since it's a dedicated signal
+        return None
+
+    return {
+        "strategy":  "btc5m",
+        "outcome":   predicted_dir,
+        "ev":        round(ev, 4),
+        "true_prob": round(true_prob, 4),
+        "price":     round(target_price, 4),
+        "confidence": round(confidence, 3),
+    }
+
+async def btc5m_loop():
+    """
+    Dedicated BTC 5m signal loop.
+    - Every 30s: refresh market data + fetch Binance price
+    - At T-30s before window close: compute signal + fire entry
+    - Resolve timing = exactly 5 minutes (300s)
+    """
+    global B5
+    print("[BTC5m] Loop started")
+
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as sess:
+        while True:
+            try:
+                now_ts  = int(datetime.now(timezone.utc).timestamp())
+                win_ts  = btc5m_current_window_ts(now_ts)
+                secs_left = btc5m_seconds_to_close(now_ts)
+                slug    = btc5m_slug(win_ts)
+
+                # ── New window → reset state ──────────────────────
+                if win_ts != B5.current_ts:
+                    B5.current_ts     = win_ts
+                    B5.current_slug   = slug
+                    B5.window_open_ts = win_ts
+                    B5.window_close_ts= win_ts + BTC5M_WINDOW
+                    B5.entry_fired    = False
+                    B5.predicted_dir  = ""
+                    B5.market_data    = {}
+                    B5.signal         = {}
+                    print(f"[BTC5m] New window: {slug} | closes in {secs_left}s")
+
+                # ── Fetch Binance price every cycle ───────────────
+                price = await btc5m_fetch_price(sess)
+                if price: B5.btc_price = price
+
+                # ── Fetch klines every 60s ────────────────────────
+                if now_ts - B5.last_predict >= 60 or not B5.klines:
+                    klines = await btc5m_fetch_klines(sess, limit=20)
+                    if klines: B5.klines = klines
+                    B5.last_predict = now_ts
+
+                # ── Compute signal continuously ───────────────────
+                if B5.klines and B5.btc_price:
+                    sig_data = btc5m_compute_signal(B5.klines, B5.btc_price)
+                    if sig_data["dir"]:
+                        B5.predicted_dir = sig_data["dir"]
+                        B5.confidence    = sig_data["confidence"]
+                        B5.signal        = sig_data
+
+                # ── Fetch market data (refresh every new window or 60s) ──
+                if now_ts - B5.last_market_refresh >= 60 or not B5.market_data:
+                    mkt = await btc5m_fetch_market(slug, sess)
+                    if mkt:
+                        B5.market_data = mkt
+                        B5.last_market_refresh = now_ts
+
+                # ── Entry zone: T-30s to T-10s before close ──────
+                # This is the sweet spot: direction largely locked in
+                in_entry_zone = 10 <= secs_left <= 35
+                should_fire   = (
+                    in_entry_zone
+                    and not B5.entry_fired
+                    and B5.predicted_dir
+                    and B5.confidence >= 0.60
+                    and B5.market_data
+                    and not S.gas_paused
+                )
+
+                if should_fire:
+                    market_sig = btc5m_market_to_signal(
+                        B5.market_data, B5.predicted_dir, B5.confidence
+                    )
+                    if market_sig:
+                        # Build market dict for open_position
+                        q = B5.market_data.get("question", f"BTC 5m {B5.current_slug}")
+                        mkt_dict = {
+                            "id":          B5.market_data.get("id", B5.current_slug),
+                            "question":    q[:80],
+                            "category":    "crypto",
+                            "yes_price":   market_sig["price"] if market_sig["outcome"]=="UP" else 1-market_sig["price"],
+                            "no_price":    1-market_sig["price"] if market_sig["outcome"]=="UP" else market_sig["price"],
+                            "volume":      float(B5.market_data.get("volume", 0) or 0),
+                            "volume_24h":  float(B5.market_data.get("volume24hr", 0) or 0),
+                            "end_date":    "",
+                            "resolve_sec": secs_left,        # resolve when window closes
+                            "resolve_fmt": f"{secs_left}s",
+                            "spread":      0.0,
+                            "liquidity":   0.0,
+                            "_is_btc5m":   True,
+                        }
+
+                        await open_position(mkt_dict, market_sig)
+                        B5.entry_fired = True
+                        B5.total      += 1
+                        print(f"[BTC5m] ENTRY {market_sig['outcome']} @ {market_sig['price']} conf={B5.confidence} T-{secs_left}s")
+
+                # Broadcast BTC5m status to dashboard
+                await broadcast({"type": "btc5m", "data": {
+                    "slug":          B5.current_slug,
+                    "window_ts":     B5.window_open_ts,
+                    "window_close":  B5.window_close_ts,
+                    "secs_left":     secs_left,
+                    "btc_price":     round(B5.btc_price, 2),
+                    "predicted_dir": B5.predicted_dir,
+                    "confidence":    round(B5.confidence, 3),
+                    "entry_fired":   B5.entry_fired,
+                    "in_entry_zone": in_entry_zone,
+                    "signal":        B5.signal.get("signals", {}),
+                    "stats":         {"wins": B5.wins, "losses": B5.losses, "total": B5.total},
+                }})
+
+            except Exception as e:
+                S.errors.append(f"[BTC5m] {str(e)[:80]}")
+
+            await asyncio.sleep(10)   # poll every 10s
 
 app = FastAPI(title="Polymarket Bot v3")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -514,6 +923,8 @@ def build_market_rows(parsed: list) -> list:
 def risk_ok(market_id: str, sig: dict) -> tuple[bool, str]:
     if S.gas_paused:
         return False, f"Gas stop: {gas_tx_remaining()} tx tersisa"
+    if S.daily_pnl <= -C.daily_loss_limit:
+        return False, f"Daily loss limit ${C.daily_loss_limit}"
     open_pos = [p for p in S.positions if p["status"]=="open"]
     if len(open_pos) >= C.max_open_pos:
         return False, f"Max {C.max_open_pos} posisi"
@@ -613,6 +1024,11 @@ async def close_position(pos: dict, won: bool):
 
         S.daily_pnl    = round(S.daily_pnl + pnl, 4)
         S.lifetime_pnl = round(S.lifetime_pnl + pnl, 4)
+
+        # Track BTC5m accuracy separately
+        if pos.get("strategy") == "btc5m":
+            if won: B5.wins  += 1
+            else:   B5.losses += 1
 
         S.positions.remove(pos)
         S.closed_trades.append(pos)
@@ -917,16 +1333,40 @@ async def ws_endpoint(ws: WebSocket):
             "gas":       get_gas_info(),
             "salary":    get_salary_info(),
             "history":   S.closed_trades[-30:][::-1],
+            "btc5m":     api_btc5m(),
         }}, default=str))
         while True: await ws.receive_text()
     except WebSocketDisconnect: pass
     finally: S.ws_clients.discard(ws)
 
+@app.get("/api/btc5m")
+def api_btc5m():
+    """Real-time BTC 5m signal status"""
+    now_ts    = int(datetime.now(timezone.utc).timestamp())
+    secs_left = btc5m_seconds_to_close(now_ts)
+    return {
+        "slug":          B5.current_slug,
+        "window_ts":     B5.window_open_ts,
+        "window_close":  B5.window_close_ts,
+        "secs_left":     secs_left,
+        "btc_price":     round(B5.btc_price, 2),
+        "predicted_dir": B5.predicted_dir,
+        "confidence":    round(B5.confidence, 3),
+        "entry_fired":   B5.entry_fired,
+        "in_entry_zone": 10 <= secs_left <= 35,
+        "signal_detail": B5.signal,
+        "stats":         {"wins": B5.wins, "losses": B5.losses, "total": B5.total},
+        "klines_count":  len(B5.klines),
+        "market_found":  bool(B5.market_data),
+    }
+
 @app.on_event("startup")
 async def startup():
     asyncio.create_task(scanner_loop())
-    asyncio.create_task(resolver_loop())   # always run resolver (handles real timing in sim)
+    asyncio.create_task(resolver_loop())
+    asyncio.create_task(btc5m_loop())     # ← dedicated BTC 5m engine
     print(f"[Bot v3] Mode={C.mode} Capital=${C.usdc_capital} POL={C.pol_balance}")
     print(f"[Bot v3] Salary every ${C.salary_threshold}: keep {int(C.salary_keep_pct*100)}% withdraw {int(C.salary_withdraw_pct*100)}%")
     print(f"[Bot v3] Fast markets only (max 7 days resolve)")
     print(f"[Bot v3] Gas reserve: {int(C.gas_reserve_pct*100)}% of POL")
+    print(f"[Bot v3] BTC5m engine: slug=btc-updown-5m-{{ts}}, entry T-30s to T-10s")

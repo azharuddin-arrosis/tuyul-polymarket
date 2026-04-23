@@ -3,7 +3,7 @@ import { usePolyBot } from './hooks/usePolyBot.js'
 import { SetupWizard } from './components/SetupWizard.jsx'
 import { SalaryPanel } from './components/SalaryPanel.jsx'
 import { PositionCard } from './components/PositionCard.jsx'
-import { MarketTable, GasPanel, Toast, ActivityLog, XTag } from './components/Widgets.jsx'
+import { MarketTable, GasPanel, Toast, ActivityLog, XTag, BTC5mPanel } from './components/Widgets.jsx'
 import { usd, pct, CAT_COLOR, STRAT_COLOR } from './utils.js'
 
 /* ─── Primitive UI ──────────────────────────── */
@@ -137,6 +137,7 @@ function ConfigTable({config}){
   if(!config) return null
   const sections=[
     {t:'Bot',rows:[['Mode',config.mode],['Min Bet','$1.00'],['Max Open',config.max_open],['Min EV',`${((config.min_ev||.04)*100).toFixed(0)}%`],['Daily Loss',`$${config.daily_loss}`],['Scan',`${config.scan_sec}s`],['Markets','≤7d resolve only']]},
+    {t:'BTC 5M Signal',rows:[['Slug','btc-updown-5m-{ts}'],['ts calc','now - (now % 300)'],['Entry zone','T-30s to T-10s before close'],['Min conf','60%'],['Indicators','EMA(3/8) + RSI(7) + Vol + Candles'],['Data src','Binance BTCUSDT 1m klines'],['Resolution','Chainlink BTC/USD oracle'],['Freq','1 bet per 5m window']]},
     {t:'Compound',rows:[['Base',`$${config.compound_base}`],['Step',`$${config.compound_step}`],['Increment',`+$${config.compound_inc}/tier`],['Max Bet',`$${config.compound_max_bet}`],['$20→T1',`$1 · $40→T2 $2 · $60→T3 $3`]]},
     {t:'Salary',rows:[['Threshold',`$${config.salary_threshold}`],['Tarik',`${((config.salary_withdraw_pct||.7)*100).toFixed(0)}%`],['Simpan',`${((config.salary_keep_pct||.3)*100).toFixed(0)}%`],['Formula','Equity $100 → tarik $70 → lanjut $30']]},
     {t:'Gas',rows:[['Reserve','50% POL dikunci'],['Per TX','~$0.02'],['Alert',`<${config.gas_alert_tx} TX`],['Stop',`<${config.gas_stop_tx} TX`]]},
@@ -170,7 +171,7 @@ const TABS=['overview','markets','positions','salary','history','config']
 
 /* ─── MAIN APP ─────────────────────────────── */
 export default function App(){
-  const {stats,positions,log,markets,config,gas,salary,history,connected,lastUpd,notify,setup,resumeGas}=usePolyBot()
+  const {stats,positions,log,markets,config,gas,salary,history,btc5m,connected,lastUpd,notify,setup,resumeGas}=usePolyBot()
   const [tab,setTab]=useState('overview')
   const [ready,setReady]=useState(false)
   const hist=usePnlHistory(stats?.capital, stats?.initial)
@@ -194,6 +195,8 @@ export default function App(){
         <Dot on={connected}/><span style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:connected?'var(--green)':'var(--red)'}}>{connected?'LIVE':'···'}</span>
         {stats&&<XTag t={stats.mode} c={stats.mode==='SIM'?'var(--amber)':'var(--green)'}/>}
         {(stats?.compound_tier??0)>0&&<XTag t={`T${stats.compound_tier}·$${stats.compound_bet}`} c="var(--green)"/>}
+        {btc5m?.predicted_dir&&<XTag t={`BTC5M ${btc5m.predicted_dir} ${btc5m.confidence?(btc5m.confidence*100).toFixed(0)+'%':''}`} c={btc5m.predicted_dir==='UP'?'var(--green)':'var(--red)'}/>}
+        {btc5m?.in_entry_zone&&<XTag t="⚡ENTRY" c="var(--amber)"/>}
         {gas?.status==='critical'&&<XTag t="GAS CRIT" c="var(--red)"/>}
         {gas?.status==='low'&&<XTag t="GAS LOW" c="var(--amber)"/>}
         {stats?.daily_stopped&&<XTag t="DAILY STOP" c="var(--red)"/>}
@@ -278,6 +281,7 @@ export default function App(){
 
             {/* sidebar */}
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              <BTC5mPanel data={btc5m}/>
               <SalaryRow salary={salary}/>
               <CompoundRow stats={stats}/>
               <GasPanel gas={gas} onResume={resumeGas}/>
