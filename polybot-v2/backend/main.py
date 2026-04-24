@@ -440,10 +440,10 @@ class Config:
     prob_min         = float(os.getenv("PROB_MIN", "0.55"))
     prob_max         = float(os.getenv("PROB_MAX", "0.88"))
     scan_sec         = int(os.getenv("SCAN_INTERVAL", "10"))
-    # Compound
-    compound_base    = 20.0
-    compound_step    = 20.0
-    compound_inc     = 1.0
+    # Compound: $10 = $2 bet
+    compound_base    = 10.0
+    compound_step    = 10.0
+    compound_inc     = 2.0
     compound_max_bet = 50.0
     # Gas: keep 50% as reserve
     gas_reserve_pct  = 0.50

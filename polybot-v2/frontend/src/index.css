@@ -1,13 +1,13 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0a0c10;--bg1:#0e1117;--bg2:#12161e;--bg3:#171c26;--bg4:#1d2435;
-  --border:#1e2840;--border2:#253050;
-  --text:#b8ccd8;--text2:#6a82a0;--text3:#384d68;
-  --green:#00c87a;--gbg:rgba(0,200,122,.06);
-  --red:#f04060;--rbg:rgba(240,64,96,.06);
-  --amber:#e09000;--abg:rgba(224,144,0,.06);
-  --blue:#3a8fd8;--bbg:rgba(58,143,216,.06);
-  --gold:#c8a820;--goldbg:rgba(200,168,32,.06);
+  --bg:#000000;--bg1:#0a0a0a;--bg2:#111111;--bg3:#1a1a1a;--bg4:#222222;
+  --border:#333333;--border2:#444444;
+  --text:#ffffff;--text2:#cccccc;--text3:#888888;
+  --green:#00ff00;--gbg:rgba(0,255,0,.06);
+  --red:#ff0000;--rbg:rgba(255,0,0,.06);
+  --amber:#ffaa00;--abg:rgba(255,170,0,.06);
+  --blue:#0088ff;--bbg:rgba(0,136,255,.06);
+  --gold:#ffcc00;--goldbg:rgba(255,204,0,.06);
   --mono:'Consolas','JetBrains Mono',monospace;
   --sans:'Segoe UI',system-ui,sans-serif;
   --fs:11px;--fss:10px;--fsxs:9px;
