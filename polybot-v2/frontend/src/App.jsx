@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { usePolyBot } from './hooks/usePolyBot.js'
 import { SetupWizard } from './components/SetupWizard.jsx'
 import { PositionCard } from './components/PositionCard.jsx'
-import { XTag } from './components/Widgets.jsx'
+import { XTag, Toast } from './components/Widgets.jsx'
 import { usd, pct } from './utils.js'
 
 function Dot({on}){return <span style={{display:'inline-block',width:5,height:5,borderRadius:'50%',marginRight:4,background:on?'var(--green)':'var(--red)',boxShadow:on?'0 0 4px var(--green)':'none',animation:on?'pulse 2s infinite':'none'}}/>}
@@ -10,46 +10,45 @@ function Dot({on}){return <span style={{display:'inline-block',width:5,height:5,
 function Stat({label,value,sub,color}){
   return(
     <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'4px 8px',minWidth:0}}>
-      <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:1}}>{label}</div>
-      <div style={{fontSize:14,fontWeight:600,color:color||'var(--text)',fontFamily:'var(--mono)',lineHeight:1.2}}>{value}</div>
-      {sub&&<div style={{fontSize:'var(--fsxs)',color:'var(--text3)',marginTop:1}}>{sub}</div>}
+      <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:2}}>{label}</div>
+      <div style={{fontSize:14,fontWeight:700,color:color||'var(--text)',fontFamily:'var(--mono)',lineHeight:1.2}}>{value}</div>
+      {sub&&<div style={{fontSize:'var(--fsxs)',color:'var(--text3)',marginTop:2}}>{sub}</div>}
     </div>
   )
 }
 
 function MiniScanner({markets}){
-  const rows = markets?.slice(0,15) || []
+  const rows = markets?.slice(0,12) || []
   return(
     <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
       <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.06em',fontWeight:600}}>Global Scanner</span>
-        <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>{rows.length} markets</span>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>{rows.length}</span>
       </div>
-      <div style={{overflowY:'auto',maxHeight:200}}>
+      <div style={{overflowY:'auto',maxHeight:180}}>
         <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
-          <colgroup><col style={{width:40}}/><col style={{width:'auto'}}/><col style={{width:40}}/><col style={{width:40}}/><col style={{width:40}}/><col style={{width:40}}/></colgroup>
+          <colgroup><col style={{width:40}}/><col style={{width:'auto'}}/><col style={{width:40}}/><col style={{width:35}}/><col style={{width:35}}/><col style={{width:35}}/></colgroup>
           <thead>
             <tr>
-              <th className="xls-th">Resolve</th>
+              <th className="xls-th">T</th>
               <th className="xls-th">Market</th>
               <th className="xls-th">YES</th>
               <th className="xls-th">NO</th>
-              <th className="xls-th">Signal</th>
+              <th className="xls-th">Sig</th>
               <th className="xls-th">EV</th>
             </tr>
           </thead>
           <tbody>
-            {rows.length===0&&<tr><td colSpan={6} style={{padding:'10px',textAlign:'center',color:'var(--text3)',fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>_ scanning...</td></tr>}
+            {rows.length===0&&<tr><td colSpan={6} style={{padding:'8px',textAlign:'center',color:'var(--text3)',fontSize:'var(--fsxs)'}}>_ scanning...</td></tr>}
             {rows.map((r,i)=>{
               const hasSig=r.signal&&r.signal!=='—'
-              const sig=r.signal||'—'
               return(
                 <tr key={r.id||i} className="xls-tr" style={{background:hasSig?'var(--gbg)':''}}>
                   <td className="xls-td" style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:'var(--text3)'}}>{r.resolve_fmt||'?'}</td>
-                  <td className="xls-td" style={{color:'var(--text)',fontSize:'var(--fsxs)'}} title={r.question}>{r.question?.slice(0,30)}</td>
+                  <td className="xls-td" style={{color:'var(--text)',fontSize:'var(--fsxs)'}} title={r.question}>{r.question?.slice(0,25)}</td>
                   <td className="xls-td" style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',textAlign:'right',color:r.yes_price>=.55?'var(--green)':'var(--text2)'}}>{r.yes_price?.toFixed(2)}</td>
                   <td className="xls-td" style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',textAlign:'right',color:'var(--text2)'}}>{r.no_price?.toFixed(2)}</td>
-                  <td className="xls-td" style={{fontSize:'var(--fsxs)',color:hasSig?'var(--green)':'var(--text3)'}}>{sig}</td>
+                  <td className="xls-td" style={{fontSize:'var(--fsxs)',color:hasSig?'var(--green)':'var(--text3)'}}>{r.signal||'—'}</td>
                   <td className="xls-td" style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',textAlign:'right',color:r.ev>.1?'var(--green)':'var(--text3)'}}>{hasSig?`${(r.ev*100).toFixed(0)}%`:'—'}</td>
                 </tr>
               )
@@ -65,27 +64,19 @@ function OpenPositions({positions}){
   return(
     <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
       <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between'}}>
-        <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.06em',fontWeight:600}}>Open Positions</span>
-        <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>{positions.length}</span>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>Open ({positions.length})</span>
       </div>
-      <div style={{overflowY:'auto',maxHeight:140}}>
+      <div style={{overflowY:'auto',maxHeight:80}}>
         {positions.length===0
-          ?<div style={{padding:'8px 10px',color:'var(--text3)',fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>_ no open positions</div>
-          :<table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
-            <colgroup><col style={{width:70}}/><col style={{width:'auto'}}/><col style={{width:35}}/><col style={{width:40}}/><col style={{width:40}}/></colgroup>
-            <thead><tr>
-              <th className="xls-th">ID</th>
-              <th className="xls-th">Market</th>
-              <th className="xls-th">Side</th>
-              <th className="xls-th">Price</th>
-              <th className="xls-th">Bet</th>
-            </tr></thead>
+          ?<div style={{padding:'6px 10px',color:'var(--text3)',fontSize:'var(--fsxs)'}}>_ none</div>
+          :<table style={{width:'100%',borderCollapse:'collapse'}}>
+            <colgroup><col style={{width:50}}/><col style={{width:'auto'}}/><col style={{width:30}}/><col style={{width:35}}/><col style={{width:35}}/></colgroup>
             <tbody>
               {positions.map(p=>(
                 <tr key={p.id} className="xls-tr">
                   <td className="xls-td" style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:'var(--text3)'}}>{p.id}</td>
-                  <td className="xls-td" style={{color:'var(--text)',fontSize:'var(--fsxs)'}} title={p.question}>{p.question?.slice(0,25)}</td>
-                  <td className="xls-td"><span style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:p.outcome==='YES'?'var(--green)':'var(--amber)'}}>{p.outcome}</span></td>
+                  <td className="xls-td" style={{color:'var(--text)',fontSize:'var(--fsxs)'}}>{p.question?.slice(0,20)}</td>
+                  <td className="xls-td"><span style={{fontSize:'var(--fsxs)',color:p.outcome==='YES'?'var(--green)':'var(--amber)'}}>{p.outcome}</span></td>
                   <td className="xls-td" style={{fontFamily:'var(--mono)',textAlign:'right',color:'var(--text2)'}}>{p.price?.toFixed(2)}</td>
                   <td className="xls-td" style={{fontFamily:'var(--mono)',textAlign:'right',color:'var(--text)'}}>${p.size?.toFixed(0)}</td>
                 </tr>
@@ -102,29 +93,32 @@ function ActivityLog({log}){
   return(
     <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
       <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)'}}>
-        <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.06em',fontWeight:600}}>Activity Log</span>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>Activity</span>
       </div>
-      <div style={{maxHeight:120,overflowY:'auto'}}>
-        {log.length===0&&<div style={{padding:'6px 10px',color:'var(--text3)',fontFamily:'var(--mono)',fontSize:'var(--fsxs)'}}>_ waiting...</div>}
-        {log.slice(0,30).map((e,i)=>{
+      <div style={{maxHeight:100,overflowY:'auto'}}>
+        {log.length===0&&<div style={{padding:'6px',color:'var(--text3)',fontSize:'var(--fsxs)'}}>_ waiting...</div>}
+        {log.slice(0,15).map((e,i)=>{
           const isO=e.event==='OPEN',isC=e.event==='CLOSE',won=e.result==='won'
           const color=isO?'var(--blue)':isC?(won?'var(--green)':'var(--red)'):'var(--text3)'
           const icon=isO?'▲':isC?(won?'✓':'✗'):'·'
           return(
             <div key={i} style={{
-              display:'grid',gridTemplateColumns:'16px 48px 1fr auto',
-              alignItems:'center',gap:4,padding:'2px 10px',
+              display:'grid',gridTemplateColumns:'14px 42px 1fr auto',
+              alignItems:'center',gap:3,padding:'2px 8px',
               borderBottom:'1px solid var(--border)',fontSize:'var(--fsxs)',fontFamily:'var(--mono)',
-              background:i%2===0?'transparent':'rgba(255,255,255,.02)',
             }}>
               <span style={{color}}>{icon}</span>
               <span style={{color:'var(--text3)'}}>{e.time}</span>
               <span style={{color:'var(--text2)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                {isO&&`${e.id} ${e.question?.slice(0,20)} [${e.outcome}]`}
-                {isC&&`${e.id} ${won?'WIN':'LOSE'} ${Number(e.pnl)>=0?'+':''}$${Math.abs(Number(e.pnl)).toFixed(2)}`}
-                {!isO&&!isC&&e.event}
+                {isO&&`${e.id} ${e.question?.slice(0,15)}`}
+                {isC&&`${e.id} ${won?'WIN':'LOSE'} ${Number(e.pnl)>=0?'+':''}$${Math.abs(Number(e.pnl)).toFixed(1)}`}
+                {e.event==='SALARY'&&`💰 GAJIAN $${Number(e.withdrawn).toFixed(0)}`}
+                {e.event==='COMPOUND_UP'&&`⬆ T${e.tier} $${e.new_bet}`}
+                {!isO&&!isC&&e.event!=='SALARY'&&e.event!=='COMPOUND_UP'&&e.event}
               </span>
-              {isC&&<span style={{color:won?'var(--green)':'var(--red)',whiteSpace:'nowrap'}}>{won?'+':'-'}${Math.abs(Number(e.pnl)).toFixed(2)}</span>}
+              {isC&&<span style={{color:won?'var(--green)':'var(--red)'}}>{won?'+':'-'}${Math.abs(Number(e.pnl)).toFixed(1)}</span>}
+              {e.event==='SALARY'&&<XTag t="SALARY" c="var(--gold)"/>}
+              {e.event==='COMPOUND_UP'&&<XTag t={`T${e.tier}`} c="var(--green)"/>}
             </div>
           )
         })}
@@ -133,8 +127,86 @@ function ActivityLog({log}){
   )
 }
 
+function SalaryPanel({salary}){
+  if(!salary) return null
+  return(
+    <div style={{background:'var(--bg2)',border:'1px solid var(--gold)',borderRadius:'var(--r3)',overflow:'hidden'}}>
+      <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--gold)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>💰 Gajian</span>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>{salary.salary_count||0}x</span>
+      </div>
+      <div style={{padding:'6px 10px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:4,fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>
+        <div><span style={{color:'var(--text3)'}}>Total:</span> <span style={{color:'var(--gold)'}}>${usd(salary.total_withdrawn)}</span></div>
+        <div><span style={{color:'var(--text3)'}}>Target:</span> <span style={{color:'var(--text)'}}>${salary.next_target}</span></div>
+        <div><span style={{color:'var(--text3)'}}>Next:</span> <span style={{color:'var(--gold)'}}>${usd(salary.to_next)}</span></div>
+        <div><span style={{color:'var(--text3)'}}>Progress:</span> <span style={{color:'var(--text)'}}>{salary.progress_pct}%</span></div>
+      </div>
+    </div>
+  )
+}
+
+function CompoundPanel({stats}){
+  if(!stats) return null
+  const t=stats.compound_tier??0,b=stats.compound_bet??1,p=stats.compound_prog??0
+  return(
+    <div style={{background:'var(--bg2)',border:'1px solid var(--green)',borderRadius:'var(--r3)',overflow:'hidden'}}>
+      <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--green)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>Compound</span>
+        <span style={{fontFamily:'var(--mono)',color:'var(--green)'}}>T{t} · ${b}/bet</span>
+      </div>
+      <div style={{padding:'6px 10px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:4,fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>
+        <div><span style={{color:'var(--text3)'}}>Next Tier:</span> <span style={{color:'var(--text)'}}>${stats.compound_next}</span></div>
+        <div><span style={{color:'var(--text3)'}}>Progress:</span> <span style={{color:'var(--amber)'}}>{p}%</span></div>
+      </div>
+      <div style={{height:3,background:'var(--border2)',borderRadius:1,margin:'4px 10px 6px'}}>
+        <div style={{height:'100%',width:`${p}%`,background:'var(--green)',borderRadius:1}}/>
+      </div>
+    </div>
+  )
+}
+
+function GasPanel({gas,onResume}){
+  if(!gas) return null
+  const bc=gas.status==='critical'?'var(--red)':gas.status==='low'?'var(--amber)':'var(--text)'
+  return(
+    <div style={{background:'var(--bg2)',border:`1px solid ${gas.status==='ok'?'var(--border)':bc}`,borderRadius:'var(--r3)',overflow:'hidden'}}>
+      <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>⛽ Gas</span>
+        <XTag t={gas.status.toUpperCase()} c={bc}/>
+      </div>
+      <div style={{padding:'6px 10px',display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4,fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>
+        <div><span style={{color:'var(--text3)'}}>POL:</span> <span style={{color:bc}}>{gas.pol_left?.toFixed(2)}</span></div>
+        <div><span style={{color:'var(--text3)'}}>TX:</span> <span style={{color:bc}}>{gas.tx_left}</span></div>
+        <div><span style={{color:'var(--text3)'}}>Usable:</span> <span style={{color:'var(--text)'}}>{gas.pol_usable?.toFixed(2)}</span></div>
+      </div>
+      {gas.paused&&<button onClick={onResume} style={{margin:'4px 10px 6px',padding:'4px',background:'var(--rbg)',border:'1px solid var(--red)',borderRadius:'var(--r)',color:'var(--red)',fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>RESUME</button>}
+    </div>
+  )
+}
+
+function BTC5mPanel({data}){
+  if(!data) return null
+  const {predicted_dir,confidence,in_entry_zone,slug}=data
+  const dirColor=predicted_dir==='UP'?'var(--green)':predicted_dir==='DOWN'?'var(--red)':'var(--text3)'
+  return(
+    <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
+      <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>⚡ BTC5M</span>
+        <div style={{display:'flex',gap:4}}>
+          {in_entry_zone&&<XTag t="ENTRY" c="var(--amber)"/>}
+          {predicted_dir&&<XTag t={predicted_dir} c={dirColor}/>}
+        </div>
+      </div>
+      <div style={{padding:'6px 10px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:4,fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>
+        <div><span style={{color:'var(--text3)'}}>Dir:</span> <span style={{color:dirColor}}>{predicted_dir||'—'}</span></div>
+        <div><span style={{color:'var(--text3)'}}>Conf:</span> <span style={{color:confidence>=.7?'var(--green)':confidence>=.6?'var(--amber)':'var(--text3)'}}>{confidence?`${(confidence*100).toFixed(0)}%`:'—'}</span></div>
+      </div>
+    </div>
+  )
+}
+
 export default function App(){
-  const {stats,positions,log,markets,gas,salary,connected,lastUpd,notify,setup,resumeGas}=usePolyBot()
+  const {stats,positions,log,markets,gas,salary,btc5m,connected,lastUpd,notify,setup,resumeGas}=usePolyBot()
   const [ready,setReady]=useState(false)
   const pnl=stats?.pnl??0,isPos=pnl>=0
 
@@ -145,11 +217,13 @@ export default function App(){
 
   return(
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',flexDirection:'column'}}>
-      <header style={{height:28,background:'var(--bg1)',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',padding:'0 10px',gap:8,flexShrink:0}}>
+      <Toast notify={notify} onDismiss={()=>{}} onResume={resumeGas}/>
+      
+      <header style={{height:26,background:'var(--bg1)',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',padding:'0 10px',gap:6,flexShrink:0}}>
         <span style={{fontFamily:'var(--mono)',fontSize:11,fontWeight:700,color:'var(--green)',letterSpacing:'.1em'}}>
-          POLY<span style={{color:'var(--text)'}}>BOT</span><span style={{fontSize:'var(--fsxs)',color:'var(--text3)',marginLeft:3}}>v3</span>
+          POLY<span style={{color:'var(--text)'}}>BOT</span><span style={{fontSize:'var(--fsxs)',color:'var(--text3)',marginLeft:2}}>v3</span>
         </span>
-        <div style={{width:1,height:12,background:'var(--border)'}}/>
+        <div style={{width:1,height:10,background:'var(--border)'}}/>
         <Dot on={connected}/><span style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:connected?'var(--green)':'var(--red)'}}>{connected?'LIVE':'···'}</span>
         {stats&&<XTag t={stats.mode} c={stats.mode==='SIM'?'var(--amber)':'var(--green)'}/>}
         {(stats?.compound_tier??0)>0&&<XTag t={`T${stats.compound_tier}·$${stats.compound_bet}`} c="var(--green)"/>}
@@ -157,30 +231,36 @@ export default function App(){
         {gas?.status==='critical'&&<XTag t="GAS" c="var(--red)"/>}
         {gas?.status==='low'&&<XTag t="GAS" c="var(--amber)"/>}
         <div style={{marginLeft:'auto',display:'flex',gap:4}}>
-          <button onClick={()=>setReady(false)} style={{background:'transparent',border:'1px solid var(--border)',color:'var(--text3)',fontFamily:'var(--mono)',fontSize:'var(--fsxs)',padding:'2px 6px',borderRadius:'var(--r)',textTransform:'uppercase'}}>RST</button>
+          <button onClick={()=>setReady(false)} style={{background:'transparent',border:'1px solid var(--border)',color:'var(--text3)',fontFamily:'var(--mono)',fontSize:'var(--fsxs)',padding:'2px 6px',borderRadius:'var(--r)'}}>RST</button>
         </div>
         {lastUpd&&<span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>{lastUpd.toLocaleTimeString()}</span>}
       </header>
 
-      <main style={{flex:1,padding:'6px 8px',display:'flex',flexDirection:'column',gap:6}}>
+      <main style={{flex:1,padding:'6px 8px',display:'flex',flexDirection:'column',gap:6,overflowY:'auto'}}>
         <div style={{display:'grid',gridTemplateColumns:'repeat(8,1fr)',gap:4}}>
           <Stat label="Equity" value={usd(stats?.capital)} color="var(--text)"/>
           <Stat label="PnL" value={`${pnl>=0?'+':''}${usd(pnl)}`} color={isPos?'var(--green)':'var(--red)'}/>
-          <Stat label="Win Rate" value={pct(stats?.win_rate)} color={stats?.win_rate>=60?'var(--green)':stats?.win_rate>=45?'var(--amber)':'var(--red)'}/>
+          <Stat label="Win" value={pct(stats?.win_rate)} color={stats?.win_rate>=60?'var(--green)':stats?.win_rate>=45?'var(--amber)':'var(--red)'}/>
           <Stat label="Daily" value={`${(stats?.daily_pnl??0)>=0?'+':''}${usd(stats?.daily_pnl)}`} color={(stats?.daily_pnl??0)>=0?'var(--green)':'var(--red)'}/>
-          <Stat label="Salary" value={usd(salary?.total_withdrawn)} color="var(--gold)"/>
+          <Stat label="Gajian" value={usd(salary?.total_withdrawn)} color="var(--gold)"/>
           <Stat label="Open" value={stats?.open_count??0} color="var(--blue)"/>
           <Stat label="Tier" value={`T${stats?.compound_tier??0}`} color="var(--green)"/>
           <Stat label="Gas" value={`${gas?.tx_left??'—'}`} color={gas?.status==='ok'?'var(--text)':gas?.status==='low'?'var(--amber)':'var(--red)'}/>
         </div>
 
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,flex:1}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6}}>
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
             <MiniScanner markets={markets}/>
             <OpenPositions positions={positions}/>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
             <ActivityLog log={log}/>
+            <BTC5mPanel data={btc5m}/>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            <SalaryPanel salary={salary}/>
+            <CompoundPanel stats={stats}/>
+            <GasPanel gas={gas} onResume={resumeGas}/>
           </div>
         </div>
       </main>
