@@ -406,6 +406,7 @@ async def btc5m_loop():
                         print(f"[BTC5m] ENTRY {market_sig['outcome']} @ {market_sig['price']} conf={B5.confidence} T-{secs_left}s")
 
                 # Broadcast BTC5m status to dashboard
+                sigs = B5.signal.get("signals", {})
                 await broadcast({"type": "btc5m", "data": {
                     "slug":          B5.current_slug,
                     "window_ts":     B5.window_open_ts,
@@ -416,7 +417,16 @@ async def btc5m_loop():
                     "confidence":    round(B5.confidence, 3),
                     "entry_fired":   B5.entry_fired,
                     "in_entry_zone": in_entry_zone,
-                    "signal":        B5.signal.get("signals", {}),
+                    "signal": {
+                        "ema_up":      sigs.get("ema_up"),
+                        "ema_margin":  sigs.get("ema_margin"),
+                        "rsi":         sigs.get("rsi"),
+                        "vol_spike":   sigs.get("vol_spike"),
+                        "candle_bias": sigs.get("candle_bias"),
+                        "pos_pct":     sigs.get("pos_pct"),
+                        "up_score":    sigs.get("up_score"),
+                        "down_score":  sigs.get("down_score"),
+                    },
                     "stats":         {"wins": B5.wins, "losses": B5.losses, "total": B5.total},
                 }})
 
@@ -1360,6 +1370,8 @@ def get_config() -> dict:
         "compound_divisor": C.compound_divisor,
         "compound_min_bet": C.compound_min_bet,
         "compound_max_cap": C.compound_max_cap,
+        "compound_base": C.compound_divisor,     # Alias for dashboard
+        "compound_step": C.compound_divisor,     # Alias for dashboard
         "compound_formula": comp_info["formula"],
         #
         "gas_reserve_pct": C.gas_reserve_pct,
@@ -1745,8 +1757,19 @@ def api_btc5m():
         "predicted_dir": B5.predicted_dir,
         "confidence":    round(B5.confidence, 3),
         "entry_fired":   B5.entry_fired,
-        "in_entry_zone": 10 <= secs_left <= 35,
-        "signal_detail": B5.signal,
+        "in_entry_zone":  10 <= secs_left <= 35,
+        # Flat signal for frontend compatibility
+        "signal": {
+            "ema_up":      (sigs := B5.signal.get("signals", {})).get("ema_up"),
+            "ema_margin":  sigs.get("ema_margin"),
+            "rsi":         sigs.get("rsi"),
+            "vol_spike":   sigs.get("vol_spike"),
+            "candle_bias": sigs.get("candle_bias"),
+            "pos_pct":     sigs.get("pos_pct"),
+            "up_score":    sigs.get("up_score"),
+            "down_score":  sigs.get("down_score"),
+        },
+        "signal_detail": B5.signal,  # Keep for backward compat
         "stats":         {"wins": B5.wins, "losses": B5.losses, "total": B5.total},
         "klines_count":  len(B5.klines),
         "market_found":  bool(B5.market_data),
