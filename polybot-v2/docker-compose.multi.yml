@@ -62,6 +62,8 @@ services:
     profiles:
       - bot1
       - all
+      - production
+      - production
 
   # ═══════════════════════════════════════════════════════════════════════════════
   # BOT 2 — SECONDARY INSTANCE
@@ -99,6 +101,7 @@ services:
     profiles:
       - bot2
       - all
+      - production
 
   # ═══════════════════════════════════════════════════════════════════════════════
   # SHARED NGINX REVERSE PROXY
