@@ -125,28 +125,20 @@ function HistoryPanel({history}){
 
 function ConfigPanel({config}){
   if(!config) return null
-  const sections=[
-    {t:'Bot',rows:[['Mode',config.mode],['Min Bet','$1.00'],['Max Open',config.max_open],['Min EV',`${((config.min_ev||.04)*100).toFixed(0)}%`],['Daily Loss',`$${config.daily_loss}`]]},
-    {t:'Compound',rows:[['Base',`$${config.compound_base}`],['Step',`$${config.compound_step}`],['Inc',`+$${config.compound_inc}/tier`],['Max',`$${config.compound_max_bet}`]]},
-    {t:'Gas',rows:[['Reserve','50%'],['Alert',`<${config.gas_alert_tx} TX`],['Stop',`<${config.gas_stop_tx} TX`],['Per TX','~$0.02']]},
-    {t:'Salary',rows:[['Thresh',`$${config.salary_threshold}`],['Tarik',`${((config.salary_withdraw_pct||.7)*100).toFixed(0)}%`],['Simpan',`${((config.salary_keep_pct||.3)*100).toFixed(0)}%`]]},
-  ]
   return(
     <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
       <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)'}}>
         <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>Config</span>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,padding:4}}>
-        {sections.map(({t,rows})=>
-          <div key={t} style={{padding:'2px 4px'}}>
-            <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',fontWeight:600}}>{t}</span>
-            {rows.map(([k,v])=>(
-              <div key={k} style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--text2)'}}>
-                {k}: <span style={{color:'var(--text)'}}>{v}</span>
-              </div>
-            ))}
-          </div>
-        ))}
+      <div style={{padding:'6px 10px',fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--text2)'}}>
+        <div><span style={{color:'var(--text3)'}}>Mode:</span> {config.mode}</div>
+        <div><span style={{color:'var(--text3)'}}>Min Bet:</span> $1.00</div>
+        <div><span style={{color:'var(--text3)'}}>Max Open:</span> {config.max_open}</div>
+        <div><span style={{color:'var(--text3)'}}>Min EV:</span> {((config.min_ev||.04)*100).toFixed(0)}%</div>
+        <div><span style={{color:'var(--text3)'}}>Daily Loss:</span> ${config.daily_loss}</div>
+        <div><span style={{color:'var(--text3)'}}>Comp Base:</span> ${config.compound_base}</div>
+        <div><span style={{color:'var(--text3)'}}>Comp Step:</span> ${config.compound_step}</div>
+        <div><span style={{color:'var(--text3)'}}>Sal Thresh:</span> ${config.salary_threshold}</div>
       </div>
     </div>
   )
