@@ -31,9 +31,9 @@
             --accent: #00d68f;
             --font-mono: 'JetBrains Mono', monospace;
             --font-ui: 'Syne', sans-serif;
-            --header-h: 44px;
-            --stats-h: 72px;
-            --chart-h: 110px;
+            --header-h: 32px;
+            --stats-h: 48px;
+            --chart-h: 70px;
         }
 
         * {
@@ -49,7 +49,7 @@
             background: radial-gradient(circle at top, #10141a 0%, #0a0b0d 50%, #08090b 100%);
             color: var(--text);
             font-family: var(--font-mono);
-            font-size: 11px;
+            font-size: 9px;
         }
 
         .app {
@@ -115,6 +115,28 @@
             border: 1px solid rgba(0, 214, 143, 0.2);
             font-weight: 600;
             letter-spacing: 0.5px;
+        }
+
+        .bot-select {
+            background: var(--bg4);
+            border: 1px solid var(--border2);
+            color: var(--green);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 9px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .bot-select:focus {
+            border-color: var(--green);
+        }
+
+        .bot-select option {
+            background: var(--bg3);
+            color: var(--text);
         }
 
         .header-time {
@@ -1096,7 +1118,11 @@
         <div class="header">
             <div class="header-left">
                 <div class="header-dot"></div>
-                <span class="header-title">POLYBOT</span>
+                <span class="header-title" id="bot-title">POLYBOT</span>
+                <select id="bot-selector" onchange="setCurrentBot(this.value)" class="bot-select">
+                    <option value="bot1">BOT1</option>
+                    <option value="bot2">BOT2</option>
+                </select>
                 <span class="header-badge">FORWARD TEST</span>
             </div>
             <div class="header-right">
@@ -1343,6 +1369,21 @@
         let _currentMarkets = [];
         let isRunning = false;
         let currentMode = 'demo';
+        let currentBot = 'bot1';
+
+        // Bot selector functions
+        function setCurrentBot(botId) {
+            currentBot = botId;
+            localStorage.setItem('currentBot', botId);
+            document.getElementById('bot-selector').value = botId;
+            document.getElementById('bot-title').textContent = `POLYBOT ${botId.toUpperCase()}`;
+            fetchSnapshot();
+            connectSocket();
+        }
+
+        function getCurrentBot() {
+            return localStorage.getItem('currentBot') || 'bot1';
+        }
 
         function resizeChart() {
             const wrap = chartCanvas.parentElement;
@@ -1725,10 +1766,10 @@
         async function fetchSnapshot() {
             try {
                 const [stateRes, marketsRes, historyRes, priceHistoryRes] = await Promise.all([
-                    fetch('/api/state'),
-                    fetch('/api/markets'),
-                    fetch('/api/history'),
-                    fetch('/api/price-history').catch(() => ({ ok: false }))
+                    fetch(`/api/state?bot=${currentBot}`),
+                    fetch(`/api/markets?bot=${currentBot}`),
+                    fetch(`/api/history?bot=${currentBot}`),
+                    fetch(`/api/price-history?bot=${currentBot}`).catch(() => ({ ok: false }))
                 ]);
 
                 if (!stateRes.ok || !marketsRes.ok || !historyRes.ok) {
@@ -1854,7 +1895,7 @@
 
         async function simulate(slug, outcome, price) {
             const amt = parseFloat(document.querySelector('input[name="bet_size"]')?.value || 1);
-            const r = await fetch('/api/simulate', {
+            const r = await fetch(`/api/simulate?bot=${currentBot}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ slug, outcome, amount: amt, price })
@@ -1865,7 +1906,7 @@
 
         async function sellEarly(slug) {
             if (!confirm('Close this position?')) return;
-            await fetch('/api/sell', {
+            await fetch(`/api/sell?bot=${currentBot}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ slug })
@@ -1874,7 +1915,7 @@
 
         async function resetBot() {
             if (!confirm('Reset all bot data?')) return;
-            await fetch('/api/reset', { method: 'POST' });
+            await fetch(`/api/reset?bot=${currentBot}`, { method: 'POST' });
             location.reload();
         }
 
@@ -1884,7 +1925,7 @@
             const btn = document.getElementById('sim-btn');
             if (isRunning) {
                 btn.innerText = 'Stopping...';
-                const stopRes = await fetch('/api/settings', {
+                const stopRes = await fetch(`/api/settings?bot=${currentBot}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(collectSettingsPayload(false))
@@ -1902,7 +1943,7 @@
 
             btn.innerText = 'Starting...';
             const data = collectSettingsPayload(true);
-            const res = await fetch('/api/settings', {
+            const res = await fetch(`/api/settings?bot=${currentBot}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -1945,11 +1986,28 @@
             });
         }, 1000);
 
-        const socket = io();
+        const socket = io({ query: { bot: currentBot } });
+        
+        function connectSocket() {
+            if (socket.connected) {
+                socket.disconnect();
+            }
+            const newSocket = io({ query: { bot: currentBot } });
+            newSocket.on('update', applySnapshot);
+            newSocket.on('connect_error', () => fetchSnapshot());
+            newSocket.on('disconnect', () => fetchSnapshot());
+            return newSocket;
+        }
+        
         socket.on('update', applySnapshot);
         socket.on('connect_error', () => fetchSnapshot());
         socket.on('disconnect', () => fetchSnapshot());
 
+        // Initialize bot from localStorage
+        currentBot = getCurrentBot();
+        document.getElementById('bot-selector').value = currentBot;
+        document.getElementById('bot-title').textContent = `POLYBOT ${currentBot.toUpperCase()}`;
+        
         setMode('demo');
         fetchSnapshot();
         setInterval(fetchSnapshot, 2000);

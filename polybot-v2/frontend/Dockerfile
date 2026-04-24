@@ -6,16 +6,31 @@ COPY . .
 RUN npm run build
 
 FROM nginx:alpine
-# Install envsubst for variable substitution
-RUN apk add --no-cache gettext
+RUN apk add --no-cache curl
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf.template /etc/nginx/conf.d/default.conf.template
-# Environment variables for runtime configuration
-ENV PORT=3001
-ENV BACKEND_HOST=backend
-ENV BACKEND_PORT=8000
-# Generate nginx.conf from template using envsubst
-RUN envsubst '${PORT}-${BACKEND_HOST}-${BACKEND_PORT}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf
-EXPOSE ${PORT}
-HEALTHCHECK --interval=15s --timeout=5s CMD wget -qO- http://localhost:${PORT}/ || exit 1
-CMD ["nginx","-g","daemon off;"]
+
+RUN echo 'server { \
+    listen 3001; \
+    server_name _; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+    location /api/ { \
+        proxy_pass http://bot1-sim:8000; \
+        proxy_set_header Host $host; \
+    } \
+    location /ws { \
+        proxy_pass http://bot1-sim:8000/ws; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "Upgrade"; \
+    } \
+    location /health { \
+        proxy_pass http://bot1-sim:8000/health; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
+
+HEALTHCHECK --interval=10s --timeout=5s CMD curl -sf http://localhost:3001/ || exit 1
+CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 3001

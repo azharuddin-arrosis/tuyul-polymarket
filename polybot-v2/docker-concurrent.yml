@@ -188,9 +188,9 @@ services:
       - "3001:3001"
     depends_on:
       bot1-sim:
-        condition: service_healthy
+        condition: service_started
       bot2-sim:
-        condition: service_healthy
+        condition: service_started
     profiles:
       - sim
       - all
@@ -215,9 +215,9 @@ services:
       - "3000:3000"
     depends_on:
       bot1-real:
-        condition: service_healthy
+        condition: service_started
       bot2-real:
-        condition: service_healthy
+        condition: service_started
     profiles:
       - real
       - all
