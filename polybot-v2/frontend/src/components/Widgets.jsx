@@ -1,6 +1,184 @@
 import { useState, useMemo } from 'react'
 import { usd, CAT_COLOR, STRAT_COLOR, STRAT_LABEL, fmtDur } from '../utils.js'
 
+/* ─── HealthMonitor ────────────────────────────────── */
+export function HealthMonitor({ health }) {
+  if (!health) {
+    return (
+      <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'8px 10px'}}>
+        <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>Health _ connecting...</div>
+      </div>
+    )
+  }
+
+  const { services, last_trade, stats, mode } = health
+  
+  const getIndicatorColor = (indicator) => {
+    return indicator === 'green' ? 'var(--green)' : indicator === 'yellow' ? 'var(--amber)' : 'var(--red)'
+  }
+
+  const getIndicatorIcon = (indicator) => {
+    return indicator === 'green' ? '✓' : indicator === 'yellow' ? '!' : '✗'
+  }
+
+  return (
+    <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
+      <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.06em'}}>Health Monitor</span>
+        <XTag 
+          t={health.status === 'healthy' ? 'HEALTHY' : 'DEGRADED'} 
+          c={health.status === 'healthy' ? 'var(--green)' : 'var(--amber)'} 
+        />
+      </div>
+
+      <div style={{padding:'7px 10px'}}>
+        {/* Service Status Grid */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:8}}>
+          {Object.entries(services).map(([name, data]) => (
+            <div key={name} style={{
+              padding:'6px 8px',
+              background: getIndicatorColor(data.indicator) + '11',
+              border:`1px solid ${getIndicatorColor(data.indicator)}33`,
+              borderRadius:'var(--r2)'
+            }}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:3}}>
+                <span style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--text3)',textTransform:'uppercase'}}>{name}</span>
+                <span style={{fontSize:9,fontFamily:'var(--mono)',color:getIndicatorColor(data.indicator),fontWeight:700}}>
+                  {getIndicatorIcon(data.indicator)}
+                </span>
+              </div>
+              <div style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:getIndicatorColor(data.indicator)}}>
+                {data.indicator.toUpperCase()}
+              </div>
+              {data.seconds_ago !== undefined && (
+                <div style={{fontSize:9,fontFamily:'var(--mono)',color:'var(--text3)',marginTop:2}}>
+                  {data.seconds_ago}s ago
+                </div>
+              )}
+              {data.latency_ms && (
+                <div style={{fontSize:9,fontFamily:'var(--mono)',color:'var(--text3)'}}>
+                  {data.latency_ms.toFixed(0)}ms
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Last Trade */}
+        {last_trade?.seconds_ago !== null && (
+          <div style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--text3)',marginBottom:4}}>
+            Last trade: {last_trade.seconds_ago !== undefined ? `${last_trade.seconds_ago}s ago` : '—'}
+          </div>
+        )}
+
+        {/* Quick Stats */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4,fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>
+          <div><span style={{color:'var(--text3)'}}>Trades:</span> {stats?.total_trades || 0}</div>
+          <div><span style={{color:'var(--text3)'}}>Open:</span> {stats?.open_positions || 0}</div>
+          <div><span style={{color:'var(--text3)'}}>Mode:</span> <span style={{color:mode==='sim'?'var(--amber)':'var(--green)'}}>{mode?.toUpperCase()}</span></div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── DemoModeToggle ────────────────────────────────── */
+export function DemoModeToggle({ currentMode, onSwitch, disabled }) {
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const isDemo = currentMode === 'sim'
+
+  const handleSwitch = async (newMode) => {
+    setLoading(true)
+    try {
+      await onSwitch(newMode)
+      setShowConfirm(false)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (showConfirm) {
+    return (
+      <div style={{
+        background:'var(--bg1)',border:'1px solid var(--amber)',borderRadius:'var(--r3)',
+        padding:'10px',animation:'slideIn .2s ease'
+      }}>
+        <div style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--amber)',marginBottom:6,fontWeight:600}}>
+          ⚠️ CONFIRM MODE SWITCH
+        </div>
+        <div style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--text2)',marginBottom:8}}>
+          {isDemo 
+            ? 'Switch to REAL mode will trade with actual capital on Polymarket. Are you sure?'
+            : 'Switch to DEMO mode will use paper trading. No real money will be used.'
+          }
+        </div>
+        <div style={{display:'flex',gap:6}}>
+          <button 
+            onClick={() => handleSwitch(isDemo ? 'real' : 'sim')}
+            disabled={loading}
+            style={{
+              flex:1,padding:'6px',borderRadius:'var(--r)',border:'none',
+              background:isDemo?'var(--green)':'var(--amber)',color:'var(--bg)',
+              fontFamily:'var(--mono)',fontSize:'var(--fsxs)',fontWeight:600,
+              cursor:loading?'not-allowed':'pointer',opacity:loading?.6:1
+            }}
+          >
+            {loading ? '...' : isDemo ? 'SWITCH TO REAL' : 'SWITCH TO DEMO'}
+          </button>
+          <button 
+            onClick={() => setShowConfirm(false)}
+            disabled={loading}
+            style={{
+              padding:'6px 12px',borderRadius:'var(--r)',border:'1px solid var(--border)',
+              background:'var(--bg2)',color:'var(--text3)',
+              fontFamily:'var(--mono)',fontSize:'var(--fsxs)',
+              cursor:loading?'not-allowed':'pointer'
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
+      <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.06em'}}>Trading Mode</span>
+        <XTag 
+          t={isDemo ? 'DEMO' : 'REAL'} 
+          c={isDemo ? 'var(--amber)' : 'var(--green)'} 
+        />
+      </div>
+      <div style={{padding:'8px 10px'}}>
+        <div style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--text2)',marginBottom:6}}>
+          {isDemo 
+            ? 'Paper trading with fake capital. No real money used.'
+            : 'Live trading on Polymarket with real USDC.'
+          }
+        </div>
+        <button 
+          onClick={() => setShowConfirm(true)}
+          disabled={disabled}
+          style={{
+            width:'100%',padding:'6px',borderRadius:'var(--r)',border:`1px solid ${isDemo?'var(--amber)':'var(--green)'}`,
+            background: isDemo ? 'var(--amberbg)' : 'var(--gbg)',
+            color: isDemo ? 'var(--amber)' : 'var(--green)',
+            fontFamily:'var(--mono)',fontSize:'var(--fsxs)',fontWeight:600,
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.5 : 1
+          }}
+        >
+          Switch to {isDemo ? 'REAL' : 'DEMO'} Mode
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* ─── XTag ──────────────────────────────────────── */
 export function XTag({t,c}) {
   return <span style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',padding:'0px 5px',borderRadius:'var(--r)',

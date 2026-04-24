@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
-const WS_URL = () => {
-  const p = window.location.protocol==='https:'?'wss':'ws'
-  return `${p}://${window.location.host}/ws`
+const API_URL = () => {
+  const p = window.location.protocol === 'https:' ? 'https:' : 'http:'
+  return `${p}//${window.location.host}`
 }
 
-export function usePolyBot() {
+export function usePolyBot(botName) {
   const [stats,    setStats]    = useState(null)
   const [positions,setPos]      = useState([])
   const [log,      setLog]      = useState([])
@@ -18,6 +18,7 @@ export function usePolyBot() {
   const [connected,setConn]     = useState(false)
   const [lastUpd,  setLastUpd]  = useState(null)
   const [notify,   setNotify]   = useState(null)
+  const [health,   setHealth]   = useState(null)  // Health monitoring
   const ws  = useRef(null)
   const tmr = useRef(null)
 
@@ -26,11 +27,29 @@ export function usePolyBot() {
     setTimeout(()=>setNotify(null), 8000)
   }
 
+  // Poll health status every 10 seconds
+  const fetchHealth = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL()}/api/health`)
+      if (res.ok) {
+        const data = await res.json()
+        setHealth(data)
+      }
+    } catch (e) {
+      console.error('Health check failed:', e)
+    }
+  }, [])
+
   const connect = useCallback(()=>{
     if (ws.current?.readyState===WebSocket.OPEN) return
     try {
-      ws.current = new WebSocket(WS_URL())
-      ws.current.onopen  = ()=>{ setConn(true); clearTimeout(tmr.current) }
+      const wsUrl = (window.location.protocol==='https:'?'wss':'ws') + '://' + window.location.host + '/ws'
+      ws.current = new WebSocket(wsUrl)
+      ws.current.onopen  = ()=>{ 
+        setConn(true); 
+        clearTimeout(tmr.current)
+        fetchHealth() // Initial health check
+      }
       ws.current.onclose = ()=>{ setConn(false); tmr.current=setTimeout(connect,3000) }
       ws.current.onerror = ()=>ws.current?.close()
       ws.current.onmessage = (e)=>{
@@ -60,12 +79,20 @@ export function usePolyBot() {
         } catch{}
       }
     } catch{}
-  },[])
+  },[fetchHealth])
 
   useEffect(()=>{
     connect()
-    return ()=>{ clearTimeout(tmr.current); ws.current?.close() }
-  },[connect])
+    
+    // Health polling interval
+    const healthInterval = setInterval(fetchHealth, 10000)
+    
+    return ()=>{ 
+      clearTimeout(tmr.current)
+      clearInterval(healthInterval)
+      ws.current?.close() 
+    }
+  },[connect, fetchHealth])
 
   // REST fallback
   useEffect(()=>{
@@ -83,10 +110,11 @@ export function usePolyBot() {
         ])
         setStats(s);setPos(p);setLog(l);setMarkets(m);setGas(g);setSalary(sl);setHistory(h)
         setLastUpd(new Date())
+        fetchHealth() // Also check health via REST
       } catch{}
     },5000)
     return ()=>clearInterval(id)
-  },[connected])
+  },[connected, fetchHealth])
 
   const setup = async(usdc,pol,mode)=>{
     const r = await fetch('/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -96,5 +124,22 @@ export function usePolyBot() {
 
   const resumeGas = async()=>fetch('/api/gas/resume',{method:'POST'})
 
-  return {stats,positions,log,markets,config,gas,salary,history,btc5m,connected,lastUpd,notify,setup,resumeGas}
+  const setMode = async (newMode) => {
+    // Switch between demo (sim) and real mode
+    const r = await fetch('/api/setup', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        usdc: stats?.capital || 10,
+        pol: config?.pol_balance || 11,
+        mode: newMode
+      })
+    })
+    return r.json()
+  }
+
+  return {
+    stats, positions, log, markets, config, gas, salary, history, btc5m, 
+    connected, lastUpd, notify, setup, resumeGas, health, setMode
+  }
 }

@@ -1,14 +1,285 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePolyBot } from './hooks/usePolyBot.js'
 import { SetupWizard } from './components/SetupWizard.jsx'
 import { PositionCard } from './components/PositionCard.jsx'
-import { MarketTable, XTag, Toast } from './components/Widgets.jsx'
+import { MarketTable, XTag, Toast, HealthMonitor, DemoModeToggle } from './components/Widgets.jsx'
 import { usd, pct, CAT_COLOR, STRAT_COLOR, STRAT_LABEL } from './utils.js'
 
 const STORAGE_KEY = 'polybot_pnl_history'
 
 function loadHistory(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]} catch{ return [] } }
 function saveHistory(h){ localStorage.setItem(STORAGE_KEY, JSON.stringify(h)) }
+
+// ═══════════════════════════════════════════════════════════════
+// MULTI-BOT ROUTER
+// ═══════════════════════════════════════════════════════════════
+
+function BotRouter({ bots, currentBot, onSwitchBot }) {
+  if (!bots || bots.length <= 1) return null
+  
+  return (
+    <div style={{
+      background: 'var(--bg2)', border: '1px solid var(--border)', 
+      borderRadius: 'var(--r3)', padding: '4px 8px',
+      display: 'flex', gap: '4px', alignItems: 'center'
+    }}>
+      <span style={{fontSize: 'var(--fsxs)', color: 'var(--text3)', 
+                    fontFamily: 'var(--mono)', textTransform: 'uppercase'}}>
+        Bot:
+      </span>
+      {bots.map(bot => (
+        <button
+          key={bot.name}
+          onClick={() => onSwitchBot(bot.name)}
+          style={{
+            background: currentBot === bot.name ? 'var(--bg3)' : 'transparent',
+            border: '1px solid var(--border)',
+            borderColor: currentBot === bot.name ? bot.color : 'var(--border)',
+            borderRadius: 'var(--r)',
+            padding: '2px 8px',
+            color: currentBot === bot.name ? bot.color : 'var(--text3)',
+            fontFamily: 'var(--mono)',
+            fontSize: 'var(--fsxs)',
+            cursor: 'pointer',
+            transition: 'all 0.15s'
+          }}
+        >
+          {bot.display_name}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMBINED DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+function CombinedDashboard({ bots, stats, positions, markets, config, gas, salary, history, log, btc5m, connected }) {
+  if (!stats) return null
+  
+  const totalEquity = bots?.reduce((sum, b) => sum + (b.capital || 0), 0)
+  const totalPnL = bots?.reduce((sum, b) => sum + (b.pnl || 0), 0)
+  const totalWins = bots?.reduce((sum, b) => sum + (b.wins || 0), 0)
+  const totalTrades = bots?.reduce((sum, b) => sum + (b.total_trades || 0), 0)
+  const winRate = totalTrades > 0 ? (totalWins / totalTrades * 100) : 0
+  
+  return (
+    <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+      <div style={{
+        background: 'var(--bg2)', border: '1px solid var(--green)',
+        borderRadius: 'var(--r3)', padding: '8px 12px'
+      }}>
+        <div style={{fontSize: 'var(--fsxs)', color: 'var(--green)', 
+                     fontFamily: 'var(--mono)', textTransform: 'uppercase', 
+                     marginBottom: '6px'}}>
+          Combined Portfolio — All Bots
+        </div>
+        <div style={{display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px'}}>
+          <div>
+            <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Total Equity</div>
+            <div style={{fontSize: 16, fontWeight: 700, color: 'var(--green)', 
+                        fontFamily: 'var(--mono)'}}>
+              ${usd(totalEquity)}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Total P&L</div>
+            <div style={{fontSize: 16, fontWeight: 700, 
+                        color: totalPnL >= 0 ? 'var(--green)' : 'var(--red)', 
+                        fontFamily: 'var(--mono)'}}>
+              {totalPnL >= 0 ? '+' : ''}${usd(totalPnL)}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Win Rate</div>
+            <div style={{fontSize: 16, fontWeight: 700, 
+                        color: winRate >= 60 ? 'var(--green)' : winRate >= 45 ? 'var(--amber)' : 'var(--red)', 
+                        fontFamily: 'var(--mono)'}}>
+              {pct(winRate)}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Bots</div>
+            <div style={{fontSize: 16, fontWeight: 700, color: 'var(--text)', 
+                        fontFamily: 'var(--mono)'}}>
+              {bots?.length || 0}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Open Pos</div>
+            <div style={{fontSize: 16, fontWeight: 700, color: 'var(--blue)', 
+                        fontFamily: 'var(--mono)'}}>
+              {positions?.length || 0}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Gajian</div>
+            <div style={{fontSize: 16, fontWeight: 700, color: 'var(--gold)', 
+                        fontFamily: 'var(--mono)'}}>
+              ${usd(salary?.total_withdrawn || 0)}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Individual bot cards */}
+      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '6px'}}>
+        {bots?.map(bot => (
+          <BotSummaryCard key={bot.name} bot={bot} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function BotSummaryCard({ bot }) {
+  if (!bot) return null
+  
+  const winRate = bot.total_trades > 0 ? (bot.wins / bot.total_trades * 100) : 0
+  
+  return (
+    <div style={{
+      background: 'var(--bg2)', border: '1px solid var(--border)',
+      borderRadius: 'var(--r3)', overflow: 'hidden'
+    }}>
+      <div style={{
+        padding: '4px 10px', borderBottom: '1px solid var(--border)',
+        background: 'var(--bg3)', display: 'flex',
+        justifyContent: 'space-between', alignItems: 'center'
+      }}>
+        <span style={{
+          fontSize: 'var(--fsxs)', color: bot.color || 'var(--green)',
+          fontFamily: 'var(--mono)', textTransform: 'uppercase',
+          fontWeight: 600
+        }}>
+          {bot.display_name}
+        </span>
+        <XTag t={bot.mode} c={bot.mode === 'sim' ? 'var(--amber)' : 'var(--green)'} />
+      </div>
+      <div style={{padding: '6px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px'}}>
+        <div>
+          <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Equity</div>
+          <div style={{fontFamily: 'var(--mono)', color: 'var(--text)'}}>
+            ${usd(bot.capital || 0)}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>P&L</div>
+          <div style={{fontFamily: 'var(--mono)', 
+                      color: (bot.pnl || 0) >= 0 ? 'var(--green)' : 'var(--red)'}}>
+            {((bot.pnl || 0) >= 0 ? '+' : '')}${usd(bot.pnl || 0)}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Wins</div>
+          <div style={{fontFamily: 'var(--mono)', color: winRate >= 60 ? 'var(--green)' : 'var(--text2)'}}>
+            {pct(winRate)}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WITHDRAWAL PANEL
+// ═══════════════════════════════════════════════════════════════
+
+function WithdrawalPanel({ botName, salary, onWithdraw }) {
+  const [amount, setAmount] = useState('')
+  const [loading, setLoading] = useState(false)
+  
+  if (!salary) return null
+  
+  const projected = salary.projected_withdraw || 0
+  const canWithdraw = projected > 0 && !salary.paused
+  
+  const handleWithdraw = async () => {
+    setLoading(true)
+    try {
+      await onWithdraw(botName, amount)
+      setAmount('')
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  return (
+    <div style={{
+      background: 'var(--bg2)', border: '1px solid var(--gold)',
+      borderRadius: 'var(--r3)', overflow: 'hidden'
+    }}>
+      <div style={{
+        padding: '4px 10px', borderBottom: '1px solid var(--border)',
+        background: 'var(--bg3)', display: 'flex',
+        justifyContent: 'space-between', alignItems: 'center'
+      }}>
+        <span style={{fontSize: 'var(--fsxs)', color: 'var(--gold)', 
+                     fontFamily: 'var(--mono)', textTransform: 'uppercase', 
+                     fontWeight: 600}}>
+          💰 Withdrawal
+        </span>
+        <span style={{fontSize: 'var(--fsxs)', color: 'var(--text3)', 
+                     fontFamily: 'var(--mono)'}}>
+          {salary.salary_count || 0} payouts
+        </span>
+      </div>
+      
+      <div style={{padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '8px'}}>
+        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: 'var(--fsxs)'}}>
+          <div>
+            <span style={{color: 'var(--text3)'}}>Available:</span>{' '}
+            <span style={{color: 'var(--gold)', fontFamily: 'var(--mono)'}}>
+              ${usd(projected)}
+            </span>
+          </div>
+          <div>
+            <span style={{color: 'var(--text3)'}}>Next Target:</span>{' '}
+            <span style={{color: 'var(--text)', fontFamily: 'var(--mono)'}}>
+              ${salary.next_target}
+            </span>
+          </div>
+        </div>
+        
+        <div style={{display: 'flex', gap: '4px'}}>
+          <input
+            type="number"
+            placeholder="Amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            style={{flex: 1, fontFamily: 'var(--mono)'}}
+          />
+          <button
+            onClick={handleWithdraw}
+            disabled={loading || !canWithdraw}
+            style={{
+              background: canWithdraw ? 'var(--goldbg)' : 'var(--bg3)',
+              border: '1px solid var(--gold)',
+              borderRadius: 'var(--r)',
+              color: canWithdraw ? 'var(--gold)' : 'var(--text3)',
+              padding: '4px 12px',
+              fontFamily: 'var(--mono)',
+              fontSize: 'var(--fsxs)',
+              cursor: canWithdraw ? 'pointer' : 'not-allowed',
+              opacity: loading ? 0.6 : 1
+            }}
+          >
+            {loading ? 'Processing...' : 'Withdraw'}
+          </button>
+        </div>
+        
+        <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>
+          Next payout at ${salary.next_target} equity
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ════════════════════════════════��═��════════════════════════════
+// SPARKLINE & HISTORY (existing)
+// ═══════════════════════════════════════════════════════════════
 
 function Sparkline({history}){
   if(history.length<2) return <div style={{height:30,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)',fontSize:9}}>_ no data</div>
@@ -35,6 +306,10 @@ function usePnlHistory(capital, initial){
   },[capital])
   return history.current
 }
+
+// ═══════════════════════════════════════════════════════════════
+// WIDGET COMPONENTS (from existing app)
+// ═══════════════════════════════════════════════════════════════
 
 function Dot({on}){return <span style={{display:'inline-block',width:5,height:5,borderRadius:'50%',marginRight:4,background:on?'var(--green)':'var(--red)',boxShadow:on?'0 0 4px var(--green)':'none',animation:on?'pulse 2s infinite':'none'}}/>}
 
@@ -149,27 +424,6 @@ function HistoryPanel({history}){
             </div>
           )
         })}
-      </div>
-    </div>
-  )
-}
-
-function ConfigPanel({config}){
-  if(!config) return null
-  return(
-    <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
-      <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)'}}>
-        <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>Config</span>
-      </div>
-      <div style={{padding:'6px 10px',fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--text2)'}}>
-        <div><span style={{color:'var(--text3)'}}>Mode:</span> {config.mode}</div>
-        <div><span style={{color:'var(--text3)'}}>Min Bet:</span> $1.00</div>
-        <div><span style={{color:'var(--text3)'}}>Max Open:</span> {config.max_open}</div>
-        <div><span style={{color:'var(--text3)'}}>Min EV:</span> {((config.min_ev||.04)*100).toFixed(0)}%</div>
-        <div><span style={{color:'var(--text3)'}}>Daily Loss:</span> ${config.daily_loss}</div>
-        <div><span style={{color:'var(--text3)'}}>Comp Base:</span> ${config.compound_base}</div>
-        <div><span style={{color:'var(--text3)'}}>Comp Step:</span> ${config.compound_step}</div>
-        <div><span style={{color:'var(--text3)'}}>Sal Thresh:</span> ${config.salary_threshold}</div>
       </div>
     </div>
   )
@@ -291,19 +545,58 @@ function BTC5mPanel({data}){
   )
 }
 
+function ConfigPanel({config}){
+  if(!config) return null
+  return(
+    <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
+      <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>Config</span>
+      </div>
+      <div style={{padding:'6px 10px',fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--text2)'}}>
+        <div><span style={{color:'var(--text3)'}}>Mode:</span> {config.mode}</div>
+        <div><span style={{color:'var(--text3)'}}>Min Bet:</span> $1.00</div>
+        <div><span style={{color:'var(--text3)'}}>Max Open:</span> {config.max_open}</div>
+        <div><span style={{color:'var(--text3)'}}>Min EV:</span> {((config.min_ev||.04)*100).toFixed(0)}%</div>
+        <div><span style={{color:'var(--text3)'}}>Daily Loss:</span> ${config.daily_loss}</div>
+        <div><span style={{color:'var(--text3)'}}>Comp Base:</span> ${config.compound_base}</div>
+        <div><span style={{color:'var(--text3)'}}>Comp Step:</span> ${config.compound_step}</div>
+        <div><span style={{color:'var(--text3)'}}>Sal Thresh:</span> ${config.salary_threshold}</div>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN APP WITH MULTI-BOT ROUTING
+// ═══════════════════════════════════════════════════════════════
+
 export default function App(){
-  const {stats,positions,log,markets,config,gas,salary,history,btc5m,connected,lastUpd,notify,setup,resumeGas}=usePolyBot()
+  // Get bot from URL path
+  const path = window.location.pathname
+  const botName = path.startsWith('/dashboard/') ? path.split('/')[2] : null
+  
+  const {stats,positions,log,markets,config,gas,salary,history,btc5m,connected,lastUpd,notify,setup,resumeGas,health,setMode}=usePolyBot(botName)
   const [ready,setReady]=useState(true)
+  const [currentBot, setCurrentBot] = useState(botName || 'all')
+  
   const pnl=stats?.pnl??0,isPos=pnl>=0
   const hist=usePnlHistory(stats?.capital, stats?.initial)
   const doSetup=async(usdc,pol,mode)=>{ await setup(usdc,pol,mode); setReady(true) }
   
+  const handleSwitchBot = (name) => {
+    window.location.href = name === 'all' ? '/dashboard' : `/dashboard/${name}`
+  }
+  
+  // Bot list for router
+  const botList = [
+    { name: 'all', display_name: 'All Bots', color: '#ffffff', mode: stats?.mode || 'sim' },
+    { name: botName || 'bot1', display_name: stats?.bot_name || 'Primary', color: '#00ff88', mode: stats?.mode || 'sim' }
+  ]
+  
   useEffect(()=>{
-    if(stats && stats.capital) {
-      setReady(true)
-    }
+    if(stats && stats.capital) setReady(true)
   },[stats])
-
+  
   if(!stats) {
     return (
       <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -322,6 +615,7 @@ export default function App(){
         <span style={{fontFamily:'var(--mono)',fontSize:11,fontWeight:700,color:'var(--green)',letterSpacing:'.1em'}}>
           POLY<span style={{color:'var(--text)'}}>BOT</span><span style={{fontSize:'var(--fsxs)',color:'var(--text3)',marginLeft:2}}>v3</span>
         </span>
+        <BotRouter bots={botList} currentBot={currentBot} onSwitchBot={handleSwitchBot} />
         <div style={{width:1,height:10,background:'var(--border)'}}/>
         <Dot on={connected}/><span style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:connected?'var(--green)':'var(--red)'}}>{connected?'LIVE':'···'}</span>
         {stats&&<XTag t={stats.mode} c={stats.mode==='SIM'?'var(--amber)':'var(--green)'}/>}
@@ -334,41 +628,73 @@ export default function App(){
         </div>
         {lastUpd&&<span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>{lastUpd.toLocaleTimeString()}</span>}
       </header>
-
+      
       <main style={{flex:1,padding:'6px 8px',display:'flex',flexDirection:'column',gap:6,overflowY:'auto'}}>
-<div style={{display:'grid',gridTemplateColumns:'repeat(8,1fr)',gap:4}}>
-          <Stat label="Equity" value={usd(stats?.capital)} sub={`${usd(stats?.available)} + ${usd(stats?.locked)} locked`} color="var(--text)"/>
-          <Stat label="PnL" value={`${pnl>=0?'+':''}${usd(pnl)}`} sub={`${pct(stats?.roi_pct)} ROI`} color={isPos?'var(--green)':'var(--red)'}/>
-          <Stat label="Win" value={pct(stats?.win_rate)} sub={`${stats?.wins??0}W ${stats?.losses??0}L`} color={stats?.win_rate>=60?'var(--green)':stats?.win_rate>=45?'var(--amber)':'var(--red)'}/>
-          <Stat label="Daily" value={`${(stats?.daily_pnl??0)>=0?'+':''}${usd(stats?.daily_pnl)}`} color={(stats?.daily_pnl??0)>=0?'var(--green)':'var(--red)'}/>
-          <Stat label="Gajian" value={usd(salary?.total_withdrawn)} color="var(--gold)"/>
-          <Stat label="Open" value={stats?.open_count??0} color="var(--blue)"/>
-          <Stat label="Tier" value={`T${stats?.compound_tier??0}`} color="var(--green)"/>
-          <Stat label="Gas" value={`${gas?.tx_left??'—'}`} color={gas?.status==='ok'?'var(--text)':gas?.status==='low'?'var(--amber)':'var(--red)'}/>
-        </div>
-
-        <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'4px 8px'}}>
-          <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:2}}>PnL Curve · {pnl>=0?'+':''}${pnl.toFixed(2)} ({pct(stats?.roi_pct)})</div>
-          <Sparkline history={hist}/>
-        </div>
-
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6}}>
-          <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            <MiniScanner markets={markets}/>
-            <OpenPositions positions={positions}/>
-            <HistoryPanel history={history}/>
-          </div>
-          <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            <ActivityLog log={log}/>
-            <BTC5mPanel data={btc5m}/>
-          </div>
-          <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            <SalaryPanel salary={salary}/>
-            <CompoundPanel stats={stats}/>
-            <GasPanel gas={gas} onResume={resumeGas}/>
-            <ConfigPanel config={config}/>
-          </div>
-        </div>
+        {/* Combined dashboard for /dashboard */}
+        {currentBot === 'all' && (
+          <CombinedDashboard 
+            bots={botList.filter(b => b.name !== 'all')}
+            stats={stats}
+            positions={positions}
+            markets={markets}
+            config={config}
+            gas={gas}
+            salary={salary}
+            history={history}
+            log={log}
+            btc5m={btc5m}
+            connected={connected}
+          />
+        )}
+        
+        {/* Individual bot dashboard */}
+        {currentBot !== 'all' && (
+          <>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(8,1fr)',gap:4}}>
+              <Stat label="Equity" value={usd(stats?.capital)} sub={`${usd(stats?.available)} + ${usd(stats?.locked)} locked`} color="var(--text)"/>
+              <Stat label="PnL" value={`${pnl>=0?'+':''}${usd(pnl)}`} sub={`${pct(stats?.roi_pct)} ROI`} color={isPos?'var(--green)':'var(--red)'}/>
+              <Stat label="Win" value={pct(stats?.win_rate)} sub={`${stats?.wins??0}W ${stats?.losses??0}L`} color={stats?.win_rate>=60?'var(--green)':stats?.win_rate>=45?'var(--amber)':'var(--red)'}/>
+              <Stat label="Daily" value={`${(stats?.daily_pnl??0)>=0?'+':''}${usd(stats?.daily_pnl)}`} color={(stats?.daily_pnl??0)>=0?'var(--green)':'var(--red)'}/>
+              <Stat label="Gajian" value={usd(salary?.total_withdrawn)} color="var(--gold)"/>
+              <Stat label="Open" value={stats?.open_count??0} color="var(--blue)"/>
+              <Stat label="Tier" value={`T${stats?.compound_tier??0}`} color="var(--green)"/>
+              <Stat label="Gas" value={`${gas?.tx_left??'—'}`} color={gas?.status==='ok'?'var(--text)':gas?.status==='low'?'var(--amber)':'var(--red)'}/>
+            </div>
+            
+            {botName && (
+              <WithdrawalPanel botName={botName} salary={salary} onWithdraw={async () => {}} />
+            )}
+            
+            <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'4px 8px'}}>
+              <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:2}}>PnL Curve · {pnl>=0?'+':''}${pnl.toFixed(2)} ({pct(stats?.roi_pct)})</div>
+              <Sparkline history={hist}/>
+            </div>
+            
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6}}>
+              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                <MiniScanner markets={markets}/>
+                <OpenPositions positions={positions}/>
+                <HistoryPanel history={history}/>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                <ActivityLog log={log}/>
+                <BTC5mPanel data={btc5m}/>
+                <HealthMonitor health={health}/>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                <SalaryPanel salary={salary}/>
+                <CompoundPanel stats={stats}/>
+                <GasPanel gas={gas} onResume={resumeGas}/>
+                <ConfigPanel config={config}/>
+                <DemoModeToggle 
+                  currentMode={stats?.mode || 'sim'} 
+                  onSwitch={setMode}
+                  disabled={!connected}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </main>
     </div>
   )

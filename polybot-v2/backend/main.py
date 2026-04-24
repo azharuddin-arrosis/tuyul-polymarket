@@ -1245,7 +1245,168 @@ def get_config() -> dict:
         "real_wallet_note": "Polymarket butuh EVM wallet (MetaMask), bukan Phantom (Solana)",
     }
 
-# ─── API ROUTES ──────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+# HEALTH CHECK SYSTEM
+# Comprehensive health monitoring for all services
+# ═══════════════════════════════════════════════════════════════
+import httpx
+
+# Track last successful API hits
+_last_binance_check = 0
+_last_polymarket_check = 0
+_last_trade_timestamp = None
+_binance_status = "unknown"
+_polymarket_status = "unknown"
+
+async def check_binance_connectivity() -> dict:
+    """Check Binance API connectivity"""
+    global _last_binance_check, _binance_status
+    try:
+        async with httpx.AsyncClient(timeout=aiohttp.ClientTimeout(total=5)) as sess:
+            async with sess.get(f"{BINANCE_API}/ticker/price", params={"symbol":"BTCUSDT"}) as r:
+                if r.status == 200:
+                    _binance_status = "ok"
+                    _last_binance_check = int(datetime.now(timezone.utc).timestamp())
+                    return {"status": "ok", "latency_ms": r.elapsed.total_seconds() * 1000}
+    except Exception as e:
+        _binance_status = "error"
+    return {"status": "error", "error": str(e)[:50]}
+
+async def check_polymarket_connectivity() -> dict:
+    """Check Polymarket API connectivity"""
+    global _last_polymarket_check, _polymarket_status
+    try:
+        async with httpx.AsyncClient(timeout=aiohttp.ClientTimeout(total=5)) as sess:
+            async with sess.get(f"{GAMMA}/markets", params={"active":"true","limit":1}) as r:
+                if r.status == 200:
+                    _polymarket_status = "ok"
+                    _last_polymarket_check = int(datetime.now(timezone.utc).timestamp())
+                    return {"status": "ok", "latency_ms": r.elapsed.total_seconds() * 1000}
+    except Exception as e:
+        _polymarket_status = "error"
+    return {"status": "error", "error": str(e)[:50]}
+
+def get_health_indicator(last_hit_ts: int) -> str:
+    """Get health indicator based on last successful hit"""
+    now = int(datetime.now(timezone.utc).timestamp())
+    diff = now - last_hit_ts
+    if diff < 30: return "green"
+    if diff < 60: return "yellow"
+    return "red"
+
+@app.get("/api/health")
+async def api_health():
+    """
+    Comprehensive health check endpoint
+    Returns: Binance, Polymarket, bot status, database status, last trade
+    """
+    global _last_trade_timestamp
+    
+    now = int(datetime.now(timezone.utc).timestamp())
+    
+    # Run async checks
+    binance = await check_binance_connectivity()
+    polymarket = await check_polymarket_connectivity()
+    
+    # Get last trade timestamp
+    last_trade = None
+    if S.closed_trades:
+        last_closed = S.closed_trades[-1].get("closed_at") or S.closed_trades[-1].get("opened_at")
+        if last_closed:
+            _last_trade_timestamp = int(datetime.fromisoformat(last_closed).timestamp())
+    
+    return {
+        "status": "healthy" if binance["status"] == "ok" and polymarket["status"] == "ok" else "degraded",
+        "timestamp": now,
+        "mode": C.mode,
+        "services": {
+            "binance": {
+                "status": _binance_status,
+                "indicator": get_health_indicator(_last_binance_check),
+                "last_hit": _last_binance_check,
+                "seconds_ago": now - _last_binance_check if _last_binance_check else 999,
+                "latency_ms": binance.get("latency_ms"),
+            },
+            "polymarket": {
+                "status": _polymarket_status,
+                "indicator": get_health_indicator(_last_polymarket_check),
+                "last_hit": _last_polymarket_check,
+                "seconds_ago": now - _last_polymarket_check if _last_polymarket_check else 999,
+                "latency_ms": polymarket.get("latency_ms"),
+            },
+            "database": {
+                "status": "ok",  # SQLite always accessible in this setup
+                "indicator": "green",
+            },
+            "bot": {
+                "status": "running" if S.running else "stopped",
+                "indicator": "green" if S.running else "red",
+                "gas_paused": S.gas_paused,
+            },
+        },
+        "last_trade": {
+            "timestamp": _last_trade_timestamp,
+            "seconds_ago": now - _last_trade_timestamp if _last_trade_timestamp else None,
+        },
+        "stats": {
+            "total_trades": len(S.closed_trades),
+            "open_positions": len(S.positions),
+            "capital": round(total_equity(), 2),
+            "daily_pnl": round(S.daily_pnl, 2),
+        }
+    }
+
+@app.get("/api/health/binance")
+async def api_health_binance():
+    """Specific Binance health status"""
+    binance = await check_binance_connectivity()
+    return {
+        "service": "binance",
+        "timestamp": int(datetime.now(timezone.utc).timestamp()),
+        **binance,
+        "indicator": get_health_indicator(_last_binance_check),
+        "last_hit": _last_binance_check,
+        "seconds_ago": int(datetime.now(timezone.utc).timestamp()) - _last_binance_check if _last_binance_check else 999,
+    }
+
+@app.get("/api/health/polymarket")
+async def api_health_polymarket():
+    """Specific Polymarket health status"""
+    polymarket = await check_polymarket_connectivity()
+    return {
+        "service": "polymarket",
+        "timestamp": int(datetime.now(timezone.utc).timestamp()),
+        **polymarket,
+        "indicator": get_health_indicator(_last_polymarket_check),
+        "last_hit": _last_polymarket_check,
+        "seconds_ago": int(datetime.now(timezone.utc).timestamp()) - _last_polymarket_check if _last_polymarket_check else 999,
+    }
+
+@app.get("/api/health/bot")
+def api_health_bot():
+    """Specific bot health status"""
+    return {
+        "bot_id": os.getenv("BOT_NAME", "bot1"),
+        "timestamp": int(datetime.now(timezone.utc).timestamp()),
+        "status": "running" if S.running else "stopped",
+        "indicator": "green" if S.running else "red",
+        "mode": C.mode,
+        "capital": round(total_equity(), 2),
+        "available": round(S.capital, 2),
+        "locked": round(S.locked_capital, 2),
+        "open_positions": len(S.positions),
+        "gas_paused": S.gas_paused,
+        "gas_status": gas_status(),
+        "daily_pnl": round(S.daily_pnl, 2),
+        "daily_stopped": S.daily_pnl <= -C.daily_loss_limit,
+        "start_time": S.start_time,
+        "uptime_seconds": int(datetime.now(timezone.utc).timestamp()) - int(datetime.fromisoformat(S.start_time).timestamp()),
+    }
+
+# ═══════════════════════════════════════════════════════════════
+# API ROUTES ───────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+
 @app.get("/health")
 def health(): return {"status":"ok","mode":C.mode}
 

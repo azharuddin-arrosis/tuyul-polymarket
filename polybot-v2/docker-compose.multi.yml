@@ -1,0 +1,210 @@
+version: '3.8'
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# POLYMARKET BOT v2 — MULTI-BOT DOCKER COMPOSE
+# ======================================================================
+# Deploys multiple bot instances with individual configurations.
+# Each bot gets its own container with isolated state.
+#
+# Bot Instances:
+# - bot1: Primary bot (port 8001)
+# - bot2: Secondary bot (port 8002)
+#
+# Architecture:
+# ┌─────────────┐     ┌─────────────┐
+# │ Nginx       │────▶│ bot1:8001   │
+# │ :80/:8000   │     └─────────────┘
+# │             │────▶│ bot2:8002   │
+# │             │     └─────────────┘
+# │ :3001 (UI)  │────▶│ shared DB   │
+# └─────────────┘     └─────────────┘
+#
+# Usage:
+#   docker-compose -f docker-compose.multi.yml up -d
+#   docker-compose -f docker-compose.multi.yml up -d bot1
+#   docker-compose -f docker-compose.multi.yml logs -f bot1
+# ═══════════════════════════════════════════════════════════════════════════════
+
+services:
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # BOT 1 — PRIMARY INSTANCE
+  # ═══════════════════════════════════════════════════════════════════════════════
+  bot1:
+    build:
+      context: ./backend
+    container_name: polybot-v2-bot1
+    restart: unless-stopped
+    env_file: .env.bot1
+    environment:
+      - BOT_NAME=bot1
+      - BOT_PORT=8001
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_NAME=polybot
+      - DB_USER=polybot
+      - DB_PASSWORD=${DB_PASSWORD:-polybot123}
+    volumes:
+      - bot1_data:/app/data
+      - bot1_logs:/app/logs
+    networks:
+      - polybot_net
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      database:
+        condition: service_healthy
+    profiles:
+      - bot1
+      - all
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # BOT 2 — SECONDARY INSTANCE
+  # ═══════════════════════════════════════════════════════════════════════════════
+  bot2:
+    build:
+      context: ./backend
+    container_name: polybot-v2-bot2
+    restart: unless-stopped
+    env_file: .env.bot2
+    environment:
+      - BOT_NAME=bot2
+      - BOT_PORT=8002
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_NAME=polybot
+      - DB_USER=polybot
+      - DB_PASSWORD=${DB_PASSWORD:-polybot123}
+    volumes:
+      - bot2_data:/app/data
+      - bot2_logs:/app/logs
+    networks:
+      - polybot_net
+    ports:
+      - "8002:8000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      database:
+        condition: service_healthy
+    profiles:
+      - bot2
+      - all
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # SHARED NGINX REVERSE PROXY
+  # ═══════════════════════════════════════════════════════════════════════════════
+  nginx:
+    image: nginx:alpine
+    container_name: polybot-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.multi.conf:/etc/nginx/nginx.conf:ro
+      - ./data/certs:/etc/nginx/certs:ro
+    networks:
+      - polybot_net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # SHARED POSTGRESQL FOR PERSISTENT STORAGE
+  # ═══════════════════════════════════════════════════════════════════════════════
+  database:
+    image: postgres:15-alpine
+    container_name: polybot-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=polybot
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-polybot123}
+      - POSTGRES_DB=polybot
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - polybot_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U polybot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - production
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # SHARED FRONTEND (DASHBOARD)
+  # ═══════════════════════════════════════════════════════════════════════════════
+  frontend:
+    build:
+      context: ./frontend
+    container_name: polybot-v2-frontend
+    restart: unless-stopped
+    environment:
+      - REACT_APP_WS_URL=ws://localhost/ws
+      - REACT_APP_API_URL=http://localhost/api
+    networks:
+      - polybot_net
+    ports:
+      - "3001:3001"
+    depends_on:
+      - bot1
+      - bot2
+    profiles:
+      - frontend
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# VOLUMES (Persistent data)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+volumes:
+  # Bot 1 volumes
+  bot1_data:
+    driver: local
+  bot1_logs:
+    driver: local
+  
+  # Bot 2 volumes
+  bot2_data:
+    driver: local
+  bot2_logs:
+    driver: local
+  
+  # Shared database
+  db_data:
+    driver: local
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NETWORKS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+networks:
+  polybot_net:
+    driver: bridge
+    name: polybot_net
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PROFILE GROUPS
+# ═══════════════════════════════════════════════════════════════════════════════
+# Usage:
+#   # Start only bot1
+#   docker-compose --profile bot1 up -d
+#
+#   # Start bot1 + bot2 (all bots)
+#   docker-compose --profile all up -d
+#
+#   # Start full stack (bots + frontend + db)
+#   docker-compose --profile production up -d
+# ═══════════════════════════════════════════════════════════════════════════════
