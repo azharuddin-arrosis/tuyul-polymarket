@@ -17,14 +17,31 @@ RUN echo 'server { \
     location / { \
         try_files $uri $uri/ /index.html; \
     } \
+    # Default: proxy to bot1-sim \
     location /api/ { \
-        proxy_pass http://bot1-sim:8000; \
+        proxy_pass http://bot1-sim:8000/api/; \
         proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
     } \
+    # Bot 2 API \
+    location /api/bot2/ { \
+        proxy_pass http://bot2-sim:8000/api/; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+    } \
+    # Default websocket to bot1 \
     location /ws { \
         proxy_pass http://bot1-sim:8000/ws; \
         proxy_set_header Upgrade $http_upgrade; \
         proxy_set_header Connection "Upgrade"; \
+        proxy_set_header Host $host; \
+    } \
+    # Bot 2 websocket \
+    location /ws/bot2 { \
+        proxy_pass http://bot2-sim:8000/ws; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "Upgrade"; \
+        proxy_set_header Host $host; \
     } \
     location /health { \
         proxy_pass http://bot1-sim:8000/health; \

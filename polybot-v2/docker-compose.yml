@@ -2,7 +2,6 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: polybot-backend
     restart: unless-stopped
     env_file: .env
     environment:
@@ -32,8 +31,6 @@ services:
       - bot_logs:/app/logs
     networks:
       - polybot_net
-    ports:
-      - "8000:8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
