@@ -262,12 +262,26 @@ function BTC5mPanel({data}){
 
 export default function App(){
   const {stats,positions,log,markets,config,gas,salary,history,btc5m,connected,lastUpd,notify,setup,resumeGas}=usePolyBot()
-  const [ready,setReady]=useState(false)
+  const [ready,setReady]=useState(true) // default true utk skip modal
   const pnl=stats?.pnl??0,isPos=pnl>=0
 
   const doSetup=async(usdc,pol,mode)=>{ await setup(usdc,pol,mode); setReady(true) }
-  useEffect(()=>{ if(stats?.capital) setReady(true) },[stats])
+  
+  // Auto-show dashboard kalo sudah ada stats dari backend
+  useEffect(()=>{
+    if(stats && stats.capital) {
+      setReady(true)
+    }
+  },[stats])
 
+  if(!stats) {
+    return (
+      <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div style={{fontFamily:'var(--mono)',color:'var(--text3)',fontSize:12}}>Connecting...</div>
+      </div>
+    )
+  }
+  
   if(!ready) return <SetupWizard onSetup={doSetup}/>
 
   return(
