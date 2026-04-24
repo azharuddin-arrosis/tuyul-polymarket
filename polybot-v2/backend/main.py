@@ -1286,7 +1286,9 @@ async def check_polymarket_connectivity() -> dict:
                     return {"status": "ok", "latency_ms": r.content_time * 1000}
     except Exception as e:
         _polymarket_status = "error"
-    return {"status": "error", "error": str(e)[:50]}
+        return {"status": "error", "error": str(e)[:50]}
+    return {"status": "error", "error": "unknown"}
+    return {"status": "error", "error": "unknown"}
 
 def get_health_indicator(last_hit_ts: int) -> str:
     """Get health indicator based on last successful hit"""
