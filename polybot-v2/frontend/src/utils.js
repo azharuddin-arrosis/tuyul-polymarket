@@ -1,6 +1,8 @@
 export const f2  = n => n==null?'—':Number(n).toFixed(2)
+export const f3  = n => n==null?'—':Number(n).toFixed(3)
 export const f4  = n => n==null?'—':Number(n).toFixed(4)
 export const pct = n => n==null?'—':`${Number(n).toFixed(1)}%`
+export const id = n => n==null?'—':`${Number(n).toFixed(0)}`
 export const usd = n => {
   if (n == null) return '—';
   const v = Number(n);

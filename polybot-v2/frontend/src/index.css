@@ -1,32 +1,212 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#000000;--bg1:#0a0a0a;--bg2:#111111;--bg3:#1a1a1a;--bg4:#222222;
-  --border:#333333;--border2:#444444;
-  --text:#ffffff;--text2:#cccccc;--text3:#888888;
-  --green:#00ff00;--gbg:rgba(0,255,0,.06);
-  --red:#ff0000;--rbg:rgba(255,0,0,.06);
-  --amber:#ffaa00;--abg:rgba(255,170,0,.06);
-  --blue:#0088ff;--bbg:rgba(0,136,255,.06);
-  --gold:#ffcc00;--goldbg:rgba(255,204,0,.06);
-  --mono:'Consolas','JetBrains Mono',monospace;
-  --sans:'Segoe UI',system-ui,sans-serif;
-  --fs:11px;--fss:10px;--fsxs:9px;
-  --r:2px;--r2:3px;--r3:5px;
-  --row:22px;--cell:3px 7px;
+  /* ═══════════════════════════════════════════════════════════════
+     MODERN DARK THEME — CYBERPUNK TERMINAL STYLE
+     Colors inspired by terminal aesthetics with neon accents
+  ═══════════════════════════════════════════════════════════════ */
+  
+  /* Base backgrounds — deep blacks with subtle gradients */
+  --bg:#050508;--bg1:#0a0a0f;--bg2:#0f0f14;--bg3:#16161d;--bg4:#1e1e28;--bg5:#262630;
+  
+  /* Borders — subtle with slight glow potential */
+  --border:#2a2a38;--border2:#3a3a4a;--border3:#4a4a5a;
+  
+  /* Text hierarchy */
+  --text:#e8e8f0;--text2:#b0b0c0;--text3:#707088;--text4:#505068;
+  
+  /* ═══ NEON ACCENT COLORS ═══ */
+  
+  /* Primary green — success, profit, live */
+  --neon-green:#00ff9f;--neon-green-dim:#00cc7a;--neon-green-glow:rgba(0,255,159,0.15);
+  --green:#00ff9f;--green-muted:#00cc7a;
+  --gbg:rgba(0,255,159,.05);--gbg2:rgba(0,255,159,.1);
+  
+  /* Primary red — loss, error, stop */
+  --neon-red:#ff3366;--neon-red-dim:#cc2244;--neon-red-glow:rgba(255,51,102,0.15);
+  --red:#ff3366;--red-muted:#cc2244;
+  --rbg:rgba(255,51,102,.05);--rbg2:rgba(255,51,102,.1);
+  
+  /* Amber — warning, pending, caution */
+  --neon-amber:#ffaa00;--neon-amber-dim:#cc8800;--neon-amber-glow:rgba(255,170,0,0.15);
+  --amber:#ffaa00;--amber-dim:#cc8800;
+  --abg:rgba(255,170,.05);--abg2:rgba(255,170,.1);
+  
+  /* Cyan — info, links, cool */
+  --neon-cyan:#00ddff;--neon-cyan-dim:#00aacc;--neon-cyan-glow:rgba(0,221,255,0.15);
+  --cyan:#00ddff;--cyan-dim:#00aacc;
+  --cbg:rgba(0,221,255,.05);
+  
+  /* Magenta — special, highlight */
+  --neon-magenta:#ff00ff;--neon-magenta-dim:#cc00cc;--neon-magenta-glow:rgba(255,0,255,0.15);
+  --magenta:#ff00ff;--magenta-dim:#cc00cc;
+  --mbg:rgba(255,0,255,.05);
+  
+  /* Gold — money, salary, premium */
+  --neon-gold:#ffd700;--neon-gold-dim:#ccaa00;--neon-gold-glow:rgba(255,215,0,0.15);
+  --gold:#ffd700;--gold-dim:#ccaa00;
+  --goldbg:rgba(255,215,.05);--goldbg2:rgba(255,215,.1);
+  
+  /* Purple — compound, growth */
+  --neon-purple:#9966ff;--neon-purple-dim:#7744cc;--neon-purple-glow:rgba(153,102,255,0.15);
+  --purple:#9966ff;--purple-dim:#7744cc;
+  --pbg:rgba(153,102,255,.05);
+  
+  /* Blue — actions, links */
+  --neon-blue:#0088ff;--neon-blue-dim:#0066cc;--neon-blue-glow:rgba(0,136,255,0.15);
+  --blue:#0088ff;--blue-dim:#0066cc;
+  --bbg:rgba(0,136,255,.05);
+  
+  /* Orange — urgent, hot */
+  --neon-orange:#ff8800;--neon-orange-dim:#cc6600;
+  --orange:#ff8800;
+  --obg:rgba(255,136,0,.05);
+  
+  /* ═══ TYPOGRAPHY ═══ */
+  --mono:'JetBrains Mono','Fira Code','Consolas',monospace;
+  --sans:'Inter','Segoe UI',system-ui,sans-serif;
+  --fs:11px;--fss:10px;--fsxs:9px;--fsxxs:8px;
+  
+  /* ═══ SPACING & SHAPES ═══ */
+  --r:3px;--r2:4px;--r3:6px;--r4:8px;
+  --row:22px;--cell:3px 8px;
+  
+  /* ═══ EFFECTS ═══ */
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md:0 2px 8px rgba(0,0,0,0.4);
+  --shadow-lg:0 4px 16px rgba(0,0,0,0.5);
+  --shadow-glow-green:0 0 10px rgba(0,255,159,0.3);
+  --shadow-glow-red:0 0 10px rgba(255,51,102,0.3);
 }
 html,body,#root{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:var(--fs);line-height:1.4}
-::-webkit-scrollbar{width:4px;height:4px}
+
+/* ═══ SCROLLBAR STYLING ═══ */
+::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--bg1)}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-button{font-family:var(--sans);font-size:var(--fss);cursor:pointer;transition:all .12s}
-input,select{font-family:var(--mono);font-size:var(--fss);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);padding:4px 7px;outline:none}
-input:focus,select:focus{border-color:var(--blue)}
-.xls-th{background:var(--bg3);color:var(--text3);font-size:var(--fsxs);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;font-weight:500;padding:var(--cell);border-bottom:1px solid var(--border2);user-select:none;white-space:nowrap;cursor:pointer}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border3)}
+
+/* ═══ FORM ELEMENTS ═══ */
+button{
+  font-family:var(--sans);
+  font-size:var(--fss);
+  cursor:pointer;
+  transition:all .15s ease;
+  border:none;
+  outline:none;
+}
+button:disabled{opacity:.4;cursor:not-allowed}
+input,select,textarea{
+  font-family:var(--mono);
+  font-size:var(--fss);
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:var(--r2);
+  color:var(--text);
+  padding:6px 10px;
+  outline:none;
+  transition:border-color .15s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--cyan)}
+
+/* ═══ TABLE STYLES ═══ */
+.xls-th{
+  background:var(--bg3);
+  color:var(--text3);
+  font-size:var(--fsxs);
+  font-family:var(--mono);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  font-weight:500;
+  padding:var(--cell);
+  border-bottom:1px solid var(--border2);
+  user-select:none;
+  white-space:nowrap;
+  cursor:pointer;
+  position:sticky;
+  top:0;
+}
 .xls-th:hover{color:var(--text2)}
-.xls-td{padding:var(--cell);border-bottom:1px solid var(--border);font-size:var(--fs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:var(--row)}
+.xls-td{
+  padding:var(--cell);
+  border-bottom:1px solid var(--border);
+  font-size:var(--fs);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  height:var(--row);
+}
 .xls-tr:hover{background:rgba(255,255,255,.03)!important}
-.xls-tr:nth-child(even){background:rgba(255,255,255,.01)}
-@keyframes fadeUp{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.xls-tr:nth-child(even){background:rgba(255,255,255,.015)}
+
+/* ═══ ANIMATIONS ═══ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 @keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
-@keyframes flash{0%{background:rgba(0,200,122,.2)}100%{background:transparent}}
+@keyframes flash{0%{background:rgba(0,255,159,.2)}100%{background:transparent}}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 5px var(--neon-green)}50%{box-shadow:0 0 15px var(--neon-green)}}@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.fade-up{animation:fadeUp .2s ease}
+.pulse{animation:pulse 1.5s infinite}
+.slide-in{animation:slideIn .25s ease}
+.flash{animation:flash .4s ease}
+
+/* ═══ UTILITY CLASSES ═══ */
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mono{font-family:var(--mono)}
+.grid-auto-fit{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+
+/* Card container styles */
+.card{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r3);
+  overflow:hidden;
+}
+.card-header{
+  padding:6px 10px;
+  border-bottom:1px solid var(--border);
+  background:var(--bg3);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.card-title{
+  font-size:var(--fsxs);
+  color:var(--text2);
+  font-family:var(--mono);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  font-weight:600;
+}
+.card-body{padding:8px 10px}
+
+/* Tag styles */
+.tag{
+  display:inline-flex;
+  align-items:center;
+  padding:2px 6px;
+  border-radius:var(--r);
+  font-size:var(--fsxxs);
+  font-family:var(--mono);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  font-weight:500;
+}
+.tag-green{background:var(--gbg);color:var(--green)}
+.tag-red{background:var(--rbg);color:var(--red)}
+.tag-amber{background:var(--abg);color:var(--amber)}
+.tag-cyan{background:var(--cbg);color:var(--cyan)}
+.tag-purple{background:var(--pbg);color:var(--purple)}
+.tag-gold{background:var(--goldbg);color:var(--gold)}
+.tag-blue{background:var(--bbg);color:var(--blue)}
+
+/* Status indicator dot */
+.status-dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  display:inline-block;
+}
+.status-dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.status-dot.red{background:var(--red);box-shadow:0 0 6px var(--red)}
+.status-dot.amber{background:var(--amber);box-shadow:0 0 6px var(--amber)}

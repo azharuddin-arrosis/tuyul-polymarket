@@ -440,11 +440,16 @@ class Config:
     prob_min         = float(os.getenv("PROB_MIN", "0.55"))
     prob_max         = float(os.getenv("PROB_MAX", "0.88"))
     scan_sec         = int(os.getenv("SCAN_INTERVAL", "10"))
-    # Compound: $10 = $2 bet
-    compound_base    = 10.0
-    compound_step    = 10.0
-    compound_inc     = 2.0
-    compound_max_bet = 50.0
+    # Compound — NEW FORMULA v2: max_bet = max(min_bet, floor(equity / divisor))
+    # $0-19   → $1  (build phase, konservatif)
+    # $20-29  → $2
+    # $30-39  → $3
+    # $40-49  → $4
+    # $50+    → $5+ (kelipatan $10)
+    # Loaded from env: COMPOUND_DIVISOR, COMPOUND_MIN_BET, COMPOUND_MAX_CAP
+    compound_divisor  = float(os.getenv("COMPOUND_DIVISOR", "10.0"))
+    compound_min_bet  = float(os.getenv("COMPOUND_MIN_BET", "1.0"))
+    compound_max_cap  = float(os.getenv("COMPOUND_MAX_CAP", "20.0"))
     # Gas: keep 50% as reserve
     gas_reserve_pct  = 0.50
     gas_per_tx_usd   = 0.02
@@ -582,45 +587,157 @@ class BotState:
 
 S = BotState()
 
-# ─── COMPOUND ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+# COMPOUND LOGIC v2 — New Formula
+# ═══════════════════════════════════════════════════════════════
+# Formula: max_bet = max(1, floor(equity / divisor))
+#
+# Tier Structure (divisor=10):
+#   $0-19   → $1  (build phase, konservatif)
+#   $20-29  → $2
+#   $30-39  → $3
+#   $40-49  → $4
+#   $50-59  → $5
+#   $60-69  → $6
+#   ...and so on
+#
+# Easy tuning via config:
+#   C.compound_divisor  = 10.0   # equity / 10 = bet
+#   C.compound_min_bet   = 1.0   # minimum $1 (Polymarket floor)
+#   C.compound_max_cap  = 20.0  # hard cap $20/bet
+# ═══════════════════════════════════════════════════════════════
+
 def total_equity() -> float:
+    """Total equity = available + locked in positions"""
     return round(S.capital + S.locked_capital, 4)
 
-def compound_tier(capital: float) -> int:
+
+def compound_bet_from_equity(equity: float) -> float:
+    """
+    Calculate max bet from equity using new formula.
+    
+    Formula: max_bet = max(compound_min_bet, floor(equity / divisor))
+    
+    Examples (divisor=10):
+        equity=$15  → floor(15/10)=1 → $1
+        equity=$25  → floor(25/10)=2 → $2
+        equity=$35  → floor(35/10)=3 → $3
+        equity=$45  → floor(45/10)=4 → $4
+        equity=$55  → floor(55/10)=5 → $5
+        equity=$100 → floor(100/10)=10 → capped at $20
+    """
+    # Calculate: floor(equity / divisor)
+    raw_bet = int(equity / C.compound_divisor)
+    
+    # Enforce minimum $1 (Polymarket floor)
+    bet = max(C.compound_min_bet, raw_bet)
+    
+    # Apply hard cap
+    bet = min(bet, C.compound_max_cap)
+    
+    return float(bet)
+
+
+def compound_tier(equity: float) -> int:
+    """
+    Calculate compound tier from equity.
+    Tier = floor(equity / divisor)
+    
+    Examples (divisor=10):
+        $0-19   → tier 0
+        $20-29  → tier 1
+        $30-39  → tier 2
+        $40-49  → tier 3
+    """
+    return max(0, int(equity / C.compound_divisor))
+
+
+def compound_current_bet() -> float:
+    """Get current max bet based on equity"""
     eq = total_equity()
-    if eq < C.compound_base: return 0
-    return int((eq - C.compound_base) / C.compound_step) + 1
+    return compound_bet_from_equity(eq)
 
-def compound_bet(capital: float) -> float:
-    t = compound_tier(capital)
-    if t == 0: return C.min_bet
-    return round(min(t * C.compound_inc, C.compound_max_bet), 2)
 
-def compound_next() -> float:
-    t = compound_tier(S.capital)
-    return round(C.compound_base + t * C.compound_step, 2)
-
-def compound_progress() -> float:
-    t  = compound_tier(S.capital)
+def compound_next_tier_threshold() -> float:
+    """Next tier threshold (equity needed for next bet level)"""
     eq = total_equity()
-    prev = C.compound_base + (t-1)*C.compound_step if t > 0 else 0
-    top  = C.compound_base + t*C.compound_step if t > 0 else C.compound_base
-    span = top - prev
-    if span <= 0: return 100.0
-    return round(min(100.0, (eq - prev) / span * 100), 1)
+    current_tier = compound_tier(eq)
+    next_threshold = (current_tier + 1) * C.compound_divisor
+    return float(next_threshold)
+
+
+def compound_progress_to_next() -> float:
+    """Progress percentage to next tier (0-100)"""
+    eq = total_equity()
+    current_tier = compound_tier(eq)
+    
+    current_threshold = current_tier * C.compound_divisor
+    next_threshold = (current_tier + 1) * C.compound_divisor
+    
+    if next_threshold <= current_threshold:
+        return 100.0
+    
+    span = next_threshold - current_threshold
+    progress = ((eq - current_threshold) / span) * 100
+    return round(min(100.0, max(0.0, progress)), 1)
+
+
+def compound_info() -> dict:
+    """Get compound status info for dashboard"""
+    eq = total_equity()
+    tier = compound_tier(eq)
+    current_bet = compound_bet_from_equity(eq)
+    next_threshold = compound_next_tier_threshold()
+    progress = compound_progress_to_next()
+    
+    return {
+        "equity": round(eq, 2),
+        "tier": tier,
+        "current_bet": current_bet,
+        "next_threshold": next_threshold,
+        "progress_pct": progress,
+        "formula": f"max_bet = max({C.compound_min_bet}, floor(equity / {C.compound_divisor}))",
+        "config": {
+            "divisor": C.compound_divisor,
+            "min_bet": C.compound_min_bet,
+            "max_cap": C.compound_max_cap,
+        }
+    }
+
 
 def check_levelup():
-    new_t = compound_tier(S.capital)
-    if new_t > S.compound_tier:
-        old_bet = compound_bet(S.capital)
-        S.compound_tier = new_t
-        new_bet = compound_bet(S.capital)
-        ev = {"time": now_str(), "old_tier": new_t-1, "new_tier": new_t,
-              "new_bet": new_bet, "capital": round(total_equity(), 4),
-              "next": compound_next()}
+    """
+    Check if compound tier has increased.
+    Log event if tier increased.
+    """
+    new_tier = compound_tier(S.capital)
+    
+    if new_tier > S.compound_tier:
+        old_bet = compound_bet_from_equity(total_equity())
+        eq_before = S.capital + S.locked_capital
+        
+        S.compound_tier = new_tier
+        new_bet = compound_bet_from_equity(total_equity())
+        
+        ev = {
+            "time": now_str(),
+            "old_tier": new_tier - 1,
+            "new_tier": new_tier,
+            "old_bet": old_bet,
+            "new_bet": new_bet,
+            "equity": round(total_equity(), 4),
+            "next_threshold": compound_next_tier_threshold(),
+        }
         S.compound_events.append(ev)
-        add_log("COMPOUND_UP", {"tier": new_t, "new_bet": new_bet,
-            "capital": round(total_equity(),4), "next": compound_next()})
+        
+        add_log("COMPOUND_UP", {
+            "tier": new_tier,
+            "new_bet": new_bet,
+            "old_bet": old_bet,
+            "equity": round(total_equity(), 4),
+            "next_threshold": compound_next_tier_threshold(),
+            "message": f"Level up! ${old_bet} → ${new_bet}/bet",
+        })
         return True
     return False
 
@@ -709,11 +826,11 @@ def kelly_fraction(true_prob: float, price: float) -> float:
 def calc_size(true_prob: float, price: float) -> float:
     """
     No daily max-bet limit. Only limit:
-    - compound max bet
+    - compound max bet (from new formula)
     - 50% of available capital per bet (protect gas reserve logic)
     - minimum $1.00 (Polymarket floor)
     """
-    max_bet  = compound_bet(S.capital)
+    max_bet  = compound_bet_from_equity(total_equity())
     k        = kelly_fraction(true_prob, price)
     eq       = total_equity()
     raw      = eq * k
@@ -978,8 +1095,8 @@ async def open_position(market: dict, sig: dict):
             "resolve_sec":   resolve_sec,
             "resolve_fmt":   market.get("resolve_fmt","?"),
             "end_date":      market.get("end_date",""),
-            "compound_tier": compound_tier(S.capital),
-            "compound_bet":  compound_bet(S.capital),
+            "compound_tier": compound_tier(total_equity()),
+            "compound_bet":  compound_bet_from_equity(total_equity()),
         }
         S.positions.append(pos)
         consume_gas()
@@ -1192,7 +1309,10 @@ def get_stats() -> dict:
     wins  = sum(1 for t in S.closed_trades if t["status"]=="won")
     eq    = total_equity()
     pnl   = round(eq - S.initial_capital, 4)
-    t     = compound_tier(S.capital)
+    t     = compound_tier(eq)
+    
+    comp_info = compound_info()
+    
     return {
         "mode":              C.mode.upper(),
         "capital":           round(eq, 4),
@@ -1217,14 +1337,18 @@ def get_stats() -> dict:
         "errors":            S.errors[-3:],
         "gas":               get_gas_info(),
         "salary":            get_salary_info(),
+        # Compound v2
         "compound_tier":     t,
-        "compound_bet":      compound_bet(S.capital),
-        "compound_next":     compound_next(),
-        "compound_prog":     compound_progress(),
+        "compound_bet":      comp_info["current_bet"],
+        "compound_next":     comp_info["next_threshold"],
+        "compound_prog":     comp_info["progress_pct"],
+        "compound_equity":   eq,
+        "compound_formula":  comp_info["formula"],
         "compound_events":   S.compound_events[-5:],
     }
 
 def get_config() -> dict:
+    comp_info = compound_info()
     return {
         "mode": C.mode, "usdc_capital": C.usdc_capital,
         "pol_balance": C.pol_balance,
@@ -1232,8 +1356,12 @@ def get_config() -> dict:
         "min_ev": C.min_ev, "daily_loss": C.daily_loss_limit,
         "prob_min": C.prob_min, "prob_max": C.prob_max,
         "scan_sec": C.scan_sec,
-        "compound_base": C.compound_base, "compound_step": C.compound_step,
-        "compound_inc": C.compound_inc, "compound_max_bet": C.compound_max_bet,
+        # Compound v2 - New Formula
+        "compound_divisor": C.compound_divisor,
+        "compound_min_bet": C.compound_min_bet,
+        "compound_max_cap": C.compound_max_cap,
+        "compound_formula": comp_info["formula"],
+        #
         "gas_reserve_pct": C.gas_reserve_pct,
         "gas_alert_tx": C.gas_alert_tx, "gas_stop_tx": C.gas_stop_tx,
         "salary_threshold": C.salary_threshold,
@@ -1466,16 +1594,45 @@ def api_config(): return get_config()
 
 @app.get("/api/compound")
 def api_compound():
+    """
+    Compound API — Shows new formula tiers
+    
+    Formula: max_bet = max(1, floor(equity / 10))
+    Tier    Equity Range    Max Bet
+    T0      $0-19        $1
+    T1      $20-29       $2
+    T2      $30-39       $3
+    T3      $40-49       $4
+    T4      $50-59       $5
+    ...
+    """
+    eq = total_equity()
+    current_t = compound_tier(eq)
+    current_b = compound_bet_from_equity(eq)
+    
+    # Build tier table (0-14)
     tiers = []
-    for i in range(0,15):
-        cs = 0 if i==0 else C.compound_base+(i-1)*C.compound_step
-        ce = C.compound_base if i==0 else C.compound_base+i*C.compound_step
-        mb = C.min_bet if i==0 else round(i*C.compound_inc, 2)
-        tiers.append({"tier":i,"cap_from":cs,"cap_to":ce,"max_bet":mb,
-                       "active":compound_tier(S.capital)==i})
-    return {"current_tier":compound_tier(S.capital),"current_bet":compound_bet(S.capital),
-            "capital":round(total_equity(),4),"tiers":tiers,"events":S.compound_events,
-            "salary_events":S.salary_events}
+    for i in range(0, 15):
+        tier_equity = i * C.compound_divisor
+        max_bet = max(C.compound_min_bet, min(i, int(C.compound_max_cap / C.compound_divisor)))
+        tiers.append({
+            "tier": i,
+            "equity_range": f"${tier_equity:.0f}-{tier_equity + C.compound_divisor:.0f}",
+            "max_bet": max_bet,
+            "active": current_t == i,
+        })
+    
+    return {
+        "current_tier": current_t,
+        "current_bet": current_b,
+        "equity": round(eq, 4),
+        "next_threshold": compound_next_tier_threshold(),
+        "progress_pct": compound_progress_to_next(),
+        "formula": compound_info()["formula"],
+        "config": compound_info()["config"],
+        "tiers": tiers,
+        "events": S.compound_events,
+    }
 
 @app.post("/api/gas/resume")
 async def api_gas_resume():
@@ -1594,6 +1751,37 @@ def api_btc5m():
         "klines_count":  len(B5.klines),
         "market_found":  bool(B5.market_data),
     }
+
+@app.post("/api/start")
+async def api_start():
+    """Start the bot scanner"""
+    if S.running:
+        return {"ok": False, "message": "Bot already running"}
+    S.running = True
+    add_log("BOT_START", {"message": "Bot started manually"})
+    await broadcast({"type": "stats", "data": get_stats()})
+    return {"ok": True, "message": "Bot started"}
+
+@app.post("/api/stop")
+async def api_stop():
+    """Stop the bot scanner"""
+    if not S.running:
+        return {"ok": False, "message": "Bot already stopped"}
+    S.running = False
+    add_log("BOT_STOP", {"message": "Bot stopped manually"})
+    await broadcast({"type": "stats", "data": get_stats()})
+    return {"ok": True, "message": "Bot stopped"}
+
+@app.post("/api/restart")
+async def api_restart():
+    """Restart the bot scanner (stop then start)"""
+    S.running = False
+    add_log("BOT_RESTART", {"message": "Bot restarting..."})
+    await asyncio.sleep(1)
+    S.running = True
+    add_log("BOT_RESTART", {"message": "Bot restarted"})
+    await broadcast({"type": "stats", "data": get_stats()})
+    return {"ok": True, "message": "Bot restarted"}
 
 @app.on_event("startup")
 async def startup():

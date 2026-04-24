@@ -1,0 +1,303 @@
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* Core Dark Theme - Modern Palette */
+  --bg:#060608;--bg1:#0c0c10;--bg2:#121218;--bg3:#18181f;--bg4:#222230;
+  --bg-glass:rgba(18,18,24,0.85);
+  
+  /* Borders & Dividers */
+  --border:#2a2a3a;--border2:#383850;
+  
+  /* Text Hierarchy */
+  --text:#f0f0f8;--text2:#a0a0b8;--text3:#606078;
+  
+  /* Brand Colors - Cyberpunk/Neon Inspired */
+  --green:#00ff9d;--green-dim:#00cc7d;--green-glow:rgba(0,255,157,0.15);
+  --red:#ff3366;--red-dim:#cc2952;--red-glow:rgba(255,51,102,0.15);
+  --amber:#ffaa00;--amber-dim:#cc8800;--amber-glow:rgba(255,170,0,0.15);
+  --blue:#00aaff;--blue-dim:#0088cc;--blue-glow:rgba(0,170,255,0.15);
+  --gold:#ffd700;--gold-dim:#ccaa00;--gold-glow:rgba(255,215,0,0.15);
+  --purple:#a855f7;--purple-dim:#8644cc;--purple-glow:rgba(168,85,247,0.15);
+  --cyan:#22d3ee;--cyan-dim:#1aa8b8;--cyan-glow:rgba(34,211,238,0.15);
+  
+  /* Signal Colors */
+  --signal-up:#00ff9d;
+  --signal-down:#ff3366;
+  --signal-neutral:#606078;
+  
+  /* Typography */
+  --mono:'JetBrains Mono','Fira Code','Consolas',monospace;
+  --sans:'Inter','Segoe UI',system-ui,sans-serif;
+  --fs:12px;--fss:11px;--fsxs:9px;
+  
+  /* Spacing & Radius */
+  --r:4px;--r2:6px;--r3:10px;--r4:14px;
+  --cell:4px 8px;
+  
+  /* Shadows & Effects */
+  --shadow-sm:0 2px 4px rgba(0,0,0,0.3);
+  --shadow-md:0 4px 12px rgba(0,0,0,0.4);
+  --shadow-glow-green:0 0 20px rgba(0,255,157,0.3);
+  --shadow-glow-red:0 0 20px rgba(255,51,102,0.3);
+  --shadow-glow-blue:0 0 20px rgba(0,170,255,0.3);
+}
+
+html,body,#root{
+  height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:var(--fs);
+  line-height:1.5
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border)}
+
+/* Form Elements */
+button{
+  font-family:var(--sans);
+  font-size:var(--fss);
+  cursor:pointer;
+  transition:all .18s cubic-bezier(0.4,0,0.2,1);
+  border:none
+}
+input,select{
+  font-family:var(--mono);
+  font-size:var(--fss);
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:var(--r2);
+  color:var(--text);
+  padding:6px 10px;
+  outline:none;
+  transition:border-color .15s
+}
+input:focus,select:focus{border-color:var(--blue)}
+input::placeholder{color:var(--text3)}
+
+/* Table Styles */
+.xls-th{
+  background:var(--bg3);
+  color:var(--text3);
+  font-size:var(--fsxs);
+  font-family:var(--mono);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  font-weight:600;
+  padding:var(--cell);
+  border-bottom:1px solid var(--border2);
+  user-select:none;
+  white-space:nowrap;
+  text-align:left
+}
+.xls-td{
+  padding:var(--cell);
+  border-bottom:1px solid var(--border);
+  font-size:var(--fs);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  height:28px
+}
+.xls-tr:hover{background:rgba(255,255,255,.03)!important}
+.xls-tr:nth-child(even){background:rgba(255,255,255,.015)}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideInLeft{from{transform:translateX(-100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 5px currentColor}50%{box-shadow:0 0 20px currentColor}}
+@keyframes countPulse{0%{transform:scale(1.1);color:var(--amber)}100%{transform:scale(1);color:inherit}}
+@keyframes gradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+.animate-fade-up{animation:fadeUp .3s ease-out}
+.animate-pulse{animation:pulse 2s infinite}
+.animate-slide-in{animation:slideIn .35s cubic-bezier(0.4,0,0.2,1)}
+.animate-glow{animation:glowPulse 2s ease-in-out infinite}
+
+/* Utility Classes */
+.mono{font-family:var(--mono)}
+.text-glow-green{text-shadow:var(--shadow-glow-green)}
+.text-glow-red{text-shadow:var(--shadow-glow-red)}
+.bg-glass{background:var(--bg-glass);backdrop-filter:blur(12px)}
+
+/* Card Base Styles */
+.card{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r3);
+  overflow:hidden;
+  transition:border-color .2s,box-shadow .2s
+}
+.card:hover{border-color:var(--border2)}
+.card-header{
+  padding:8px 12px;
+  border-bottom:1px solid var(--border);
+  background:var(--bg3);
+  display:flex;
+  justify-content:space-between;
+  align-items:center
+}
+.card-title{
+  font-size:var(--fsxs);
+  color:var(--text2);
+  font-family:var(--mono);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-weight:600
+}
+.card-body{padding:10px 12px}
+
+/* Status Badges */
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:2px 8px;
+  border-radius:var(--r);
+  font-family:var(--mono);
+  font-size:var(--fsxs);
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.04em
+}
+.badge-green{background:var(--green-glow);color:var(--green);border:1px solid var(--green-dim)}
+.badge-red{background:var(--red-glow);color:var(--red);border:1px solid var(--red-dim)}
+.badge-amber{background:var(--amber-glow);color:var(--amber);border:1px solid var(--amber-dim)}
+.badge-blue{background:var(--blue-glow);color:var(--blue);border:1px solid var(--blue-dim)}
+.badge-gold{background:var(--gold-glow);color:var(--gold);border:1px solid var(--gold-dim)}
+.badge-purple{background:var(--purple-glow);color:var(--purple);border:1px solid var(--purple-dim)}
+.badge-cyan{background:var(--cyan-glow);color:var(--cyan);border:1px solid var(--cyan-dim)}
+
+/* Progress Bars */
+.progress-bar{
+  height:4px;
+  background:var(--bg4);
+  border-radius:2px;
+  overflow:hidden
+}
+.progress-fill{
+  height:100%;
+  border-radius:2px;
+  transition:width .4s cubic-bezier(0.4,0,0.2,1);
+  background:linear-gradient(90deg,var(--green-dim),var(--green));
+}
+.progress-fill.negative{background:linear-gradient(90deg,var(--red-dim),var(--red))}
+
+/* Countdown Timer */
+.countdown{
+  font-family:var(--mono);
+  font-size:var(--fs);
+  font-weight:700;
+  color:var(--amber);
+  animation:countPulse 1s ease-in-out
+}
+
+/* Tooltip */
+.tooltip{
+  position:relative
+}
+.tooltip::after{
+  content:attr(data-tooltip);
+  position:absolute;
+  bottom:100%;
+  left:50%;
+  transform:translateX(-50%);
+  padding:4px 8px;
+  background:var(--bg4);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  font-size:var(--fsxs);
+  white-space:nowrap;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .15s;
+  z-index:1000
+}
+.tooltip:hover::after{opacity:1}
+
+/* Grid Layouts */
+.dashboard-grid{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  gap:10px
+}
+@media (max-width:1200px){
+  .dashboard-grid{grid-template-columns:repeat(6,1fr)}
+}
+@media (max-width:768px){
+  .dashboard-grid{grid-template-columns:repeat(3,1fr)}
+}
+
+/* Stat Card */
+.stat-card{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r3);
+  padding:12px 14px;
+  transition:all .2s
+}
+.stat-card:hover{border-color:var(--border2)}
+.stat-label{
+  font-size:var(--fsxs);
+  color:var(--text3);
+  font-family:var(--mono);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  margin-bottom:2px
+}
+.stat-value{
+  font-size:20px;
+  font-weight:700;
+  font-family:var(--mono);
+  line-height:1.2
+}
+.stat-sub{
+  font-size:var(--fsxs);
+  color:var(--text3);
+  font-family:var(--mono);
+  margin-top:2px
+}
+
+/* Sparkline SVG Container */
+.sparkline-container{
+  width:100%;
+  height:48px;
+  position:relative
+}
+.sparkline-container svg{
+  width:100%;
+  height:100%
+}
+
+/* Recharts Customizations */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line{
+  stroke:var(--border);
+  stroke-opacity:0.5
+}
+.recharts-tooltip-wrapper{
+  outline:none
+}
+.custom-tooltip{
+  background:var(--bg3)!important;
+  border:1px solid var(--border2)!important;
+  border-radius:var(--r2)!important;
+  padding:8px 10px!important;
+  box-shadow:var(--shadow-md)!important
+}
+.custom-tooltip .label{
+  font-family:var(--mono);
+  font-size:var(--fsxs);
+  color:var(--text3);
+  margin-bottom:4px
+}
+.custom-tooltip .value{
+  font-family:var(--mono);
+  font-size:var(--fs);
+  color:var(--text)
+}

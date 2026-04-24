@@ -47,11 +47,13 @@ class BotConfig:
     prob_max: float = 0.85
     scan_interval: int = 5
     
-    # Compound
-    compound_base: float = 20.0
-    compound_step: float = 20.0
-    compound_inc: float = 1.0
-    compound_max_bet: float = 20.0
+    # Compound — NEW LOGIC v2
+    # Formula: max_bet = max(1, floor(equity / 10))
+    # $0-19 → $1, $20-29 → $2, $30-39 → $3, $40-49 → $4, $50+ → $5+
+    # Easy tuning via single parameter
+    compound_divisor: float = 10.0      # equity / 10 = bet
+    compound_min_bet: float = 1.0        # minimum $1 (Polymarket floor)
+    compound_max_cap: float = 20.0      # hard cap at $20/bet
     
     # Gas
     gas_alert_tx: int = 10
@@ -210,10 +212,9 @@ def load_bot_config(env_file: str | Path) -> BotConfig:
         prob_max=float(env.get("PROB_MAX", "0.85")),
         scan_interval=int(env.get("SCAN_INTERVAL", "5")),
         
-        compound_base=float(env.get("COMPOUND_BASE", "20")),
-        compound_step=float(env.get("COMPOUND_STEP", "20")),
-        compound_inc=float(env.get("COMPOUND_INC", "1.0")),
-        compound_max_bet=float(env.get("COMPOUND_MAX_BET", "20.0")),
+        compound_divisor=float(env.get("COMPOUND_DIVISOR", "10")),
+        compound_min_bet=float(env.get("COMPOUND_MIN_BET", "1.0")),
+        compound_max_cap=float(env.get("COMPOUND_MAX_CAP", "20.0")),
         
         gas_alert_tx=int(env.get("GAS_ALERT_TX", "10")),
         gas_stop_tx=int(env.get("GAS_STOP_TX", "2")),
