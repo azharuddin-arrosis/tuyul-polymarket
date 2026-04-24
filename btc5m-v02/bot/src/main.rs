@@ -751,7 +751,9 @@ async fn post_settings(
     let was_auto = state.state.lock().await.settings.auto_mode;
     let is_starting = !was_auto && requested_auto;
 
-    // Validate real-mode prerequisites *before* acquiring the lock
+    // FIX: Validate real-mode prerequisites ONLY when entering Real mode.
+    // Demo mode skips all external connectivity checks so bots can start
+    // independently of peer health.
     if requested_mode == BotMode::Real {
         let client = Client::builder().timeout(Duration::from_secs(5)).build().unwrap();
         if let Err(msg) = validate_real_mode(&client).await {
@@ -764,8 +766,12 @@ async fn post_settings(
     if is_starting {
         s.settings.usdc_balance  = if form.usdc_balance  > 0.0 { form.usdc_balance  } else { 100.0 };
         s.settings.matic_balance = if form.matic_balance > 0.0 { form.matic_balance } else { 0.5   };
-        println!("[INIT] Starting simulation — USDC: ${:.2}, MATIC: {:.4}",
-            s.settings.usdc_balance, s.settings.matic_balance);
+        println!("[INIT] Bot launched — mode={:?} auto={} usdc=${:.2} matic={:.4}",
+            requested_mode, requested_auto, s.settings.usdc_balance, s.settings.matic_balance);
+        // FIX: Log but do NOT block startup due to health check failures.
+        if requested_auto {
+            println!("[INFO] Auto-trading enabled. Health checks are advisory for Demo mode.");
+        }
     }
 
     // FIX: validate thresholds before applying

@@ -145,7 +145,7 @@ app.get('/api/bots', (req, res) => {
     });
 });
 
-// Health check - check both bots
+// Health check - check all bots but don't block (used for monitoring)
 app.get('/health', async (req, res) => {
     const results = {};
     
@@ -153,20 +153,59 @@ app.get('/health', async (req, res) => {
         try {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 2000);
-            const res = await fetch(`${botUrl}/health`, { signal: controller.signal });
+            const response = await fetch(`${botUrl}/health`, { signal: controller.signal });
             clearTimeout(timeout);
-            results[botId] = res.ok ? 'ok' : `error ${res.status}`;
+            results[botId] = response.ok ? 'ok' : `error ${response.status}`;
         } catch (e) {
             results[botId] = `unreachable: ${e.message}`;
         }
     }
     
+    // For monitoring only — don't block operations
     const allOk = Object.values(results).every(r => r === 'ok');
-    res.status(allOk ? 200 : 503).json({
+    res.status(allOk ? 200 : 200).json({
         status: allOk ? 'ok' : 'degraded',
         bots: results
     });
 });
+
+// NEW: Aggregate state across all configured bots for dashboard
+async function getAggregatedState() {
+    const botStates = {};
+    for (const botId of Object.keys(BOTS)) {
+        try {
+            const stateData = await fetchBot(botId, '/api/state');
+            botStates[botId] = { ok: true, data: stateData };
+        } catch (e) {
+            console.error(`Failed to fetch state for ${botId}:`, e.message);
+            botStates[botId] = { ok: false, error: e.message };
+        }
+    }
+    
+    // Aggregate metrics
+    let totalBalance = 0;
+    let totalPnL = 0;
+    let totalOpenPositions = 0;
+    
+    for (const [botId, stateInfo] of Object.entries(botStates)) {
+        if (stateInfo.ok && stateInfo.data) {
+            totalBalance += stateInfo.data.usdc_balance || 0;
+            totalPnL += stateInfo.data.realized_pnl || 0;
+            totalOpenPositions += stateInfo.data.open_positions?.length || 0;
+        }
+    }
+    
+    return {
+        aggregated: {
+            totalBalance,
+            totalPnL,
+            totalOpenPositions,
+            botCount: Object.keys(BOTS).length,
+            healthyCount: Object.values(botStates).filter(b => b.ok).length
+        },
+        bots: botStates
+    };
+}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

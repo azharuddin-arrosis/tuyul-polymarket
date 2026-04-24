@@ -3,7 +3,7 @@ import { usePolyBot } from './hooks/usePolyBot.js'
 import { SetupWizard } from './components/SetupWizard.jsx'
 import { PositionCard } from './components/PositionCard.jsx'
 import { MarketTable, XTag, Toast, HealthMonitor, DemoModeToggle } from './components/Widgets.jsx'
-import { usd, pct, CAT_COLOR, STRAT_COLOR, STRAT_LABEL } from './utils.js'
+import { usd, idr, pct, CAT_COLOR, STRAT_COLOR, STRAT_LABEL } from './utils.js'
 
 const STORAGE_KEY = 'polybot_pnl_history'
 
@@ -15,7 +15,7 @@ function saveHistory(h){ localStorage.setItem(STORAGE_KEY, JSON.stringify(h)) }
 // ═══════════════════════════════════════════════════════════════
 
 function BotRouter({ bots, currentBot, onSwitchBot }) {
-  if (!bots || bots.length <= 1) return null
+  if (!bots || bots.length === 0) return null
   
   return (
     <div style={{
@@ -25,9 +25,9 @@ function BotRouter({ bots, currentBot, onSwitchBot }) {
     }}>
       <span style={{fontSize: 'var(--fsxs)', color: 'var(--text3)', 
                     fontFamily: 'var(--mono)', textTransform: 'uppercase'}}>
-        Bot:
+        Bots:
       </span>
-      {bots.map(bot => (
+      {bots.map((bot, idx) => (
         <button
           key={bot.name}
           onClick={() => onSwitchBot(bot.name)}
@@ -44,7 +44,7 @@ function BotRouter({ bots, currentBot, onSwitchBot }) {
             transition: 'all 0.15s'
           }}
         >
-          {bot.display_name}
+          Bot {idx + 1}
         </button>
       ))}
     </div>
@@ -80,7 +80,10 @@ function CombinedDashboard({ bots, stats, positions, markets, config, gas, salar
             <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Total Equity</div>
             <div style={{fontSize: 16, fontWeight: 700, color: 'var(--green)', 
                         fontFamily: 'var(--mono)'}}>
-              ${usd(totalEquity)}
+              {usd(totalEquity)}
+            </div>
+            <div style={{fontSize: 'var(--fsxs)', color: 'var(--text2)', fontFamily: 'var(--mono)'}}>
+              {idr(totalEquity)}
             </div>
           </div>
           <div>
@@ -88,7 +91,10 @@ function CombinedDashboard({ bots, stats, positions, markets, config, gas, salar
             <div style={{fontSize: 16, fontWeight: 700, 
                         color: totalPnL >= 0 ? 'var(--green)' : 'var(--red)', 
                         fontFamily: 'var(--mono)'}}>
-              {totalPnL >= 0 ? '+' : ''}${usd(totalPnL)}
+              {totalPnL >= 0 ? '+' : ''}{usd(totalPnL)}
+            </div>
+            <div style={{fontSize: 'var(--fsxs)', color: totalPnL >= 0 ? 'var(--green)' : 'var(--red)', fontFamily: 'var(--mono)'}}>
+              {idr(totalPnL)}
             </div>
           </div>
           <div>
@@ -117,7 +123,10 @@ function CombinedDashboard({ bots, stats, positions, markets, config, gas, salar
             <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Gajian</div>
             <div style={{fontSize: 16, fontWeight: 700, color: 'var(--gold)', 
                         fontFamily: 'var(--mono)'}}>
-              ${usd(salary?.total_withdrawn || 0)}
+              {usd(salary?.total_withdrawn || 0)}
+            </div>
+            <div style={{fontSize: 'var(--fsxs)', color: 'var(--gold)', fontFamily: 'var(--mono)'}}>
+              {idr(salary?.total_withdrawn || 0)}
             </div>
           </div>
         </div>
@@ -161,20 +170,30 @@ function BotSummaryCard({ bot }) {
         <div>
           <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Equity</div>
           <div style={{fontFamily: 'var(--mono)', color: 'var(--text)'}}>
-            ${usd(bot.capital || 0)}
+            {usd(bot.capital || 0)}
+          </div>
+          <div style={{fontSize: 'var(--fsxs)', fontFamily: 'var(--mono)', color: 'var(--text2)'}}>
+            {idr(bot.capital || 0)}
           </div>
         </div>
         <div>
           <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>P&L</div>
           <div style={{fontFamily: 'var(--mono)', 
                       color: (bot.pnl || 0) >= 0 ? 'var(--green)' : 'var(--red)'}}>
-            {((bot.pnl || 0) >= 0 ? '+' : '')}${usd(bot.pnl || 0)}
+            {((bot.pnl || 0) >= 0 ? '+' : '')}{usd(bot.pnl || 0)}
+          </div>
+          <div style={{fontSize: 'var(--fsxs)', fontFamily: 'var(--mono)', 
+                      color: (bot.pnl || 0) >= 0 ? 'var(--green)' : 'var(--red)'}}>
+            {idr(bot.pnl || 0)}
           </div>
         </div>
         <div>
           <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Wins</div>
           <div style={{fontFamily: 'var(--mono)', color: winRate >= 60 ? 'var(--green)' : 'var(--text2)'}}>
             {pct(winRate)}
+          </div>
+          <div style={{fontSize: 'var(--fsxs)', fontFamily: 'var(--mono)', color: 'var(--text3)'}}>
+            {bot.wins || 0}W {bot.losses || 0}L
           </div>
         </div>
       </div>
@@ -590,7 +609,7 @@ export default function App(){
   // Bot list for router
   const botList = [
     { name: 'all', display_name: 'All Bots', color: '#ffffff', mode: stats?.mode || 'sim' },
-    { name: botName || 'bot1', display_name: stats?.bot_name || 'Primary', color: '#00ff88', mode: stats?.mode || 'sim' }
+    { name: botName || 'bot1', display_name: 'Bot 1', color: '#00ff88', mode: stats?.mode || 'sim' }
   ]
   
   useEffect(()=>{

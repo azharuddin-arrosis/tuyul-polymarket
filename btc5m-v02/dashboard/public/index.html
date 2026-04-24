@@ -117,26 +117,35 @@
             letter-spacing: 0.5px;
         }
 
-        .bot-select {
+        .bot-selectors {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .bot-btn {
             background: var(--bg4);
             border: 1px solid var(--border2);
-            color: var(--green);
-            padding: 2px 6px;
+            color: var(--text-dim);
+            padding: 2px 10px;
             border-radius: 4px;
             font-family: var(--font-mono);
             font-size: 9px;
             font-weight: 600;
             cursor: pointer;
-            outline: none;
+            transition: all 0.15s;
+            text-transform: uppercase;
         }
 
-        .bot-select:focus {
-            border-color: var(--green);
+        .bot-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
         }
 
-        .bot-select option {
-            background: var(--bg3);
-            color: var(--text);
+        .bot-btn.active {
+            background: var(--accent);
+            border-color: rgba(0, 214, 143, 0.35);
+            color: #000;
         }
 
         .header-time {
@@ -1119,10 +1128,10 @@
             <div class="header-left">
                 <div class="header-dot"></div>
                 <span class="header-title" id="bot-title">POLYBOT</span>
-                <select id="bot-selector" onchange="setCurrentBot(this.value)" class="bot-select">
-                    <option value="bot1">BOT1</option>
-                    <option value="bot2">BOT2</option>
-                </select>
+                <div class="bot-selectors">
+                    <button class="bot-btn active" data-bot="bot1" onclick="setCurrentBot('bot1')">BOT1</button>
+                    <button class="bot-btn" data-bot="bot2" onclick="setCurrentBot('bot2')">BOT2</button>
+                </div>
                 <span class="header-badge">FORWARD TEST</span>
             </div>
             <div class="header-right">
@@ -1375,7 +1384,8 @@
         function setCurrentBot(botId) {
             currentBot = botId;
             localStorage.setItem('currentBot', botId);
-            document.getElementById('bot-selector').value = botId;
+            document.querySelectorAll('.bot-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`[data-bot=${botId}]`).classList.add('active');
             document.getElementById('bot-title').textContent = `POLYBOT ${botId.toUpperCase()}`;
             fetchSnapshot();
             connectSocket();
@@ -2005,7 +2015,9 @@
 
         // Initialize bot from localStorage
         currentBot = getCurrentBot();
-        document.getElementById('bot-selector').value = currentBot;
+        // Set active button on init
+        document.querySelectorAll(".bot-btn").forEach(b => b.classList.remove("active"));
+        document.querySelector(`[data-bot="${currentBot}"]`).classList.add("active");
         document.getElementById('bot-title').textContent = `POLYBOT ${currentBot.toUpperCase()}`;
         
         setMode('demo');

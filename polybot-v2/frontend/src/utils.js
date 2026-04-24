@@ -1,7 +1,8 @@
 export const f2  = n => n==null?'—':Number(n).toFixed(2)
 export const f4  = n => n==null?'—':Number(n).toFixed(4)
 export const pct = n => n==null?'—':`${Number(n).toFixed(1)}%`
-export const usd = n => n==null?'—':`$${Number(n).toFixed(2)}`
+export const usd = n => n==null?'—':Number(n)===0?'$0.00':`$${Number(n).toFixed(2)}`
+export const idr = n => n==null?'—':`Rp${(Number(n)*16000).toLocaleString('id-ID',{minimumFractionDigits:0,maximumFractionDigits:0})}`
 export const signUsd = n => { const v=Number(n); return `${v>=0?'+':'-'}$${Math.abs(v).toFixed(2)}` }
 export const fmtDur = sec => {
   if(!sec||sec<=0) return '—'
