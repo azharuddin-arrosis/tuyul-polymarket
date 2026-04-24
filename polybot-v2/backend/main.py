@@ -1490,17 +1490,21 @@ async def api_gas_resume():
 
 def get_bot_list():
     """Get list of configured bots from BOTS env var"""
-    bots_env = os.getenv("BOTS", "bot1")
+    bots_env = os.getenv("BOTS", "bot1,bot2")
     return [b.strip() for b in bots_env.split(",") if b.strip()]
 
 def get_bot_url(bot_name):
-    """Get URL for a bot based on its name"""
+    """Get URL for a bot based on its name and mode"""
+    # Get the mode from environment (sim or real)
+    mode = os.getenv("BOT_MODE", "sim")
     # Map bot name to container/host
+    # Format: bot1-sim:8000 or bot1-real:8000
+    container_suffix = f"-{mode}"
     bot_ports = {
-        "bot1": os.getenv("BOT1_URL", "http://bot1-sim:8000"),
-        "bot2": os.getenv("BOT2_URL", "http://bot2-sim:8000"),
+        "bot1": os.getenv("BOT1_URL", f"http://bot1{container_suffix}:8000"),
+        "bot2": os.getenv("BOT2_URL", f"http://bot2{container_suffix}:8000"),
     }
-    return bot_ports.get(bot_name, f"http://{bot_name}-sim:8000")
+    return bot_ports.get(bot_name, f"http://{bot_name}{container_suffix}:8000")
 
 @app.get("/api/state")
 async def api_state():

@@ -15,6 +15,7 @@ services:
       - BOT_NAME=bot1-sim
       - BOT_MODE=sim
       - BOT_PORT=8001
+      - BOTS=bot1,bot2
     volumes:
       - bot1-sim_data:/app/data
       - bot1-sim_logs:/app/logs
@@ -44,6 +45,7 @@ services:
       - BOT_NAME=bot2-sim
       - BOT_MODE=sim
       - BOT_PORT=8002
+      - BOTS=bot1,bot2
     volumes:
       - bot2-sim_data:/app/data
       - bot2-sim_logs:/app/logs
@@ -74,6 +76,7 @@ services:
       - BOT_NAME=bot1-real
       - BOT_MODE=real
       - BOT_PORT=8011
+      - BOTS=bot1,bot2
     volumes:
       - bot1-real_data:/app/data
       - bot1-real_logs:/app/logs
@@ -103,6 +106,7 @@ services:
       - BOT_NAME=bot2-real
       - BOT_MODE=real
       - BOT_PORT=8012
+      - BOTS=bot1,bot2
     volumes:
       - bot2-real_data:/app/data
       - bot2-real_logs:/app/logs
