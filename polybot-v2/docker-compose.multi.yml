@@ -56,9 +56,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    depends_on:
-      database:
-        condition: service_healthy
     profiles:
       - bot1
       - all
@@ -94,9 +91,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    depends_on:
-      database:
-        condition: service_healthy
     profiles:
       - bot2
       - all

@@ -1249,7 +1249,7 @@ def get_config() -> dict:
 # HEALTH CHECK SYSTEM
 # Comprehensive health monitoring for all services
 # ═══════════════════════════════════════════════════════════════
-import httpx
+# import httpx  # Using aiohttp instead
 
 # Track last successful API hits
 _last_binance_check = 0
@@ -1262,26 +1262,28 @@ async def check_binance_connectivity() -> dict:
     """Check Binance API connectivity"""
     global _last_binance_check, _binance_status
     try:
-        async with httpx.AsyncClient(timeout=aiohttp.ClientTimeout(total=5)) as sess:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as sess:
             async with sess.get(f"{BINANCE_API}/ticker/price", params={"symbol":"BTCUSDT"}) as r:
                 if r.status == 200:
                     _binance_status = "ok"
                     _last_binance_check = int(datetime.now(timezone.utc).timestamp())
-                    return {"status": "ok", "latency_ms": r.elapsed.total_seconds() * 1000}
+                    return {"status": "ok", "latency_ms": r.content_time * 1000}
+        _binance_status = "error"
     except Exception as e:
         _binance_status = "error"
-    return {"status": "error", "error": str(e)[:50]}
+        return {"status": "error", "error": str(e)[:50]}
+    return {"status": "error", "error": "unknown"}
 
 async def check_polymarket_connectivity() -> dict:
     """Check Polymarket API connectivity"""
     global _last_polymarket_check, _polymarket_status
     try:
-        async with httpx.AsyncClient(timeout=aiohttp.ClientTimeout(total=5)) as sess:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as sess:
             async with sess.get(f"{GAMMA}/markets", params={"active":"true","limit":1}) as r:
                 if r.status == 200:
                     _polymarket_status = "ok"
                     _last_polymarket_check = int(datetime.now(timezone.utc).timestamp())
-                    return {"status": "ok", "latency_ms": r.elapsed.total_seconds() * 1000}
+                    return {"status": "ok", "latency_ms": r.content_time * 1000}
     except Exception as e:
         _polymarket_status = "error"
     return {"status": "error", "error": str(e)[:50]}
