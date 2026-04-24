@@ -7,13 +7,24 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Bot configurations - support both bot1 and bot2
-const BOTS = {
-    bot1: process.env.BOT1_API || 'http://localhost:8001',
-    bot2: process.env.BOT2_API || 'http://localhost:8002'
-};
+// Bot configurations - read from env BOTS (comma-separated, e.g. bot1,bot2)
+const BOTS_LIST = (process.env.BOTS || 'bot1,bot2')
+    .split(',')
+    .map(b => b.trim())
+    .filter(b => b.length > 0);
 
-const DEFAULT_BOT = process.env.DEFAULT_BOT || 'bot1';
+// Build map of botId -> URL from env like BOT1_API, BOT2_API, fallback to http://localhost:8000
+const BOTS = {};
+BOTS_LIST.forEach(botId => {
+    const envKey = `${botId.toUpperCase()}_API`;
+    const defaultUrl = `http://localhost:8000`; // internal docker network port
+    BOTS[botId] = process.env[envKey] || defaultUrl;
+});
+
+const DEFAULT_BOT = process.env.DEFAULT_BOT || BOTS_LIST[0] || 'bot1';
+
+// IDR conversion rate (1 USDC = IDR_RATE IDR)
+const IDR_RATE = parseFloat(process.env.IDR_RATE) || 16000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());

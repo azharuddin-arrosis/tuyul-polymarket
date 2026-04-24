@@ -3,7 +3,7 @@ import { usePolyBot } from './hooks/usePolyBot.js'
 import { SetupWizard } from './components/SetupWizard.jsx'
 import { PositionCard } from './components/PositionCard.jsx'
 import { MarketTable, XTag, Toast, HealthMonitor, DemoModeToggle } from './components/Widgets.jsx'
-import { usd, idr, pct, CAT_COLOR, STRAT_COLOR, STRAT_LABEL } from './utils.js'
+import { usd, signUsd, idr, pct, CAT_COLOR, STRAT_COLOR, STRAT_LABEL } from './utils.js'
 
 const STORAGE_KEY = 'polybot_pnl_history'
 
@@ -58,8 +58,9 @@ function BotRouter({ bots, currentBot, onSwitchBot }) {
 function CombinedDashboard({ bots, stats, positions, markets, config, gas, salary, history, log, btc5m, connected }) {
   if (!stats) return null
   
-  const totalEquity = bots?.reduce((sum, b) => sum + (b.capital || 0), 0)
-  const totalPnL = bots?.reduce((sum, b) => sum + (b.pnl || 0), 0)
+  // Handle both backend /api/state properties (equityUsdc/pnlUsdc) and legacy (capital/pnl)
+  const totalEquity = bots?.reduce((sum, b) => sum + (b.equityUsdc || b.capital || 0), 0)
+  const totalPnL = bots?.reduce((sum, b) => sum + (b.pnlUsdc || b.pnl || 0), 0)
   const totalWins = bots?.reduce((sum, b) => sum + (b.wins || 0), 0)
   const totalTrades = bots?.reduce((sum, b) => sum + (b.total_trades || 0), 0)
   const winRate = totalTrades > 0 ? (totalWins / totalTrades * 100) : 0
@@ -146,6 +147,9 @@ function BotSummaryCard({ bot }) {
   if (!bot) return null
   
   const winRate = bot.total_trades > 0 ? (bot.wins / bot.total_trades * 100) : 0
+  // Handle backend /api/state properties (equityUsdc/pnlUsdc) and legacy (capital/pnl)
+  const equity = bot.equityUsdc || bot.capital || 0
+  const pnl = bot.pnlUsdc || bot.pnl || 0
   
   return (
     <div style={{
@@ -170,21 +174,21 @@ function BotSummaryCard({ bot }) {
         <div>
           <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>Equity</div>
           <div style={{fontFamily: 'var(--mono)', color: 'var(--text)'}}>
-            {usd(bot.capital || 0)}
+            {usd(equity)}
           </div>
           <div style={{fontSize: 'var(--fsxs)', fontFamily: 'var(--mono)', color: 'var(--text2)'}}>
-            {idr(bot.capital || 0)}
+            {idr(equity)}
           </div>
         </div>
         <div>
           <div style={{fontSize: 'var(--fsxs)', color: 'var(--text3)'}}>P&L</div>
           <div style={{fontFamily: 'var(--mono)', 
-                      color: (bot.pnl || 0) >= 0 ? 'var(--green)' : 'var(--red)'}}>
-            {((bot.pnl || 0) >= 0 ? '+' : '')}{usd(bot.pnl || 0)}
+                      color: pnl >= 0 ? 'var(--green)' : 'var(--red)'}}>
+            {signUsd(pnl)}
           </div>
           <div style={{fontSize: 'var(--fsxs)', fontFamily: 'var(--mono)', 
-                      color: (bot.pnl || 0) >= 0 ? 'var(--green)' : 'var(--red)'}}>
-            {idr(bot.pnl || 0)}
+                      color: pnl >= 0 ? 'var(--green)' : 'var(--red)'}}>
+            {idr(pnl)}
           </div>
         </div>
         <div>
@@ -250,8 +254,8 @@ function WithdrawalPanel({ botName, salary, onWithdraw }) {
           <div>
             <span style={{color: 'var(--text3)'}}>Available:</span>{' '}
             <span style={{color: 'var(--gold)', fontFamily: 'var(--mono)'}}>
-              ${usd(projected)}
-            </span>
+               {usd(projected)}
+             </span>
           </div>
           <div>
             <span style={{color: 'var(--text3)'}}>Next Target:</span>{' '}
@@ -437,9 +441,9 @@ function HistoryPanel({history}){
                 padding:'0 3px',borderRadius:2,fontSize:'var(--fsxs)',
                 background:won?'var(--gbg)':'var(--rbg)',color:won?'var(--green)':'var(--red)',
               }}>{won?'WIN':'LOSE'}</span>
-              <span style={{color:won?'var(--green)':'var(--red)',textAlign:'right'}}>
-                {won?'+':'-'}${Math.abs(Number(t.pnl)).toFixed(1)}
-              </span>
+<span style={{color:won?'var(--green)':'var(--red)',textAlign:'right'}}>
+                 {signUsd(t.pnl)}
+               </span>
             </div>
           )
         })}
@@ -468,14 +472,14 @@ function ActivityLog({log}){
             }}>
               <span style={{color}}>{icon}</span>
               <span style={{color:'var(--text3)'}}>{e.time}</span>
-              <span style={{color:'var(--text2)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                {isO&&`${e.id} ${e.question?.slice(0,12)}`}
-                {isC&&`${won?'WIN':'LOSE'} ${Number(e.pnl)>=0?'+':''}$${Math.abs(Number(e.pnl)).toFixed(1)}`}
-                {e.event==='SALARY'&&`💰 GAJIAN $${Number(e.withdrawn).toFixed(0)}`}
-                {e.event==='COMPOUND_UP'&&`⬆ T${e.tier} $${e.new_bet}`}
-                {!isO&&!isC&&e.event!=='SALARY'&&e.event!=='COMPOUND_UP'&&e.event}
-              </span>
-              {isC&&<span style={{color:won?'var(--green)':'var(--red)'}}>{won?'+':'-'}${Math.abs(Number(e.pnl)).toFixed(1)}</span>}
+<span style={{color:'var(--text2)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                 {isO&&`${e.id} ${e.question?.slice(0,12)}`}
+                 {isC&&`${won?'WIN':'LOSE'} ${signUsd(e.pnl)}`}
+                 {e.event==='SALARY'&&`💰 GAJIAN ${usd(e.withdrawn)}`}
+                 {e.event==='COMPOUND_UP'&&`⬆ T${e.tier} ${usd(e.new_bet)}`}
+                 {!isO&&!isC&&e.event!=='SALARY'&&e.event!=='COMPOUND_UP'&&e.event}
+               </span>
+               {isC&&<span style={{color:won?'var(--green)':'var(--red)'}}>{signUsd(e.pnl)}</span>}
               {e.event==='SALARY'&&<XTag t="SALARY" c="var(--gold)"/>}
               {e.event==='COMPOUND_UP'&&<XTag t={`T${e.tier}`} c="var(--green)"/>}
             </div>
@@ -495,9 +499,9 @@ function SalaryPanel({salary}){
         <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>{salary.salary_count||0}x</span>
       </div>
       <div style={{padding:'6px 10px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:4,fontSize:'var(--fsxs)',fontFamily:'var(--mono)'}}>
-        <div><span style={{color:'var(--text3)'}}>Total:</span> <span style={{color:'var(--gold)'}}>${usd(salary.total_withdrawn)}</span></div>
-        <div><span style={{color:'var(--text3)'}}>Target:</span> <span style={{color:'var(--text)'}}>${salary.next_target}</span></div>
-        <div><span style={{color:'var(--text3)'}}>Next:</span> <span style={{color:'var(--gold)'}}>${usd(salary.to_next)}</span></div>
+        <div><span style={{color:'var(--text3)'}}>Total:</span> <span style={{color:'var(--gold)'}}>{usd(salary.total_withdrawn)}</span></div>
+        <div><span style={{color:'var(--text3)'}}>Target:</span> <span style={{color:'var(--text)'}}>{usd(salary.next_target)}</span></div>
+        <div><span style={{color:'var(--text3)'}}>Next:</span> <span style={{color:'var(--gold)'}}>{usd(salary.to_next)}</span></div>
         <div><span style={{color:'var(--text3)'}}>Progress:</span> <span style={{color:'var(--text)'}}>{salary.progress_pct}%</span></div>
       </div>
     </div>
@@ -594,7 +598,7 @@ export default function App(){
   const path = window.location.pathname
   const botName = path.startsWith('/dashboard/') ? path.split('/')[2] : null
   
-  const {stats,positions,log,markets,config,gas,salary,history,btc5m,connected,lastUpd,notify,setup,resumeGas,health,setMode}=usePolyBot(botName)
+  const {stats,positions,log,markets,config,gas,salary,history,btc5m,connected,lastUpd,notify,setup,resumeGas,health,setMode,allBots}=usePolyBot(botName)
   const [ready,setReady]=useState(true)
   const [currentBot, setCurrentBot] = useState(botName || 'all')
   
@@ -602,14 +606,23 @@ export default function App(){
   const hist=usePnlHistory(stats?.capital, stats?.initial)
   const doSetup=async(usdc,pol,mode)=>{ await setup(usdc,pol,mode); setReady(true) }
   
-  const handleSwitchBot = (name) => {
-    window.location.href = name === 'all' ? '/dashboard' : `/dashboard/${name}`
-  }
+  // Convert allBots object to array for rendering
+  const allBotsArray = allBots ? Object.entries(allBots).map(([name, data]) => ({
+    name,
+    display_name: name === 'bot1' ? 'Bot 1' : name === 'bot2' ? 'Bot 2' : name,
+    color: name === 'bot1' ? '#00ff88' : name === 'bot2' ? '#3a8fd8' : '#ffffff',
+    mode: data?.mode || 'sim',
+    ...data
+  })) : []
   
-  // Bot list for router
-  const botList = [
+  // Bot list for router (use allBotsArray if available)
+  const botList = allBotsArray.length > 0 ? [
     { name: 'all', display_name: 'All Bots', color: '#ffffff', mode: stats?.mode || 'sim' },
-    { name: botName || 'bot1', display_name: 'Bot 1', color: '#00ff88', mode: stats?.mode || 'sim' }
+    ...allBotsArray
+  ] : [
+    { name: 'all', display_name: 'All Bots', color: '#ffffff', mode: stats?.mode || 'sim' },
+    { name: 'bot1', display_name: 'Bot 1', color: '#00ff88', mode: stats?.mode || 'sim' },
+    { name: 'bot2', display_name: 'Bot 2', color: '#3a8fd8', mode: stats?.mode || 'sim' }
   ]
   
   useEffect(()=>{
@@ -634,7 +647,14 @@ export default function App(){
         <span style={{fontFamily:'var(--mono)',fontSize:11,fontWeight:700,color:'var(--green)',letterSpacing:'.1em'}}>
           POLY<span style={{color:'var(--text)'}}>BOT</span><span style={{fontSize:'var(--fsxs)',color:'var(--text3)',marginLeft:2}}>v3</span>
         </span>
-        <BotRouter bots={botList} currentBot={currentBot} onSwitchBot={handleSwitchBot} />
+        <BotRouter 
+          bots={botList} 
+          currentBot={currentBot} 
+          onSwitchBot={(name) => {
+            setCurrentBot(name);
+            window.location.href = name === 'all' ? '/dashboard' : `/dashboard/${name}`;
+          }} 
+        />
         <div style={{width:1,height:10,background:'var(--border)'}}/>
         <Dot on={connected}/><span style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:connected?'var(--green)':'var(--red)'}}>{connected?'LIVE':'···'}</span>
         {stats&&<XTag t={stats.mode} c={stats.mode==='SIM'?'var(--amber)':'var(--green)'}/>}
@@ -652,7 +672,7 @@ export default function App(){
         {/* Combined dashboard for /dashboard */}
         {currentBot === 'all' && (
           <CombinedDashboard 
-            bots={botList.filter(b => b.name !== 'all')}
+            bots={allBotsArray}
             stats={stats}
             positions={positions}
             markets={markets}
@@ -671,9 +691,9 @@ export default function App(){
           <>
             <div style={{display:'grid',gridTemplateColumns:'repeat(8,1fr)',gap:4}}>
               <Stat label="Equity" value={usd(stats?.capital)} sub={`${usd(stats?.available)} + ${usd(stats?.locked)} locked`} color="var(--text)"/>
-              <Stat label="PnL" value={`${pnl>=0?'+':''}${usd(pnl)}`} sub={`${pct(stats?.roi_pct)} ROI`} color={isPos?'var(--green)':'var(--red)'}/>
+              <Stat label="PnL" value={signUsd(pnl)} sub={`${pct(stats?.roi_pct)} ROI`} color={isPos?'var(--green)':'var(--red)'}/>
               <Stat label="Win" value={pct(stats?.win_rate)} sub={`${stats?.wins??0}W ${stats?.losses??0}L`} color={stats?.win_rate>=60?'var(--green)':stats?.win_rate>=45?'var(--amber)':'var(--red)'}/>
-              <Stat label="Daily" value={`${(stats?.daily_pnl??0)>=0?'+':''}${usd(stats?.daily_pnl)}`} color={(stats?.daily_pnl??0)>=0?'var(--green)':'var(--red)'}/>
+              <Stat label="Daily" value={signUsd(stats?.daily_pnl??0)} color={(stats?.daily_pnl??0)>=0?'var(--green)':'var(--red)'}/>
               <Stat label="Gajian" value={usd(salary?.total_withdrawn)} color="var(--gold)"/>
               <Stat label="Open" value={stats?.open_count??0} color="var(--blue)"/>
               <Stat label="Tier" value={`T${stats?.compound_tier??0}`} color="var(--green)"/>

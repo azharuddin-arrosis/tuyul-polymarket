@@ -1484,6 +1484,72 @@ async def api_gas_resume():
     await broadcast({"type":"stats","data":get_stats()})
     return {"ok":True}
 
+# ═════════════════════════════════════════════════════════════
+# AGGREGATED STATE — Multi-bot support
+# ═══════════════════════════════════════════════════════════════
+
+def get_bot_list():
+    """Get list of configured bots from BOTS env var"""
+    bots_env = os.getenv("BOTS", "bot1")
+    return [b.strip() for b in bots_env.split(",") if b.strip()]
+
+def get_bot_url(bot_name):
+    """Get URL for a bot based on its name"""
+    # Map bot name to container/host
+    bot_ports = {
+        "bot1": os.getenv("BOT1_URL", "http://bot1-sim:8000"),
+        "bot2": os.getenv("BOT2_URL", "http://bot2-sim:8000"),
+    }
+    return bot_ports.get(bot_name, f"http://{bot_name}-sim:8000")
+
+@app.get("/api/state")
+async def api_state():
+    """Return aggregated state from all bots"""
+    bots = get_bot_list()
+    bot_states = {}
+    combined = {
+        "equity_usdc": 0.0,
+        "pnl_usdc": 0.0,
+        "equity_idr": 0.0,
+        "pnl_idr": 0.0,
+        "total_trades": 0,
+        "wins": 0,
+        "losses": 0,
+        "open_positions": 0,
+    }
+    
+    # Fetch stats from all bots
+    for bot_name in bots:
+        try:
+            url = f"{get_bot_url(bot_name)}/api/stats"
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+                async with session.get(url) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        bot_states[bot_name] = data
+                        # Aggregate
+                        combined["equity_usdc"] += data.get("capital", 0)
+                        combined["pnl_usdc"] += data.get("pnl", 0)
+                        combined["total_trades"] += data.get("total_trades", 0)
+                        combined["wins"] += data.get("wins", 0)
+                        combined["losses"] += data.get("losses", 0)
+                        combined["open_positions"] += data.get("open_positions", 0)
+                    else:
+                        bot_states[bot_name] = {"error": f"HTTP {resp.status}"}
+        except Exception as e:
+            bot_states[bot_name] = {"error": str(e)}
+    
+    # Add IDR conversion (1 USD = 16000 IDR)
+    idr_rate = 16000
+    combined["equity_idr"] = combined["equity_usdc"] * idr_rate
+    combined["pnl_idr"] = combined["pnl_usdc"] * idr_rate
+    
+    return {
+        "timestamp": int(datetime.now(timezone.utc).timestamp()),
+        "combined": combined,
+        "bots": bot_states,
+    }
+
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
     await ws.accept()

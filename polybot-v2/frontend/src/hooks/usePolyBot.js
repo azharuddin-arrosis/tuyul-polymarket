@@ -19,6 +19,7 @@ export function usePolyBot(botName) {
   const [lastUpd,  setLastUpd]  = useState(null)
   const [notify,   setNotify]   = useState(null)
   const [health,   setHealth]   = useState(null)  // Health monitoring
+  const [allBots,  setAllBots]  = useState([])   // Aggregated bot data from /api/state
   const ws  = useRef(null)
   const tmr = useRef(null)
 
@@ -95,26 +96,28 @@ export function usePolyBot(botName) {
   },[connect, fetchHealth])
 
   // REST fallback
-  useEffect(()=>{
-    if (connected) return
-    const id=setInterval(async()=>{
-      try {
-        const [s,p,l,m,g,sl,h]=await Promise.all([
-          fetch('/api/stats').then(r=>r.json()),
-          fetch('/api/positions').then(r=>r.json()),
-          fetch('/api/log?limit=80').then(r=>r.json()),
-          fetch('/api/markets').then(r=>r.json()),
-          fetch('/api/gas').then(r=>r.json()),
-          fetch('/api/salary').then(r=>r.json()),
-          fetch('/api/history?limit=50').then(r=>r.json()),
-        ])
-        setStats(s);setPos(p);setLog(l);setMarkets(m);setGas(g);setSalary(sl);setHistory(h)
-        setLastUpd(new Date())
-        fetchHealth() // Also check health via REST
-      } catch{}
-    },5000)
-    return ()=>clearInterval(id)
-  },[connected, fetchHealth])
+useEffect(()=>{
+  if (connected) return
+  const id=setInterval(async()=>{
+    try {
+      const [s,p,l,m,g,sl,h,state]=await Promise.all([
+        fetch('/api/stats').then(r=>r.json()),
+        fetch('/api/positions').then(r=>r.json()),
+        fetch('/api/log?limit=80').then(r=>r.json()),
+        fetch('/api/markets').then(r=>r.json()),
+        fetch('/api/gas').then(r=>r.json()),
+        fetch('/api/salary').then(r=>r.json()),
+        fetch('/api/history?limit=50').then(r=>r.json()),
+        fetch('/api/state').then(r=>r.json()).catch(()=>({})),
+      ])
+      setStats(s);setPos(p);setLog(l);setMarkets(m);setGas(g);setSalary(sl);setHistory(h)
+      setAllBots(state.bots || [])
+      setLastUpd(new Date())
+      fetchHealth() // Also check health via REST
+    } catch{}
+  },5000)
+  return ()=>clearInterval(id)
+},[connected, fetchHealth])
 
   const setup = async(usdc,pol,mode)=>{
     const r = await fetch('/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -140,6 +143,6 @@ export function usePolyBot(botName) {
 
   return {
     stats, positions, log, markets, config, gas, salary, history, btc5m, 
-    connected, lastUpd, notify, setup, resumeGas, health, setMode
+    connected, lastUpd, notify, setup, resumeGas, health, setMode, allBots
   }
 }
