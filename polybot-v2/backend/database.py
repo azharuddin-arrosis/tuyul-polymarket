@@ -14,6 +14,7 @@ Date: 2026-04-24
 """
 import asyncio
 import json
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,15 +23,14 @@ from dataclasses import dataclass, field, asdict
 
 
 # ═══════════════════════════════════════════════════════════════
-# DATABASE PATH
+# DATABASE PATH (bot-specific)
 # ═══════════════════════════════════════════════════════════════
 
-DB_PATH = Path(__file__).parent.parent / "data" / "polybot.db"
-
-
 def get_db_path() -> Path:
-    """Get database path, ensure directory exists"""
-    db_path = DB_PATH
+    """Get bot-specific database path"""
+    bot_name = os.getenv("BOT_NAME", "bot1").strip()
+    db_name = f"{bot_name}_polybot.db"
+    db_path = Path(__file__).parent.parent / "data" / db_name
     db_path.parent.mkdir(parents=True, exist_ok=True)
     return db_path
 
