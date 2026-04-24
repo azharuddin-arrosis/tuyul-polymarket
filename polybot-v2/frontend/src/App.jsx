@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { usePolyBot } from './hooks/usePolyBot.js'
 import { SetupWizard } from './components/SetupWizard.jsx'
 import { PositionCard } from './components/PositionCard.jsx'
-import { XTag, Toast } from './components/Widgets.jsx'
-import { usd, pct } from './utils.js'
+import { MarketTable, XTag, Toast } from './components/Widgets.jsx'
+import { usd, pct, CAT_COLOR, STRAT_COLOR, STRAT_LABEL } from './utils.js'
 
 function Dot({on}){return <span style={{display:'inline-block',width:5,height:5,borderRadius:'50%',marginRight:4,background:on?'var(--green)':'var(--red)',boxShadow:on?'0 0 4px var(--green)':'none',animation:on?'pulse 2s infinite':'none'}}/>}
 
@@ -18,16 +18,16 @@ function Stat({label,value,sub,color}){
 }
 
 function MiniScanner({markets}){
-  const rows = markets?.slice(0,12) || []
+  const rows = markets?.slice(0,10) || []
   return(
     <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
       <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',letterSpacing:'.06em',fontWeight:600}}>Global Scanner</span>
         <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>{rows.length}</span>
       </div>
-      <div style={{overflowY:'auto',maxHeight:180}}>
+      <div style={{overflowY:'auto',maxHeight:140}}>
         <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
-          <colgroup><col style={{width:40}}/><col style={{width:'auto'}}/><col style={{width:40}}/><col style={{width:35}}/><col style={{width:35}}/><col style={{width:35}}/></colgroup>
+          <colgroup><col style={{width:35}}/><col style={{width:'auto'}}/><col style={{width:35}}/><col style={{width:35}}/><col style={{width:30}}/><col style={{width:30}}/></colgroup>
           <thead>
             <tr>
               <th className="xls-th">T</th>
@@ -45,7 +45,7 @@ function MiniScanner({markets}){
               return(
                 <tr key={r.id||i} className="xls-tr" style={{background:hasSig?'var(--gbg)':''}}>
                   <td className="xls-td" style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:'var(--text3)'}}>{r.resolve_fmt||'?'}</td>
-                  <td className="xls-td" style={{color:'var(--text)',fontSize:'var(--fsxs)'}} title={r.question}>{r.question?.slice(0,25)}</td>
+                  <td className="xls-td" style={{color:'var(--text)',fontSize:'var(--fsxs)'}} title={r.question}>{r.question?.slice(0,20)}</td>
                   <td className="xls-td" style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',textAlign:'right',color:r.yes_price>=.55?'var(--green)':'var(--text2)'}}>{r.yes_price?.toFixed(2)}</td>
                   <td className="xls-td" style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',textAlign:'right',color:'var(--text2)'}}>{r.no_price?.toFixed(2)}</td>
                   <td className="xls-td" style={{fontSize:'var(--fsxs)',color:hasSig?'var(--green)':'var(--text3)'}}>{r.signal||'—'}</td>
@@ -66,7 +66,7 @@ function OpenPositions({positions}){
       <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between'}}>
         <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>Open ({positions.length})</span>
       </div>
-      <div style={{overflowY:'auto',maxHeight:80}}>
+      <div style={{overflowY:'auto',maxHeight:60}}>
         {positions.length===0
           ?<div style={{padding:'6px 10px',color:'var(--text3)',fontSize:'var(--fsxs)'}}>_ none</div>
           :<table style={{width:'100%',borderCollapse:'collapse'}}>
@@ -75,7 +75,7 @@ function OpenPositions({positions}){
               {positions.map(p=>(
                 <tr key={p.id} className="xls-tr">
                   <td className="xls-td" style={{fontFamily:'var(--mono)',fontSize:'var(--fsxs)',color:'var(--text3)'}}>{p.id}</td>
-                  <td className="xls-td" style={{color:'var(--text)',fontSize:'var(--fsxs)'}}>{p.question?.slice(0,20)}</td>
+                  <td className="xls-td" style={{color:'var(--text)',fontSize:'var(--fsxs)'}}>{p.question?.slice(0,18)}</td>
                   <td className="xls-td"><span style={{fontSize:'var(--fsxs)',color:p.outcome==='YES'?'var(--green)':'var(--amber)'}}>{p.outcome}</span></td>
                   <td className="xls-td" style={{fontFamily:'var(--mono)',textAlign:'right',color:'var(--text2)'}}>{p.price?.toFixed(2)}</td>
                   <td className="xls-td" style={{fontFamily:'var(--mono)',textAlign:'right',color:'var(--text)'}}>${p.size?.toFixed(0)}</td>
@@ -89,29 +89,92 @@ function OpenPositions({positions}){
   )
 }
 
+function HistoryPanel({history}){
+  return(
+    <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
+      <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)',display:'flex',justifyContent:'space-between'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>Trade History</span>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)'}}>{history.length} trades</span>
+      </div>
+      <div style={{overflowY:'auto',maxHeight:80}}>
+        {history.length===0&&<div style={{padding:'6px 10px',color:'var(--text3)',fontSize:'var(--fsxs)'}}>_ no closed trades</div>}
+        {history.slice(0,15).map((t,i)=>{
+          const won=t.status==='won'
+          return(
+            <div key={t.id||i} style={{
+              display:'grid',gridTemplateColumns:'50px 1fr 40px 50px',
+              alignItems:'center',gap:4,padding:'2px 10px',
+              borderBottom:'1px solid var(--border)',fontSize:'var(--fsxs)',fontFamily:'var(--mono)',
+            }}>
+              <span style={{color:'var(--text3)'}}>{t.id}</span>
+              <span style={{color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.question?.slice(0,20)}</span>
+              <span style={{
+                padding:'0 3px',borderRadius:2,fontSize:'var(--fsxs)',
+                background:won?'var(--gbg)':'var(--rbg)',color:won?'var(--green)':'var(--red)',
+              }}>{won?'WIN':'LOSE'}</span>
+              <span style={{color:won?'var(--green)':'var(--red)',textAlign:'right'}}>
+                {won?'+':'-'}${Math.abs(Number(t.pnl)).toFixed(1)}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function ConfigPanel({config}){
+  if(!config) return null
+  const sections=[
+    {t:'Bot',rows:[['Mode',config.mode],['Min Bet','$1.00'],['Max Open',config.max_open],['Min EV',`${((config.min_ev||.04)*100).toFixed(0)}%`],['Daily Loss',`$${config.daily_loss}`]]},
+    {t:'Compound',rows:[['Base',`$${config.compound_base}`],['Step',`$${config.compound_step}`],['Inc',`+$${config.compound_inc}/tier`],['Max',`$${config.compound_max_bet}`]]},
+    {t:'Gas',rows:[['Reserve','50%'],['Alert',`<${config.gas_alert_tx} TX`],['Stop',`<${config.gas_stop_tx} TX`],['Per TX','~$0.02']]},
+    {t:'Salary',rows:[['Thresh',`$${config.salary_threshold}`],['Tarik',`${((config.salary_withdraw_pct||.7)*100).toFixed(0)}%`],['Simpan',`${((config.salary_keep_pct||.3)*100).toFixed(0)}%`]]},
+  ]
+  return(
+    <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
+      <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)'}}>
+        <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>Config</span>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,padding:4}}>
+        {sections.map(({t,rows})=>
+          <div key={t} style={{padding:'2px 4px'}}>
+            <span style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',fontWeight:600}}>{t}</span>
+            {rows.map(([k,v])=>(
+              <div key={k} style={{fontSize:'var(--fsxs)',fontFamily:'var(--mono)',color:'var(--text2)'}}>
+                {k}: <span style={{color:'var(--text)'}}>{v}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function ActivityLog({log}){
   return(
     <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
       <div style={{padding:'4px 10px',borderBottom:'1px solid var(--border)',background:'var(--bg3)'}}>
         <span style={{fontSize:'var(--fsxs)',color:'var(--text)',fontFamily:'var(--mono)',textTransform:'uppercase',fontWeight:600}}>Activity</span>
       </div>
-      <div style={{maxHeight:100,overflowY:'auto'}}>
+      <div style={{maxHeight:80,overflowY:'auto'}}>
         {log.length===0&&<div style={{padding:'6px',color:'var(--text3)',fontSize:'var(--fsxs)'}}>_ waiting...</div>}
-        {log.slice(0,15).map((e,i)=>{
+        {log.slice(0,12).map((e,i)=>{
           const isO=e.event==='OPEN',isC=e.event==='CLOSE',won=e.result==='won'
           const color=isO?'var(--blue)':isC?(won?'var(--green)':'var(--red)'):'var(--text3)'
           const icon=isO?'▲':isC?(won?'✓':'✗'):'·'
           return(
             <div key={i} style={{
-              display:'grid',gridTemplateColumns:'14px 42px 1fr auto',
+              display:'grid',gridTemplateColumns:'14px 40px 1fr auto',
               alignItems:'center',gap:3,padding:'2px 8px',
               borderBottom:'1px solid var(--border)',fontSize:'var(--fsxs)',fontFamily:'var(--mono)',
             }}>
               <span style={{color}}>{icon}</span>
               <span style={{color:'var(--text3)'}}>{e.time}</span>
               <span style={{color:'var(--text2)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                {isO&&`${e.id} ${e.question?.slice(0,15)}`}
-                {isC&&`${e.id} ${won?'WIN':'LOSE'} ${Number(e.pnl)>=0?'+':''}$${Math.abs(Number(e.pnl)).toFixed(1)}`}
+                {isO&&`${e.id} ${e.question?.slice(0,12)}`}
+                {isC&&`${won?'WIN':'LOSE'} ${Number(e.pnl)>=0?'+':''}$${Math.abs(Number(e.pnl)).toFixed(1)}`}
                 {e.event==='SALARY'&&`💰 GAJIAN $${Number(e.withdrawn).toFixed(0)}`}
                 {e.event==='COMPOUND_UP'&&`⬆ T${e.tier} $${e.new_bet}`}
                 {!isO&&!isC&&e.event!=='SALARY'&&e.event!=='COMPOUND_UP'&&e.event}
@@ -186,7 +249,7 @@ function GasPanel({gas,onResume}){
 
 function BTC5mPanel({data}){
   if(!data) return null
-  const {predicted_dir,confidence,in_entry_zone,slug}=data
+  const {predicted_dir,confidence,in_entry_zone}=data
   const dirColor=predicted_dir==='UP'?'var(--green)':predicted_dir==='DOWN'?'var(--red)':'var(--text3)'
   return(
     <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',overflow:'hidden'}}>
@@ -206,7 +269,7 @@ function BTC5mPanel({data}){
 }
 
 export default function App(){
-  const {stats,positions,log,markets,gas,salary,btc5m,connected,lastUpd,notify,setup,resumeGas}=usePolyBot()
+  const {stats,positions,log,markets,config,gas,salary,history,btc5m,connected,lastUpd,notify,setup,resumeGas}=usePolyBot()
   const [ready,setReady]=useState(false)
   const pnl=stats?.pnl??0,isPos=pnl>=0
 
@@ -238,9 +301,9 @@ export default function App(){
 
       <main style={{flex:1,padding:'6px 8px',display:'flex',flexDirection:'column',gap:6,overflowY:'auto'}}>
         <div style={{display:'grid',gridTemplateColumns:'repeat(8,1fr)',gap:4}}>
-          <Stat label="Equity" value={usd(stats?.capital)} color="var(--text)"/>
-          <Stat label="PnL" value={`${pnl>=0?'+':''}${usd(pnl)}`} color={isPos?'var(--green)':'var(--red)'}/>
-          <Stat label="Win" value={pct(stats?.win_rate)} color={stats?.win_rate>=60?'var(--green)':stats?.win_rate>=45?'var(--amber)':'var(--red)'}/>
+          <Stat label="Equity" value={usd(stats?.capital)} sub={`${usd(stats?.available)} + ${usd(stats?.locked)} locked`} color="var(--text)"/>
+          <Stat label="PnL" value={`${pnl>=0?'+':''}${usd(pnl)}`} sub={`${pct(stats?.roi_pct)} ROI`} color={isPos?'var(--green)':'var(--red)'}/>
+          <Stat label="Win" value={pct(stats?.win_rate)} sub={`${stats?.wins??0}W ${stats?.losses??0}L`} color={stats?.win_rate>=60?'var(--green)':stats?.win_rate>=45?'var(--amber)':'var(--red)'}/>
           <Stat label="Daily" value={`${(stats?.daily_pnl??0)>=0?'+':''}${usd(stats?.daily_pnl)}`} color={(stats?.daily_pnl??0)>=0?'var(--green)':'var(--red)'}/>
           <Stat label="Gajian" value={usd(salary?.total_withdrawn)} color="var(--gold)"/>
           <Stat label="Open" value={stats?.open_count??0} color="var(--blue)"/>
@@ -252,6 +315,7 @@ export default function App(){
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
             <MiniScanner markets={markets}/>
             <OpenPositions positions={positions}/>
+            <HistoryPanel history={history}/>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
             <ActivityLog log={log}/>
@@ -261,6 +325,7 @@ export default function App(){
             <SalaryPanel salary={salary}/>
             <CompoundPanel stats={stats}/>
             <GasPanel gas={gas} onResume={resumeGas}/>
+            <ConfigPanel config={config}/>
           </div>
         </div>
       </main>
