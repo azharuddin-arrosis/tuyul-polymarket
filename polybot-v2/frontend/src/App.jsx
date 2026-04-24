@@ -1,9 +1,40 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePolyBot } from './hooks/usePolyBot.js'
 import { SetupWizard } from './components/SetupWizard.jsx'
 import { PositionCard } from './components/PositionCard.jsx'
 import { MarketTable, XTag, Toast } from './components/Widgets.jsx'
 import { usd, pct, CAT_COLOR, STRAT_COLOR, STRAT_LABEL } from './utils.js'
+
+const STORAGE_KEY = 'polybot_pnl_history'
+
+function loadHistory(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]} catch{ return [] } }
+function saveHistory(h){ localStorage.setItem(STORAGE_KEY, JSON.stringify(h)) }
+
+function Sparkline({history}){
+  if(history.length<2) return <div style={{height:30,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)',fontSize:9}}>_ no data</div>
+  const vals=history.map(h=>h.v)
+  const mn=Math.min(...vals),mx=Math.max(...vals),rng=mx-mn||1
+  const W=180,H=28,p=2
+  const pts=history.map((h,i)=>`${p+(i/(history.length-1))*(W-2*p)},${H-p-((h.v-mn)/rng)*(H-2*p)}`).join(' ')
+  const last=vals[vals.length-1]
+  const col=last>=0?'var(--green)':'var(--red)'
+  return(
+    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      <polyline points={pts} fill="none" stroke={col} strokeWidth="1.5" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function usePnlHistory(capital, initial){
+  const history=useRef(loadHistory())
+  useEffect(()=>{
+    if(capital==null) return
+    const init=initial||10
+    history.current=[...history.current,{t:Date.now(),v:Number((capital-init).toFixed(4))}].slice(-120)
+    saveHistory(history.current)
+  },[capital])
+  return history.current
+}
 
 function Dot({on}){return <span style={{display:'inline-block',width:5,height:5,borderRadius:'50%',marginRight:4,background:on?'var(--green)':'var(--red)',boxShadow:on?'0 0 4px var(--green)':'none',animation:on?'pulse 2s infinite':'none'}}/>}
 
@@ -262,12 +293,11 @@ function BTC5mPanel({data}){
 
 export default function App(){
   const {stats,positions,log,markets,config,gas,salary,history,btc5m,connected,lastUpd,notify,setup,resumeGas}=usePolyBot()
-  const [ready,setReady]=useState(true) // default true utk skip modal
+  const [ready,setReady]=useState(true)
   const pnl=stats?.pnl??0,isPos=pnl>=0
-
+  const hist=usePnlHistory(stats?.capital, stats?.initial)
   const doSetup=async(usdc,pol,mode)=>{ await setup(usdc,pol,mode); setReady(true) }
   
-  // Auto-show dashboard kalo sudah ada stats dari backend
   useEffect(()=>{
     if(stats && stats.capital) {
       setReady(true)
@@ -283,7 +313,7 @@ export default function App(){
   }
   
   if(!ready) return <SetupWizard onSetup={doSetup}/>
-
+  
   return(
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',flexDirection:'column'}}>
       <Toast notify={notify} onDismiss={()=>{}} onResume={resumeGas}/>
@@ -306,7 +336,7 @@ export default function App(){
       </header>
 
       <main style={{flex:1,padding:'6px 8px',display:'flex',flexDirection:'column',gap:6,overflowY:'auto'}}>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(8,1fr)',gap:4}}>
+<div style={{display:'grid',gridTemplateColumns:'repeat(8,1fr)',gap:4}}>
           <Stat label="Equity" value={usd(stats?.capital)} sub={`${usd(stats?.available)} + ${usd(stats?.locked)} locked`} color="var(--text)"/>
           <Stat label="PnL" value={`${pnl>=0?'+':''}${usd(pnl)}`} sub={`${pct(stats?.roi_pct)} ROI`} color={isPos?'var(--green)':'var(--red)'}/>
           <Stat label="Win" value={pct(stats?.win_rate)} sub={`${stats?.wins??0}W ${stats?.losses??0}L`} color={stats?.win_rate>=60?'var(--green)':stats?.win_rate>=45?'var(--amber)':'var(--red)'}/>
@@ -315,6 +345,11 @@ export default function App(){
           <Stat label="Open" value={stats?.open_count??0} color="var(--blue)"/>
           <Stat label="Tier" value={`T${stats?.compound_tier??0}`} color="var(--green)"/>
           <Stat label="Gas" value={`${gas?.tx_left??'—'}`} color={gas?.status==='ok'?'var(--text)':gas?.status==='low'?'var(--amber)':'var(--red)'}/>
+        </div>
+
+        <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r3)',padding:'4px 8px'}}>
+          <div style={{fontSize:'var(--fsxs)',color:'var(--text3)',fontFamily:'var(--mono)',marginBottom:2}}>PnL Curve · {pnl>=0?'+':''}${pnl.toFixed(2)} ({pct(stats?.roi_pct)})</div>
+          <Sparkline history={hist}/>
         </div>
 
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6}}>
