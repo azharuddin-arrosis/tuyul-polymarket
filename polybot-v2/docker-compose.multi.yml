@@ -63,7 +63,6 @@ services:
       - bot1
       - all
       - production
-      - production
 
   # ═══════════════════════════════════════════════════════════════════════════════
   # BOT 2 — SECONDARY INSTANCE
