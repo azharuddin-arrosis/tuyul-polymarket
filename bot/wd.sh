@@ -149,16 +149,21 @@ cmd_suggest() {
 
     if [ "$mode" = "dry_run" ] || [ "$mode" = "DRY_RUN" ]; then
         echo -e "${Y}MODE: DRY_RUN (Simulated)${X}"
+        echo -e "  ${D}WORKFLOW:${X}"
         echo -e "  1. Stop bot:     ${D}./orchestrator.sh stop $bot${X}"
-        echo -e "  2. Confirm WD:   ${D}./wd.sh confirm $bot dry_run --amount=${pct_val}${X}"
+        echo -e "  2. Confirm:      ${D}./wd.sh confirm $bot dry_run --amount=${pct_val}${X}"
+        echo -e "                   ${D}(matches suggest: \$${pct_val} withdraw, \$${keep_val} keep)${X}"
         echo -e "  3. Restart bot:  ${D}./orchestrator.sh start $bot dry_run${X}"
     else
-        echo -e "${R}MODE: REAL (Actual USDC)${X}"
+        echo -e "${R}MODE: REAL (Actual USDC from Polymarket)${X}"
+        echo -e "  ${D}WORKFLOW:${X}"
         echo -e "  1. Stop bot:     ${D}./orchestrator.sh stop $bot${X}"
-        echo -e "  2. Go to Polymarket → Withdraw \$${pct_val} USDC manually"
-        echo -e "  3. Note: final USDC balance + POL gas remaining"
-        echo -e "  4. Confirm:      ${D}./wd.sh confirm $bot real --usdc=AMOUNT --pol=AMOUNT${X}"
-        echo -e "     Example:      ${D}./wd.sh confirm $bot real --usdc=${keep_val} --pol=9.5${X}"
+        echo -e "  2. Withdraw:     Go to Polymarket UI → withdraw \$${pct_val} USDC manually"
+        echo -e "  3. Detect:       ${D}./wd.sh sync $bot --balance=<actual_balance> --pol=<remaining_pol>${X}"
+        echo -e "                   ${D}(e.g., if withdrew \$${pct_val}, balance might be \$${keep_val} after fees)${X}"
+        echo -e "  4. Confirm:      ${D}./wd.sh confirm $bot real --usdc=<sync_result> --pol=<gas>${X}"
+        echo -e "                   ${D}(matches sync result, not the suggest)${X}"
+        echo -e "  5. Restart:      ${D}./orchestrator.sh start $bot real${X}"
     fi
     echo ""
 }
@@ -392,13 +397,20 @@ case "$CMD" in
         cmd_history "$2"
         ;;
     *)
-        echo "Usage:"
-        echo "  ./wd.sh status                                      # show all bots"
-        echo "  ./wd.sh suggest <bot_id> [percent]                 # suggestion"
-        echo "  ./wd.sh confirm <bot_id> dry_run --amount=X        # DRY_RUN WD"
-        echo "  ./wd.sh confirm <bot_id> real --usdc=X --pol=Y     # REAL WD (after manual)"
-        echo "  ./wd.sh sync <bot_id> --balance=X [--pol=Y]        # detect balance diff (REAL)"
-        echo "  ./wd.sh history <bot_id>                            # show WD history"
+        echo "WITHDRAWAL WORKFLOW:"
+        echo ""
+        echo "  DRY_RUN MODE (instant, simulated):"
+        echo "    ./wd.sh suggest <bot> [%]"
+        echo "    ./wd.sh confirm <bot> dry_run --amount=X          # ← sesuai suggest"
+        echo ""
+        echo "  REAL MODE (manual Polymarket withdrawal):"
+        echo "    ./wd.sh suggest <bot> [%]"
+        echo "    ./wd.sh sync <bot> --balance=X --pol=Y            # ← detect actual balance"
+        echo "    ./wd.sh confirm <bot> real --usdc=X --pol=Y       # ← sesuai sync result"
+        echo ""
+        echo "  OTHER:"
+        echo "    ./wd.sh status                                     # show all bots"
+        echo "    ./wd.sh history <bot_id>                           # show WD history table"
         exit 1
         ;;
 esac
