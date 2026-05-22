@@ -97,38 +97,29 @@ BTC5M_WIN = 300
 # Survives across window resets; capped at 60 minutes of data (1800 samples @ 2s poll)
 _price_samples: list = []  # list of [timestamp_int, price_float]
 
-# ─── COMPOUND: tier-based multiplicative ─────────────────────
-# Base: equity $10 → bet $1.00 (tier 0)
-# Setiap equity naik kelipatan $5 di atas $10 → bet × 1.20
-# $15 → $1.20, $20 → $1.44, $25 → $1.73, $30 → $2.07, $50 → $4.30, $100 → $26.62
-_COMPOUND_BASE_EQ  = 10.0   # equity threshold untuk bet > base
-_COMPOUND_TIER_EQ  = 5.0    # equity step per tier above base
-_COMPOUND_RATE     = 1.20   # multiplier per tier
-_COMPOUND_BASE_BET = 1.0    # bet at tier 0 (equity $10)
-
-def _tier_from_equity(equity: float) -> int:
-    if equity < _COMPOUND_BASE_EQ: return 0
-    return int((equity - _COMPOUND_BASE_EQ) // _COMPOUND_TIER_EQ)
+# ─── COMPOUND: Fixed 10% of equity ──────────────────────────
+# Opsi B: always 10% of equity, min $1, max $50
+# $10→$1, $20→$2, $50→$5, $100→$10, $200→$20, $500→$50 (cap)
+# Max loss per trade = 10% — never all-in
+_COMPOUND_PCT      = 0.10   # 10% of equity per bet
+_COMPOUND_BASE_BET = 1.0    # minimum bet
+_COMPOUND_MAX_BET  = 50.0   # maximum bet cap
 
 def compound_bet(equity: float) -> float:
-    tier = _tier_from_equity(equity)
-    bet  = _COMPOUND_BASE_BET * (_COMPOUND_RATE ** tier)
-    return round(min(max(bet, _COMPOUND_BASE_BET), 50.0), 2)
+    raw = equity * _COMPOUND_PCT
+    # Round to nearest $0.10, clamp min $1 max $50
+    return round(min(max(round(raw, 1), _COMPOUND_BASE_BET), _COMPOUND_MAX_BET), 2)
 
 def compound_next_at(equity: float) -> float:
-    # Equity needed for next tier
-    tier = _tier_from_equity(equity)
-    return round(_COMPOUND_BASE_EQ + (tier + 1) * _COMPOUND_TIER_EQ, 2)
+    # Next $10 equity milestone (for UI progress display)
+    return round(math.ceil(equity / 10) * 10, 2)
 
 def compound_progress(equity: float) -> float:
-    if equity < _COMPOUND_BASE_EQ:
-        return round(min(100.0, max(0.0, equity / _COMPOUND_BASE_EQ * 100)), 1)
-    tier = _tier_from_equity(equity)
-    tier_start = _COMPOUND_BASE_EQ + tier * _COMPOUND_TIER_EQ
-    tier_end   = _COMPOUND_BASE_EQ + (tier + 1) * _COMPOUND_TIER_EQ
-    span = tier_end - tier_start
-    if span <= 0: return 100.0
-    return round(min(100.0, max(0.0, (equity - tier_start) / span * 100)), 1)
+    # Progress within current $10 band
+    band_start = math.floor(equity / 10) * 10
+    band_end   = band_start + 10
+    if band_end <= band_start: return 100.0
+    return round(min(100.0, max(0.0, (equity - band_start) / 10 * 100)), 1)
 
 # ─── STATE ───────────────────────────────────────────────────
 class BotState:
@@ -2265,12 +2256,20 @@ def api_db_summary(): return db_summary()
 @app.get("/api/db/trades")
 def api_db_trades(bot_id: str = "", limit: int = 200): return db_trades(bot_id, limit)
 
+_last_wd_ts: float = 0.0   # epoch seconds — cooldown guard against double-tap
+
 @app.post("/api/withdrawal/execute")
 def api_withdrawal_execute(bot_id: str, amount: float):
     """Execute withdrawal via ./wd.sh — DRY_RUN only"""
+    global _last_wd_ts
     try:
         if not bot_id or amount <= 0:
             return {"ok": False, "error": "Invalid bot_id or amount"}
+        # Cooldown: prevent double-tap within 60 seconds
+        now_ts = time.time()
+        if now_ts - _last_wd_ts < 60:
+            secs = int(60 - (now_ts - _last_wd_ts))
+            return {"ok": False, "error": f"Withdrawal cooldown — tunggu {secs}s lagi"}
         # Get bot root directory (parent of backend/)
         bot_root = Path(__file__).parent.parent
         wd_script = bot_root / "wd.sh"
@@ -2287,13 +2286,20 @@ def api_withdrawal_execute(bot_id: str, amount: float):
             input="y\n"  # Auto-confirm the withdrawal prompt
         )
         if result.returncode == 0:
-            # Record withdrawal to history (survive restart)
+            cap_before = round(equity(), 4)
+            cap_after  = round(max(cap_before - amount, 0), 4)
+            # Record withdrawal with all fields frontend expects
             S.withdrawal_history.append({
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "amount": round(amount, 2),
-                "note": "WD via dashboard"
+                "timestamp":      datetime.now(timezone.utc).isoformat(),
+                "amount":         round(amount, 2),       # legacy compat
+                "amount_withdrawn": round(amount, 2),
+                "capital_before": cap_before,
+                "capital_after":  cap_after,
+                "mode":           MODE,
+                "note":           "WD via dashboard",
             })
             S.total_withdrawn += amount
+            _last_wd_ts = time.time()
             save_state()
             return {
                 "ok": True,
