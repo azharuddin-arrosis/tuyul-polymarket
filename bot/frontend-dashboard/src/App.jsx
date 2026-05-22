@@ -604,11 +604,6 @@ export default function App() {
     setDayModal({ bot, date: dateKey, trades })
   }
 
-  // If withdrawal view is active, show it instead
-  if (view === 'withdrawal') {
-    return <WithdrawalView bots={bots} data={data} onBack={() => setView('dashboard')} />
-  }
-
   const startBot = async (bot) => {
     try {
       const r = await fetch(`http://localhost:${bot.backend_port}/api/bot/start`, { method: 'POST' })
@@ -650,6 +645,11 @@ export default function App() {
     })
     return { equity, totalPnl, dailyPnl, trades, wins, losses, alive }
   }, [bots, data])
+
+  // Render withdrawal view if active, otherwise dashboard
+  if (view === 'withdrawal') {
+    return <WithdrawalView bots={bots} data={data} onBack={() => setView('dashboard')} />
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: 16 }}>
