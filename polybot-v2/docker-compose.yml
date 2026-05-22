@@ -1,0 +1,59 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - BOT_MODE=${BOT_MODE:-sim}
+      - USDC_CAPITAL=${USDC_CAPITAL:-10}
+      - POL_BALANCE=${POL_BALANCE:-11}
+      - MAX_BET_USD=${MAX_BET_USD:-2.0}
+      - MIN_BET_USD=${MIN_BET_USD:-0.5}
+      - MAX_OPEN_POS=${MAX_OPEN_POS:-5}
+      - MIN_EV=${MIN_EV:-0.05}
+      - DAILY_LOSS_LIMIT=${DAILY_LOSS_LIMIT:-3.0}
+      - PROB_MIN=${PROB_MIN:-0.60}
+      - PROB_MAX=${PROB_MAX:-0.85}
+      - SCAN_INTERVAL=${SCAN_INTERVAL:-5}
+      - COMPOUND_DIVISOR=${COMPOUND_DIVISOR:-10.0}
+      - COMPOUND_MIN_BET=${COMPOUND_MIN_BET:-1.0}
+      - COMPOUND_MAX_CAP=${COMPOUND_MAX_CAP:-20.0}
+      - GAS_ALERT_TX=${GAS_ALERT_TX:-10}
+      - GAS_STOP_TX=${GAS_STOP_TX:-2}
+      - POLY_PRIVATE_KEY=${POLY_PRIVATE_KEY:-}
+      - POLY_API_KEY=${POLY_API_KEY:-}
+      - POLY_SECRET=${POLY_SECRET:-}
+      - POLY_PASSPHRASE=${POLY_PASSPHRASE:-}
+    volumes:
+      - bot_data:/app/data
+      - bot_logs:/app/logs
+    networks:
+      - polybot_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: polybot-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - polybot_net
+
+volumes:
+  bot_data:
+  bot_logs:
+
+networks:
+  polybot_net:
+    driver: bridge

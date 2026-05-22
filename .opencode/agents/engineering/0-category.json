@@ -1,0 +1,73 @@
+{
+  "name": "Fullstack Engineering Team",
+  "description": "Senior-level fullstack engineering squad — plan, build, review, and ship with quality gates at every stage",
+  "icon": "🚀",
+  "agents": {
+    "core-orchestrator": {
+      "description": "Engineering lead — plans timelines, decomposes tasks, coordinates all agents, owns release sign-off",
+      "commonSubagents": [
+        "agents/engineering/senior-coder",
+        "agents/engineering/principal-reviewer",
+        "agents/engineering/qa-engineer"
+      ],
+      "commonTools": [],
+      "commonContext": [
+        "core/architecture/*",
+        "core/standards/*",
+        "core/workflows/*"
+      ],
+      "gateFlow": [
+        "plan-approved",
+        "code-complete",
+        "review-approved",
+        "qa-signed-off",
+        "release-ready"
+      ]
+    },
+    "senior-coder": {
+      "description": "Senior fullstack implementer — backend, frontend, API, DB, dengan full test coverage",
+      "commonSubagents": [],
+      "commonTools": [],
+      "commonContext": [
+        "core/standards/code-quality",
+        "core/standards/patterns",
+        "core/standards/tests"
+      ],
+      "invokedBy": "core-orchestrator",
+      "handoffTo": "principal-reviewer"
+    },
+    "principal-reviewer": {
+      "description": "Principal-level code reviewer — architecture, security, quality, dan test review",
+      "commonSubagents": [],
+      "commonTools": [],
+      "commonContext": [
+        "core/standards/code-quality",
+        "core/standards/security",
+        "core/standards/architecture"
+      ],
+      "invokedBy": "core-orchestrator",
+      "handoffTo": "core-orchestrator"
+    },
+    "qa-engineer": {
+      "description": "Senior QA — functional, regression, security, dan edge case testing sebelum release",
+      "commonSubagents": [],
+      "commonTools": [],
+      "commonContext": [
+        "core/standards/quality",
+        "core/standards/tests"
+      ],
+      "invokedBy": "core-orchestrator",
+      "handoffTo": "core-orchestrator"
+    }
+  },
+  "defaultFlow": {
+    "description": "Standard feature delivery pipeline",
+    "stages": [
+      { "stage": 1, "name": "Plan", "owner": "core-orchestrator", "gate": "plan-approved" },
+      { "stage": 2, "name": "Implement", "owner": "senior-coder", "gate": "code-complete" },
+      { "stage": 3, "name": "Review", "owner": "principal-reviewer", "gate": "review-approved" },
+      { "stage": 4, "name": "QA", "owner": "qa-engineer", "gate": "qa-signed-off" },
+      { "stage": 5, "name": "Release", "owner": "core-orchestrator", "gate": "release-ready" }
+    ]
+  }
+}

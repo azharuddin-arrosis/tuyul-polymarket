@@ -1,0 +1,55 @@
+{
+  "name": "Polymarket Trading Team",
+  "description": "Multi-agent sistem untuk prediction market trading di Polymarket — scan, probability analysis, research, dan portfolio management",
+  "icon": "🎯",
+  "agents": {
+    "polymarket-master": {
+      "description": "Master orchestrator — identifikasi edge, koordinasi analisis, output trade decision dengan Kelly sizing",
+      "commonSubagents": [
+        "agents/polymarket/market-scanner",
+        "agents/polymarket/probability-analyst",
+        "agents/polymarket/research-agent",
+        "agents/polymarket/portfolio-manager"
+      ],
+      "commonContext": [],
+      "gateFlow": [
+        "scan",
+        "deep-analysis",
+        "edge-calculation",
+        "sizing",
+        "execution"
+      ]
+    },
+    "market-scanner": {
+      "description": "Scan universe Polymarket, filter berdasarkan liquidity/timing/kategori, flag potential mispricings",
+      "commonSubagents": [],
+      "invokedBy": "polymarket-master"
+    },
+    "probability-analyst": {
+      "description": "Estimasi true probability via base rates, model aggregation, Bayesian update, dan bias correction",
+      "commonSubagents": [],
+      "invokedBy": "polymarket-master"
+    },
+    "research-agent": {
+      "description": "Deep research per market — primary sources, expert consensus, resolution criteria, evidence synthesis",
+      "commonSubagents": [],
+      "invokedBy": "polymarket-master"
+    },
+    "portfolio-manager": {
+      "description": "Kelly sizing, diversifikasi, position tracking, exit strategy, P&L analytics, drawdown management",
+      "commonSubagents": [],
+      "invokedBy": "polymarket-master"
+    }
+  },
+  "analysisFlow": {
+    "description": "Alur dari opportunity discovery ke trade execution",
+    "steps": [
+      { "step": 1, "agent": "market-scanner", "output": "opportunity_list" },
+      { "step": 2, "agent": "research-agent", "output": "research_report", "parallel": true },
+      { "step": 3, "agent": "probability-analyst", "output": "probability_estimate", "parallel": true },
+      { "step": 4, "agent": "portfolio-manager", "output": "sizing_recommendation" },
+      { "step": 5, "agent": "polymarket-master", "output": "final_trade_decision" }
+    ]
+  },
+  "disclaimer": "Prediction markets involve risk. Past performance does not guarantee future results. Only trade with capital you can afford to lose."
+}

@@ -1,0 +1,94 @@
+services:
+  # ═══════════════════════════════════════════════════════════════
+  # BOT 1 — Primary Instance
+  # ═══════════════════════════════════════════════════════════════
+  bot1-backend:
+    build:
+      context: ./backend
+    container_name: polybot-bot1-backend
+    restart: unless-stopped
+    env_file: .env.bot1
+    environment:
+      - BOT_NAME=bot1
+      - BOT_DISPLAY_NAME=Primary Bot
+      - BOT_COLOR=#00ff88
+    volumes:
+      - bot1_data:/app/data
+      - bot1_logs:/app/logs
+    networks:
+      - polybot_net
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  bot1-frontend:
+    build:
+      context: ./frontend
+    container_name: polybot-bot1-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - API_URL=http://bot1-backend:8000
+    depends_on:
+      bot1-backend:
+        condition: service_healthy
+    networks:
+      - polybot_net
+
+  # ═══════════════════════════════════════════════════════════════
+  # BOT 2 — Secondary Instance  
+  # ═══════════════════════════════════════════════════════════════
+  bot2-backend:
+    build:
+      context: ./backend
+    container_name: polybot-bot2-backend
+    restart: unless-stopped
+    env_file: .env.bot2
+    environment:
+      - BOT_NAME=bot2
+      - BOT_DISPLAY_NAME=Secondary Bot
+      - BOT_COLOR=#ff6600
+    volumes:
+      - bot2_data:/app/data
+      - bot2_logs:/app/logs
+    networks:
+      - polybot_net
+    ports:
+      - "8002:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  bot2-frontend:
+    build:
+      context: ./frontend
+    container_name: polybot-bot2-frontend
+    restart: unless-stopped
+    ports:
+      - "3002:3001"
+    environment:
+      - API_URL=http://bot2-backend:8000
+    depends_on:
+      bot2-backend:
+        condition: service_healthy
+    networks:
+      - polybot_net
+
+volumes:
+  bot1_data:
+  bot1_logs:
+  bot2_data:
+  bot2_logs:
+
+networks:
+  polybot_net:
+    driver: bridge

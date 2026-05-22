@@ -1,0 +1,276 @@
+# ===============================================================================
+# POLYMARKET BOT v2 — CONCURRENT DEPLOYMENT (SIM + REAL)
+# ======================================================================
+# Deploys multiple bot instances running simultaneously in both simulator
+# and real mode.
+#
+# Port Mapping:
+# ┌==========┬========┬========┬===========┐
+# = Mode     = Bot 1  = Bot 2  = Dashboard=
+# ├========================================┤
+# = Simulator= 8001  = 8002  = 3001     =
+# = Real     = 8011  = 8012  = 3000     =
+# └==========┴========┴========┴===========┘
+#
+# Usage:
+#   # Run everything (sim + real simultaneously)
+#   docker-compose --profile all up -d
+#
+#   # Run only simulator mode (both bots + dashboard)
+#   docker-compose --profile sim up -d
+#
+#   # Run only real mode (both bots + dashboard)
+#   docker-compose --profile real up -d
+#
+#   # Run specific bot
+#   docker-compose --profile bot1-sim up -d
+#   docker-compose --profile bot1-real up -d
+#
+#   # View logs
+#   docker-compose logs -f bot1-sim
+#   docker-compose logs -f bot1-real
+#
+#   # Stop specific mode
+#   docker-compose --profile sim down
+#   docker-compose --profile real down
+# ===============================================================================
+
+services:
+  # ===============================================================================
+  # SIMULATOR MODE BOTS
+  # ===============================================================================
+
+    # Bot 1 — Simulator Mode
+    bot1-sim:
+      build:
+        context: ./backend
+        dockerfile: Dockerfile
+      container_name: polybot-bot1-sim
+      restart: unless-stopped
+      env_file: .env.bot1
+      environment:
+        - BOT_NAME=bot1-sim
+        - BOT_MODE=sim
+        - BOT_PORT=8001
+        - BOTS=bot1,bot2
+        - BOT1_URL=http://bot1-sim:8000
+        - BOT2_URL=http://bot2-sim:8000
+      volumes:
+        - bot1-sim_data:/app/data
+        - bot1-sim_logs:/app/logs
+      networks:
+        - polybot_net
+      ports:
+        - "8001:8000"
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+        interval: 15s
+        timeout: 5s
+        retries: 3
+        start_period: 10s
+    profiles:
+      - sim
+      - bot1-sim
+      - all
+
+    # Bot 2 — Simulator Mode
+    bot2-sim:
+      build:
+        context: ./backend
+        dockerfile: Dockerfile
+      container_name: polybot-bot2-sim
+      restart: unless-stopped
+      env_file: .env.bot2
+      environment:
+        - BOT_NAME=bot2-sim
+        - BOT_MODE=sim
+        - BOT_PORT=8002
+        - BOTS=bot1,bot2
+        - BOT1_URL=http://bot1-sim:8000
+        - BOT2_URL=http://bot2-sim:8000
+      volumes:
+        - bot2-sim_data:/app/data
+        - bot2-sim_logs:/app/logs
+      networks:
+        - polybot_net
+      ports:
+        - "8002:8000"
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+        interval: 15s
+        timeout: 5s
+        retries: 3
+        start_period: 10s
+    profiles:
+      - sim
+      - bot2-sim
+      - all
+
+  # ===============================================================================
+  # REAL MODE BOTS
+  # ===============================================================================
+
+  # Bot 1 — Real Mode
+  bot1-real:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: polybot-bot1-real
+    restart: unless-stopped
+    env_file: .env.bot1-real
+    environment:
+      - BOT_NAME=bot1-real
+      - BOT_MODE=real
+      - BOT_PORT=8011
+    volumes:
+      - bot1-real_data:/app/data
+      - bot1-real_logs:/app/logs
+    networks:
+      - polybot_net
+    ports:
+      - "8011:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    profiles:
+      - real
+      - bot1-real
+      - all
+
+  # Bot 2 — Real Mode
+  bot2-real:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: polybot-bot2-real
+    restart: unless-stopped
+    env_file: .env.bot2-real
+    environment:
+      - BOT_NAME=bot2-real
+      - BOT_MODE=real
+      - BOT_PORT=8012
+    volumes:
+      - bot2-real_data:/app/data
+      - bot2-real_logs:/app/logs
+    networks:
+      - polybot_net
+    ports:
+      - "8012:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    profiles:
+      - real
+      - bot2-real
+      - all
+
+  # ===============================================================================
+  # DASHBOARDS
+  # ===============================================================================
+
+  # Dashboard — Simulator Mode (port 3001)
+  dashboard-sim:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: polybot-dashboard-sim
+    restart: unless-stopped
+    environment:
+      - REACT_APP_WS_URL=ws://bot1-sim:8000/ws
+      - REACT_APP_API_URL=http://bot1-sim:8000/api
+      - REACT_APP_BOT_NAME=Simulator Bots
+      - PORT=3001
+      - BACKEND_HOST=bot1-sim
+      - BACKEND_PORT=8000
+    networks:
+      - polybot_net
+    ports:
+      - "3001:3001"
+    depends_on:
+      bot1-sim:
+        condition: service_started
+      bot2-sim:
+        condition: service_started
+    profiles:
+      - sim
+      - all
+
+  # Dashboard — Real Mode (port 3000)
+  dashboard-real:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: polybot-dashboard-real
+    restart: unless-stopped
+    environment:
+      - REACT_APP_WS_URL=ws://bot1-real:8000/ws
+      - REACT_APP_API_URL=http://bot1-real:8000/api
+      - REACT_APP_BOT_NAME=Real Bots
+      - PORT=3000
+      - BACKEND_HOST=bot1-real
+      - BACKEND_PORT=8000
+    networks:
+      - polybot_net
+    ports:
+      - "3000:3000"
+    depends_on:
+      bot1-real:
+        condition: service_started
+      bot2-real:
+        condition: service_started
+    profiles:
+      - real
+      - all
+
+# =======================================================================================
+# VOLUMES (Persistent data per bot)
+# ===============================================================================
+
+volumes:
+  # Simulator bots
+  bot1-sim_data:
+    driver: local
+  bot1-sim_logs:
+    driver: local
+  bot2-sim_data:
+    driver: local
+  bot2-sim_logs:
+    driver: local
+
+  # Real bots
+  bot1-real_data:
+    driver: local
+  bot1-real_logs:
+    driver: local
+  bot2-real_data:
+    driver: local
+  bot2-real_logs:
+    driver: local
+
+# ===============================================================================
+# NETWORKS
+# ===============================================================================
+
+networks:
+  polybot_net:
+    driver: bridge
+    name: polybot_concurrent_net
+
+# ===============================================================================
+# PROFILE GROUPS
+# ===============================================================================
+# Profile Usage:
+#   sim          → Both simulator bots + dashboard (ports 8001, 8002, 3001)
+#   real        → Both real bots + dashboard (ports 8011, 8012, 3000)
+#   all         → Everything (sim + real simultaneously)
+#   bot1-sim    → Only bot1 simulator
+#   bot2-sim    → Only bot2 simulator
+#   bot1-real   → Only bot1 real
+#   bot2-real   → Only bot2 real
+# ===============================================================================

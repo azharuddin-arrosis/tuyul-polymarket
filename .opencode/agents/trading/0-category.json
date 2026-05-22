@@ -1,0 +1,59 @@
+{
+  "name": "XAUUSD Trading Team",
+  "description": "Multi-agent sistem trading XAUUSD Binary Options — analisis teknikal, fundamental, news, dan sinyal terpadu",
+  "icon": "🥇",
+  "agents": {
+    "gold-trader": {
+      "description": "Master orchestrator — koordinasi semua analisis, output sinyal BO XAUUSD dengan confluence scoring",
+      "commonSubagents": [
+        "agents/trading/market-monitor",
+        "agents/trading/technical-analyst",
+        "agents/trading/fundamental-analyst",
+        "agents/trading/news-monitor"
+      ],
+      "commonContext": [],
+      "gateFlow": [
+        "market-check",
+        "parallel-analysis",
+        "confluence-validation",
+        "signal-output",
+        "post-monitoring"
+      ]
+    },
+    "market-monitor": {
+      "description": "Kondisi pasar realtime — spread, sesi, volatilitas, key levels, news blackout check",
+      "commonSubagents": [],
+      "commonContext": [],
+      "invokedBy": "gold-trader"
+    },
+    "technical-analyst": {
+      "description": "Multi-timeframe chart analysis — indikator, pattern, S/R, entry timing untuk BO",
+      "commonSubagents": [],
+      "commonContext": [],
+      "invokedBy": "gold-trader"
+    },
+    "fundamental-analyst": {
+      "description": "Macro drivers — DXY, real yields, COT, Fed policy, inflasi, geopolitik, sentimen",
+      "commonSubagents": [],
+      "commonContext": [],
+      "invokedBy": "gold-trader"
+    },
+    "news-monitor": {
+      "description": "Breaking news, event calendar, blackout windows, sentimen pasar",
+      "commonSubagents": [],
+      "commonContext": [],
+      "invokedBy": "gold-trader"
+    }
+  },
+  "signalFlow": {
+    "description": "Alur dari request ke sinyal BO",
+    "steps": [
+      { "step": 1, "agent": "market-monitor", "output": "market_snapshot" },
+      { "step": 2, "agent": "news-monitor", "output": "news_report", "parallel": true },
+      { "step": 3, "agent": "technical-analyst", "output": "technical_analysis", "parallel": true },
+      { "step": 4, "agent": "fundamental-analyst", "output": "fundamental_brief", "parallel": true },
+      { "step": 5, "agent": "gold-trader", "action": "confluence_check", "output": "final_signal" }
+    ]
+  },
+  "disclaimer": "Alat bantu analisis. Bukan jaminan profit. Trading mengandung risiko tinggi. Gunakan manajemen risiko yang ketat."
+}

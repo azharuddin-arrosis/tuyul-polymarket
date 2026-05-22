@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: btc5m-bot
+    restart: always
+    env_file:
+      - ./.env
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./bot_data:/app/data
+    environment:
+      - RUST_LOG=info
+      - STATE_FILE=/app/data/state.json
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: btc5m-dashboard
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - BOT_API=http://bot:8082
+      - PORT=3000
+    depends_on:
+      - bot
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
