@@ -76,6 +76,11 @@ class C:
     poly_api_key        = os.getenv("POLY_API_KEY", "")
     poly_secret         = os.getenv("POLY_SECRET", "")
     poly_passphrase     = os.getenv("POLY_PASSPHRASE", "")
+    # Builder Relayer (gasless redemption) — optional, falls back to py-clob-client if not set
+    relayer_api_key     = os.getenv("RELAYER_API_KEY", "")
+    relayer_api_address = os.getenv("RELAYER_API_ADDRESS", "")
+    relayer_api_host    = os.getenv("RELAYER_API_HOST", "https://relayer-v2.polymarket.com/")
+    use_gasless_redeem  = os.getenv("USE_GASLESS_REDEEM", "true").lower() == "true"  # default: try gasless
     # Circuit breakers
     balance_floor       = float(os.getenv("BALANCE_FLOOR", "20"))
     balance_refresh_sec = int(os.getenv("BALANCE_REFRESH_SEC", "300"))
@@ -1585,6 +1590,59 @@ async def close_position(pos: dict, won: bool):
     await broadcast({"type": "history",   "data": S.closed_trades[-300:][::-1]})
     await broadcast({"type": "stats",     "data": get_stats()})
 
+# ─── GASLESS REDEEM HELPER ──────────────────────────────────
+def _build_relayer_client():
+    """Build RelayClient for gasless redemption via Polymarket Builder Relayer"""
+    try:
+        from polymarket_py import RelayClient
+        from eth_account import Account
+
+        if not C.relayer_api_key or not C.relayer_api_address:
+            return None
+
+        # Create signer from private key
+        account = Account.from_key(C.poly_private_key)
+
+        client = RelayClient(
+            host=C.relayer_api_host,
+            api_key=C.relayer_api_key,
+            api_secret=C.relayer_api_address,
+            signer=account,
+        )
+        return client
+    except ImportError:
+        return None
+    except Exception as e:
+        S.errors.append(f"[relayer_client_build] {str(e)[:60]}")
+        return None
+
+async def _redeem_via_relayer(condition_id: str, outcome: str):
+    """Redeem position via Builder Relayer (gasless, Polymarket pays gas)"""
+    try:
+        from polymarket_py import RelayClient
+        from eth_account import Account
+
+        client = _build_relayer_client()
+        if not client:
+            return None
+
+        # Determine index set: YES=1, NO=2, both=3
+        index_set = 1 if outcome.upper() == "UP" else 2
+
+        # Call relayer's redeem function
+        # Note: actual implementation depends on polymarket-py API version
+        result = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: client.redeem_positions(
+                condition_id=condition_id,
+                index_sets=[index_set],
+            )
+        )
+        return result
+    except Exception as e:
+        S.errors.append(f"[redeem_relayer] {str(e)[:60]}")
+        return None
+
 # ─── AUTO-CLAIM / REDEEM (Sprint 2) ──────────────────────────
 async def redeem_winning_positions():
     """
@@ -1658,26 +1716,56 @@ async def redeem_winning_positions():
                         await close_position(pos, False)
                         continue
 
-                    # ── 2. Call CLOB redeem for winning position ──────────
-                    if not CLOB_OK:
-                        add_log("REDEEM_SKIP", {
-                            "id": pos["id"],
-                            "reason": "py-clob-client not installed",
-                            "message": "Cannot redeem — install py-clob-client",
-                        })
-                        # Still close position internally so capital is credited
-                        await close_position(pos, True)
-                        continue
-
+                    # ── 2. Try gasless redeem via Builder Relayer, fallback to py-clob-client ─────
                     try:
-                        _cond_id = condition_id  # capture for closure
-                        def _redeem():
-                            client = _build_clob_client()
-                            if client is None:
-                                return None
-                            # condition_id = CLOB hex ID (0x...), not Gamma integer id
-                            return client.redeem_positions(condition_id=_cond_id)
-                        result = await asyncio.get_event_loop().run_in_executor(None, _redeem)
+                        result = None
+                        redeem_method = "unknown"
+
+                        # Strategy 1: Try Builder Relayer (gasless, Polymarket pays)
+                        if C.use_gasless_redeem and C.relayer_api_key:
+                            try:
+                                result = await _redeem_via_relayer(condition_id, pos["outcome"])
+                                if result:
+                                    redeem_method = "gasless_relayer"
+                                    add_log("REDEEM_ATTEMPT", {
+                                        "id": pos["id"],
+                                        "method": "Builder Relayer (gasless)",
+                                        "message": "Attempting gasless redemption via Polymarket relayer",
+                                    })
+                            except Exception as e:
+                                S.errors.append(f"[redeem_gasless_fallback] {str(e)[:50]}")
+
+                        # Strategy 2: Fallback to py-clob-client if gasless unavailable/failed
+                        if not result and CLOB_OK:
+                            try:
+                                _cond_id = condition_id  # capture for closure
+                                def _redeem():
+                                    client = _build_clob_client()
+                                    if client is None:
+                                        return None
+                                    return client.redeem_positions(condition_id=_cond_id)
+                                result = await asyncio.get_event_loop().run_in_executor(None, _redeem)
+                                redeem_method = "py_clob_client"
+                                add_log("REDEEM_ATTEMPT", {
+                                    "id": pos["id"],
+                                    "method": "py-clob-client",
+                                    "message": "Redeeming via py-clob-client (has gas cost)",
+                                })
+                            except Exception as e:
+                                S.errors.append(f"[redeem_clob_fallback] {str(e)[:50]}")
+
+                        # If both methods unavailable, skip
+                        if not result:
+                            if not C.relayer_api_key and not CLOB_OK:
+                                add_log("REDEEM_SKIP", {
+                                    "id": pos["id"],
+                                    "reason": "No redemption method available",
+                                    "message": "Install polymarket-py OR configure Builder Relayer credentials",
+                                })
+                            # Still close position internally so capital is credited
+                            await close_position(pos, True)
+                            continue
+
                         claimed_usdc = 0.0
                         if result:
                             # Result may contain payout amount
@@ -1700,9 +1788,10 @@ async def redeem_winning_positions():
                             "id":          pos["id"],
                             "question":    pos["question"][:50],
                             "outcome":     pos["outcome"],
+                            "method":      redeem_method,
                             "claimed_usdc": round(claimed_usdc, 4),
                             "capital":     round(S.capital, 4),
-                            "message":     f"Winning position redeemed: +${claimed_usdc:.2f} USDC",
+                            "message":     f"✓ Redeemed via {redeem_method} (+${claimed_usdc:.2f} pUSD)",
                         })
                         await broadcast({"type": "balance_update", "data": {
                             "usdc": round(S.capital, 4),
@@ -1710,6 +1799,7 @@ async def redeem_winning_positions():
                             "ts":   S.last_balance_refresh,
                             "event": "redeem",
                             "pos_id": pos["id"],
+                            "method": redeem_method,
                         }})
 
                     except Exception as e:

@@ -331,8 +331,30 @@ check("USDC allowance > 0", ok_allowance, f"allowance=${allowance_val:.4f}")
 if not ok_allowance:
     print(f"    {WARN} {C.Y}Approve USDC di Polymarket UI sebelum trade pertama{C.X}")
 
-# ─── 9. Binance connectivity ──────────────────────────────────
-section("9. Binance API (Primary Data Source)")
+# ─── 9. Builder Relayer credentials (optional, for gasless redemption) ──
+section("9. Builder Relayer (Optional: Gasless Redemption)")
+
+RELAYER_KEY = os.getenv("RELAYER_API_KEY", "")
+RELAYER_ADDR = os.getenv("RELAYER_API_ADDRESS", "")
+RELAYER_HOST = os.getenv("RELAYER_API_HOST", "https://relayer-v2.polymarket.com/")
+
+ok_relayer_key = bool(RELAYER_KEY)
+ok_relayer_addr = bool(RELAYER_ADDR)
+relayer_configured = ok_relayer_key and ok_relayer_addr
+
+check("RELAYER_API_KEY set", ok_relayer_key,
+      f"prefix={RELAYER_KEY[:8]}…" if RELAYER_KEY else "(fallback to py-clob-client)")
+check("RELAYER_API_ADDRESS set", ok_relayer_addr,
+      f"prefix={RELAYER_ADDR[:10]}…" if RELAYER_ADDR else "(fallback to py-clob-client)")
+
+if relayer_configured:
+    print(f"    {C.G}✓ Gasless redemption enabled — zero gas cost for auto-claim{C.X}")
+else:
+    print(f"    {WARN} {C.Y}Relayer not configured — will fallback to py-clob-client (has gas cost){C.X}")
+    print(f"    {C.D}   Setup: get API key at https://polymarket.com/settings?tab=builder{C.X}")
+
+# ─── 10. Binance connectivity ──────────────────────────────────
+section("10. Binance API (Primary Data Source)")
 
 BINANCE = "https://api.binance.com/api/v3"
 BN_UA = {"User-Agent": "Mozilla/5.0 polypox-validator", "Accept": "application/json"}
@@ -362,8 +384,8 @@ except Exception as e:
     print(f"    {C.D}klines error: {str(e)[:80]}{C.X}")
 check("Binance /klines 1m BTCUSDT", ok_bn_klines, f"returned {bn_klines_n} candles" if ok_bn_klines else "UNREACHABLE — use VPN SG")
 
-# ─── 10. CLOB /markets/{condition_id} reachability ───────────
-section("10. CLOB Market Resolution Endpoint")
+# ─── 11. CLOB /markets/{condition_id} reachability ───────────
+section("11. CLOB Market Resolution Endpoint")
 
 # CLOB uses conditionId (0x hex) — NOT Gamma integer id
 ok_mkt_ep   = False
@@ -385,8 +407,8 @@ if ok_gamma and condition_id:
 else:
     check("CLOB /markets/{condition_id}", False, "skipped — no conditionId from gamma")
 
-# ─── 11. Order sign test (no submission) ─────────────────────
-section("11. Order Signing (No Submission)")
+# ─── 12. Order sign test (no submission) ─────────────────────
+section("12. Order Signing (No Submission)")
 
 ok_sign = False
 if ok_gamma and clob_token_ids and CLOB_OK:
@@ -416,6 +438,7 @@ endpoints = [
     ("     eth_getBalance Polygon RPC",           ok_pol,        f"{pol_balance:.4f} POL"),
     ("     get_orders() authenticated",           ok_auth,       "CLOB auth"),
     ("     create_order() signing",               ok_sign,       "tx signing"),
+    ("OPT  relayer-v2.polymarket.com (gasless)",  relayer_configured, "zero gas auto-claim"),
 ]
 for ep, ok, note in endpoints:
     status = f"{C.G}UP  {C.X}" if ok else f"{C.R}DOWN{C.X}"
