@@ -2000,6 +2000,25 @@ def api_log(limit: int = 200): return S.log[:limit]
 @app.get("/api/gas")
 def api_gas(): return get_gas_info()
 
+@app.get("/api/storage")
+def api_storage():
+    def dir_mb(p: Path) -> float:
+        try: return round(sum(f.stat().st_size for f in p.rglob('*') if f.is_file()) / 1048576, 2)
+        except: return 0.0
+    def file_mb(p: Path) -> float:
+        try: return round(p.stat().st_size / 1048576, 3)
+        except: return 0.0
+    log_dir = Path(os.getenv("LOG_DIR", str(DATA_DIR.parent.parent / "logs")))
+    be_log  = log_dir / f"backend-{BOT_ID}.log"
+    fe_log  = log_dir / f"frontend-{BOT_ID}.log"
+    return {
+        "data_mb":    dir_mb(DATA_DIR),
+        "db_mb":      file_mb(DB_PATH),
+        "state_mb":   file_mb(STATE_FILE),
+        "log_be_mb":  file_mb(be_log),
+        "log_fe_mb":  file_mb(fe_log),
+    }
+
 @app.get("/api/btc5m")
 def api_btc5m(): return get_btc5m_info()
 

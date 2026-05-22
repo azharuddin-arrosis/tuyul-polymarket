@@ -31,15 +31,15 @@ function useDashboard() {
     const poll = async () => {
       const updates = await Promise.all(bots.map(async (b) => {
         try {
-          const [stats, hist] = await Promise.all([
-            fetch(`http://localhost:${b.backend_port}/api/stats`, { signal: AbortSignal.timeout(3000) })
-              .then(r => r.ok ? r.json() : null).catch(() => null),
-            fetch(`http://localhost:${b.backend_port}/api/history?limit=300`, { signal: AbortSignal.timeout(3000) })
-              .then(r => r.ok ? r.json() : []).catch(() => []),
+          const [stats, hist, gas, storage] = await Promise.all([
+            fetch(`http://localhost:${b.backend_port}/api/stats`,          { signal: AbortSignal.timeout(3000) }).then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch(`http://localhost:${b.backend_port}/api/history?limit=300`, { signal: AbortSignal.timeout(3000) }).then(r => r.ok ? r.json() : []).catch(() => []),
+            fetch(`http://localhost:${b.backend_port}/api/gas`,            { signal: AbortSignal.timeout(3000) }).then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch(`http://localhost:${b.backend_port}/api/storage`,        { signal: AbortSignal.timeout(3000) }).then(r => r.ok ? r.json() : null).catch(() => null),
           ])
-          return [b.id, { stats, hist, health: !!stats }]
+          return [b.id, { stats, hist, gas, storage, health: !!stats }]
         } catch {
-          return [b.id, { stats: null, hist: [], health: false }]
+          return [b.id, { stats: null, hist: [], gas: null, storage: null, health: false }]
         }
       }))
       if (!cancelled) {
@@ -338,8 +338,55 @@ const th = { padding: '6px 10px', textAlign: 'left', fontSize: 7, color: 'var(--
 const td = { padding: '5px 10px', verticalAlign: 'middle' }
 
 // ─── BOT CARD ────────────────────────────────────────────────
+function GasBar({ orders }) {
+  if (orders == null) return null
+  const pct = Math.min(100, Math.max(0, orders / 200 * 100))
+  const color = orders <= 3 ? 'var(--red)' : orders <= 10 ? 'var(--amber)' : 'var(--green)'
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ flex: 1, height: 4, background: 'var(--bg)', borderRadius: 2, overflow: 'hidden', border: '1px solid var(--border)' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 2, transition: 'width .4s' }} />
+      </div>
+      <span style={{ fontSize: 9, color, fontWeight: 700, minWidth: 30 }}>{orders}</span>
+    </div>
+  )
+}
+
+function StorageRow({ storage, gas }) {
+  if (!storage && !gas) return null
+  const totalMb = (storage?.data_mb ?? 0)
+  const logMb   = ((storage?.log_be_mb ?? 0) + (storage?.log_fe_mb ?? 0))
+  const polLeft = gas?.pol_left ?? null
+  const ordersLeft = gas?.orders_left ?? null
+  const gasColor = ordersLeft == null ? 'var(--dim)' : ordersLeft <= 3 ? 'var(--red)' : ordersLeft <= 10 ? 'var(--amber)' : 'var(--green)'
+  return (
+    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 7, color: 'var(--dim)', letterSpacing: '.08em', fontWeight: 600 }}>STORAGE & GAS</span>
+        <div style={{ display: 'flex', gap: 10, fontSize: 8, color: 'var(--dim)' }}>
+          <span>data <span style={{ color: 'var(--white)' }}>{totalMb.toFixed(1)}MB</span></span>
+          <span>logs <span style={{ color: 'var(--white)' }}>{logMb.toFixed(1)}MB</span></span>
+          <span>db <span style={{ color: 'var(--white)' }}>{(storage?.db_mb ?? 0).toFixed(2)}MB</span></span>
+          {polLeft != null && <span>POL <span style={{ color: gasColor, fontWeight: 700 }}>{polLeft.toFixed(2)}</span></span>}
+        </div>
+      </div>
+      {ordersLeft != null && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 7, color: 'var(--dim)', minWidth: 60 }}>GAS ORDERS</span>
+          <div style={{ flex: 1 }}><GasBar orders={ordersLeft} /></div>
+          {ordersLeft <= 10 && (
+            <span style={{ fontSize: 7, color: gasColor, fontWeight: 700, letterSpacing: '.06em' }}>
+              {ordersLeft <= 3 ? '⚠ CRITICAL' : '⚠ LOW'}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function BotCard({ bot, data, onStart, onStop, onDayClick }) {
-  const { stats, hist, health } = data || {}
+  const { stats, hist, gas, storage, health } = data || {}
   const mode    = stats?.mode || '—'
   const running = stats?.running
   const equity  = stats?.capital ?? 0
@@ -406,6 +453,9 @@ function BotCard({ bot, data, onStart, onStop, onDayClick }) {
           {!health && <span style={{ fontSize: 8, color: 'var(--red)' }}>start via terminal</span>}
         </div>
       </div>
+
+      {/* Storage + Gas */}
+      <StorageRow storage={storage} gas={gas} />
 
       {/* Calendar */}
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8 }}>

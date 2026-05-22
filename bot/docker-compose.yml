@@ -23,9 +23,14 @@ networks:
     driver: bridge
 
 volumes:
-  data-real1: data-real2: data-real3:
-  data-real4: data-real5: data-real6:
-  data-real7: data-real8:
+  data-real1:
+  data-real2:
+  data-real3:
+  data-real4:
+  data-real5:
+  data-real6:
+  data-real7:
+  data-real8:
 
 services:
 
