@@ -28,8 +28,6 @@ bot/
 │   │   ├── sim1.env, sim2.env, sim3.env   # SIM placeholders
 │   │   └── real1.env, real2.env           # REAL creds (PK, API_KEY, SECRET, PASSPHRASE)
 │   └── requirements.txt
-├── old/                     # ⚠️  DEPRECATED — legacy polyfinal code (DO NOT USE)
-│   └── polyfinal/           # Archive only; new bot uses /backend/main.py + /frontend-bot
 ├── frontend-bot/                    # Per-bot detail dashboard
 │   ├── src/
 │   │   ├── App.jsx          # Single-file React UI (~1900 LOC)
@@ -591,15 +589,3 @@ Untuk migration plan SIM → DRY_RUN → REAL, lihat **`docs/polymarket_integrat
 3. Pastikan SIM mode tetap kerja (test pakai `./run.sh sim`)
 4. Jangan ubah `condition_id` flow tanpa understand CLOB API
 
----
-
-## ⚠️ Deprecated: `/old/polyfinal` Folder
-
-**DO NOT USE** folder `old/polyfinal`. Ini adalah legacy code dari previous iteration.
-
-**Active codebase:**
-- Backend: `/backend/main.py` (FastAPI + all loops)
-- Frontend: `/frontend-bot/` (per-bot detail) + `/frontend-dashboard/` (multi-bot)
-- Orchestrator: `/orchestrator.sh` (manage multiple bots)
-
-Folder `old/polyfinal` kept for **archive reference only**. Jika perlu cleanup, bisa dihapus atau dipindahkan keluar dari repo.
