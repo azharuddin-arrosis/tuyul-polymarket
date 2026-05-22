@@ -532,7 +532,6 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
             <span style={{ fontSize: 7, color: statusColor, fontWeight: 700, letterSpacing: '.06em' }}>{statusLabel}</span>
           </span>
           <span style={{ fontSize: 7, color: 'var(--dim)' }}>:{bot.backend_port}</span>
-          {pending > 0 && <span style={{ fontSize: 7, color: 'var(--amber)', fontWeight: 700 }}>· {pending} open</span>}
         </div>
         {/* Right: all buttons same size/style */}
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
