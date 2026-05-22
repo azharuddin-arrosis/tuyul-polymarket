@@ -934,8 +934,8 @@ export default function App() {
           <Sum label="PNL"    value={sgnUsd(agg.totalPnl)} color={agg.totalPnl >= 0 ? 'var(--green)' : 'var(--red)'} />
           <Sum label="DAILY"  value={sgnUsd(agg.dailyPnl)} color={agg.dailyPnl >= 0 ? 'var(--green)' : 'var(--red)'} />
           <Sum label="W/L"    value={`${agg.wins}/${agg.losses}`} />
-          <button onClick={() => setView('withdrawal')} style={{ background: 'transparent', border: '1px solid var(--amber)', color: 'var(--amber)', fontFamily: 'var(--mono)', fontSize: 9, padding: '4px 10px', cursor: 'pointer', borderRadius: 2 }}>
-            💰 WD
+          <button onClick={() => window.location.reload()} style={{ background: 'transparent', border: '1px solid var(--border2)', color: 'var(--dim)', fontFamily: 'var(--mono)', fontSize: 11, padding: '3px 9px', cursor: 'pointer', borderRadius: 2 }} title="Refresh dashboard">
+            ↺
           </button>
         </div>
       </div>
