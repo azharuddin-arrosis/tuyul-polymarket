@@ -483,6 +483,8 @@ const btnStyle = (c) => ({
 
 // ─── WITHDRAWAL VIEW ─────────────────────────────────────────
 function WithdrawalView({ bots, data, onBack }) {
+  const [wdModal, setWdModal] = useState(null) // { botId, capital, mode, percent }
+
   const ready = bots.filter(b => {
     const s = data[b.id]?.stats
     return s && s.capital >= 100
@@ -531,9 +533,21 @@ function WithdrawalView({ bots, data, onBack }) {
                         {cap} available
                       </span>
                     </div>
-                    <span style={{ fontSize: 8, color: 'var(--dim)', fontFamily: 'var(--mono)' }}>
-                      ./wd.sh suggest {b.id} 50
-                    </span>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <button
+                        onClick={() => setWdModal({ botId: b.id, capital: s.capital, mode, percent: 50 })}
+                        style={{
+                          fontFamily: 'var(--mono)', fontSize: 8, padding: '4px 10px',
+                          background: 'var(--green)', color: 'var(--bg)', border: 'none', borderRadius: 2,
+                          cursor: 'pointer', fontWeight: 700,
+                        }}
+                      >
+                        WD NOW →
+                      </button>
+                      <span style={{ fontSize: 8, color: 'var(--dim)', fontFamily: 'var(--mono)' }}>
+                        suggest 50%
+                      </span>
+                    </div>
                   </div>
                 )
               })}
@@ -587,6 +601,75 @@ function WithdrawalView({ bots, data, onBack }) {
           </code> for details
         </div>
       </div>
+
+      {/* Withdrawal Modal */}
+      {wdModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 999,
+        }} onClick={() => setWdModal(null)}>
+          <div style={{
+            background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 4, padding: 16, maxWidth: 500,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 12, color: 'var(--white)' }}>
+              Withdrawal: <span style={{ color: 'var(--amber)' }}>{wdModal.botId}</span> [{wdModal.mode}]
+            </div>
+
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 2, padding: 10, marginBottom: 12 }}>
+              <div style={{ fontSize: 9, color: 'var(--dim)', marginBottom: 6 }}>Current Capital</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--green)' }}>
+                ${Number(wdModal.capital).toFixed(2)}
+              </div>
+            </div>
+
+            <div style={{ fontSize: 9, color: 'var(--dim)', marginBottom: 6 }}>Suggestion: Withdraw {wdModal.percent}%</div>
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 2, padding: 8, marginBottom: 14, fontFamily: 'var(--mono)', fontSize: 9 }}>
+              <div style={{ color: 'var(--amber)', marginBottom: 4 }}>Withdraw Amount</div>
+              <div style={{ color: 'var(--green)', fontWeight: 700 }}>
+                ${(wdModal.capital * wdModal.percent / 100).toFixed(2)}
+              </div>
+              <div style={{ color: 'var(--dim)', fontSize: 8, marginTop: 4 }}>
+                Keep: ${(wdModal.capital * (100 - wdModal.percent) / 100).toFixed(2)}
+              </div>
+            </div>
+
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--amber)', borderRadius: 2, padding: 10, marginBottom: 14 }}>
+              <div style={{ fontSize: 8, color: 'var(--amber)', marginBottom: 6, fontFamily: 'var(--mono)' }}>COMMAND:</div>
+              <div style={{ fontSize: 8, color: 'var(--white)', fontFamily: 'var(--mono)', wordBreak: 'break-all', lineHeight: 1.4 }}>
+                ./wd.sh confirm <span style={{ color: 'var(--green)' }}>{wdModal.botId}</span> <span style={{ color: 'var(--amber)' }}>dry_run</span> --amount=<span style={{ color: 'var(--cyan)' }}>{(wdModal.capital * wdModal.percent / 100).toFixed(2)}</span>
+              </div>
+              <button
+                onClick={() => {
+                  const cmd = `./wd.sh confirm ${wdModal.botId} dry_run --amount=${(wdModal.capital * wdModal.percent / 100).toFixed(2)}`
+                  navigator.clipboard.writeText(cmd)
+                  alert('Command copied to clipboard!')
+                }}
+                style={{
+                  marginTop: 8, fontFamily: 'var(--mono)', fontSize: 7, padding: '3px 8px',
+                  background: 'var(--amber)', color: 'var(--bg)', border: 'none', borderRadius: 2,
+                  cursor: 'pointer', fontWeight: 700,
+                }}
+              >
+                COPY COMMAND
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setWdModal(null)}
+                style={{
+                  fontFamily: 'var(--mono)', fontSize: 8, padding: '6px 12px',
+                  background: 'var(--border)', color: 'var(--white)', border: 'none', borderRadius: 2,
+                  cursor: 'pointer', fontWeight: 700,
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
