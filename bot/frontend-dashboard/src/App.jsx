@@ -154,7 +154,7 @@ function CompactCalendar({ hist, withdrawals, onDayClick }) {
                  onMouseLeave={clickable ? (e) => { e.currentTarget.style.filter = '' } : undefined}
                  style={{ aspectRatio: '1', border: `1px solid ${isToday ? 'var(--amber)' : borderColor}`, borderRadius: 2, background: bg,
                           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 1,
-                          cursor: clickable ? 'pointer' : 'default', transition: 'filter 0.1s', minHeight: 32 }}>
+                          cursor: clickable ? 'pointer' : 'default', transition: 'filter 0.1s', minHeight: 0 }}>
               <span style={{ fontSize: 8, color: isToday ? 'var(--amber)' : 'var(--white)', fontWeight: isToday ? 700 : 400 }}>{day}</span>
               {d && <span style={{ fontSize: 7, color: cl, fontWeight: 700 }}>{netPnl >= 0 ? '+' : '-'}{Math.abs(netPnl).toFixed(1)}</span>}
             </div>
@@ -466,60 +466,41 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
   return (
     <div style={{
       background: 'var(--bg1)', border: '1px solid var(--border2)',
-      borderTop: `3px solid ${health ? 'var(--green)' : 'var(--red)'}`,
-      borderRadius: 4, padding: 14, display: 'flex', flexDirection: 'column', gap: 10,
+      borderTop: `2px solid ${health ? 'var(--green)' : 'var(--red)'}`,
+      borderRadius: 4, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6, overflow: 'hidden',
     }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--white)', letterSpacing: '.04em' }}>{bot.id}</span>
-            <span style={{ fontSize: 9, padding: '2px 7px', background: `${modeColor}22`, color: modeColor, border: `1px solid ${modeColor}55`, borderRadius: 2, fontWeight: 700, letterSpacing: '.07em' }}>
-              {mode}
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: 8, color: 'var(--dim)' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor, boxShadow: `0 0 4px ${statusColor}`, animation: running ? 'pulse 2s infinite' : 'none' }} />
-            <span style={{ color: statusColor, fontWeight: 700, letterSpacing: '.07em' }}>{statusLabel}</span>
-            <span>·</span>
-            <span>BE :{bot.backend_port}</span>
-            <span>·</span>
-            <span>FE :{bot.frontend_port}</span>
-          </div>
+      {/* Header row — bot id + mode + status + actions */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--white)', letterSpacing: '.04em' }}>{bot.id}</span>
+          <span style={{ fontSize: 8, padding: '1px 6px', background: `${modeColor}22`, color: modeColor, border: `1px solid ${modeColor}55`, borderRadius: 2, fontWeight: 700 }}>{mode}</span>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: statusColor, boxShadow: `0 0 4px ${statusColor}`, animation: running ? 'pulse 2s infinite' : 'none' }} />
+          <span style={{ fontSize: 8, color: statusColor, fontWeight: 700 }}>{statusLabel}</span>
+          <span style={{ fontSize: 7, color: 'var(--dim)' }}>:{bot.backend_port}</span>
         </div>
-        <button onClick={openDetail} style={{
-          fontFamily: 'var(--mono)', fontSize: 9, padding: '4px 10px',
-          background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 2, cursor: 'pointer', fontWeight: 700, letterSpacing: '.07em',
-        }}>↗ OPEN</button>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <span style={{ fontSize: 8, color: 'var(--dim)' }}>P:<span style={{ color: pending > 0 ? 'var(--amber)' : 'var(--dim2)', fontWeight: 700 }}>{pending}</span></span>
+          {!running && health && <button onClick={() => onStart(bot)} style={btnStyle('var(--green)')}>▶</button>}
+          {running && <button onClick={() => onStop(bot)} style={btnStyle('var(--red)')}>■</button>}
+          {equity >= 100 && onWithdrawal && <button onClick={() => onWithdrawal(bot)} style={btnStyle('var(--amber)')}>WD</button>}
+          {onHistory && <button onClick={() => onHistory(bot)} style={btnStyle('var(--blue)')}>HIST</button>}
+          <button onClick={openDetail} style={{ fontFamily: 'var(--mono)', fontSize: 8, padding: '2px 8px', background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 2, cursor: 'pointer', fontWeight: 700 }}>↗</button>
+        </div>
       </div>
 
-      {/* Stats grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-        <Stat label="EQUITY" value={usd(equity)} color="var(--white)" />
+      {/* Stats grid — 4 cols */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, flexShrink: 0 }}>
+        <Stat label="EQUITY"    value={usd(equity)} color="var(--white)" />
         <Stat label="TOTAL PNL" value={sgnUsd(pnl)} sub={`${roiPct >= 0 ? '+' : ''}${roiPct.toFixed(1)}%`} color={pnl >= 0 ? 'var(--green)' : 'var(--red)'} />
         <Stat label="DAILY PNL" value={sgnUsd(dailyPnl)} sub="today" color={dailyPnl >= 0 ? 'var(--green)' : 'var(--red)'} />
-        <Stat label="WIN RATE" value={`${winRate.toFixed(0)}%`} sub={`${wins}W ${losses}L`} color={winRate >= 55 ? 'var(--green)' : winRate >= 45 ? 'var(--amber)' : 'var(--red)'} />
+        <Stat label="WIN RATE"  value={`${winRate.toFixed(0)}%`} sub={`${wins}W ${losses}L`} color={winRate >= 55 ? 'var(--green)' : winRate >= 45 ? 'var(--amber)' : 'var(--red)'} />
       </div>
 
-      {/* Pending + actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
-        <span style={{ fontSize: 9, color: 'var(--dim)' }}>
-          PENDING <span style={{ color: pending > 0 ? 'var(--amber)' : 'var(--dim2)', fontWeight: 700 }}>{pending}</span>
-        </span>
-        <div style={{ display: 'flex', gap: 5 }}>
-          {!running && health && <button onClick={() => onStart(bot)} style={btnStyle('var(--green)')}>▶ RUN</button>}
-          {running && <button onClick={() => onStop(bot)} style={btnStyle('var(--red)')}>■ STOP</button>}
-          {!health && <span style={{ fontSize: 8, color: 'var(--red)' }}>start via terminal</span>}
-          {equity >= 100 && onWithdrawal && <button onClick={() => onWithdrawal(bot)} style={btnStyle('var(--amber)')}>💰 WD</button>}
-          {onHistory && <button onClick={() => onHistory(bot)} style={btnStyle('var(--blue)')}>📋 HISTORY</button>}
-        </div>
-      </div>
-
-      {/* Storage + Gas */}
+      {/* Storage + Gas — compact */}
       <StorageRow storage={storage} gas={gas} />
 
-      {/* Calendar */}
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+      {/* Calendar — flex 1 fills remaining space */}
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, flex: 1, overflow: 'hidden', minHeight: 0 }}>
         <CompactCalendar hist={hist || []} withdrawals={withdrawals || []} onDayClick={(dateKey) => onDayClick && onDayClick(bot, dateKey, hist || [], withdrawals || [])} />
       </div>
     </div>
@@ -528,10 +509,10 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
 
 function Stat({ label, value, sub, color }) {
   return (
-    <div style={{ background: 'var(--bg2)', padding: '5px 7px', borderRadius: 2, border: '1px solid var(--border)' }}>
-      <div style={{ fontSize: 7, color: 'var(--dim)', letterSpacing: '.08em', fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 12, color: color || 'var(--white)', fontWeight: 700, marginTop: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 7, color: 'var(--dim2)', marginTop: 1 }}>{sub}</div>}
+    <div style={{ background: 'var(--bg2)', padding: '4px 6px', borderRadius: 2, border: '1px solid var(--border)' }}>
+      <div style={{ fontSize: 6, color: 'var(--dim)', letterSpacing: '.08em', fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 11, color: color || 'var(--white)', fontWeight: 700, marginTop: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: 6, color: 'var(--dim2)', marginTop: 1 }}>{sub}</div>}
     </div>
   )
 }
@@ -856,74 +837,44 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: 16 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
-        <div>
-          <div style={{ fontSize: 22, fontFamily: 'var(--mono)', letterSpacing: '.03em' }}>
+    <div style={{ height: '100vh', overflow: 'hidden', background: 'var(--bg)', padding: '8px 12px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Header — compact single row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ fontSize: 16, fontFamily: 'var(--mono)', letterSpacing: '.03em' }}>
             <span style={{ color: 'var(--green)' }}>Poly</span><span style={{ color: 'var(--white)' }}>pox</span>
-            <span style={{ color: 'var(--dim)', fontSize: 14, marginLeft: 12 }}>Multi-Bot Dashboard</span>
+            <span style={{ color: 'var(--dim)', fontSize: 10, marginLeft: 10 }}>Multi-Bot</span>
           </div>
-          <div style={{ fontSize: 9, color: 'var(--dim)', marginTop: 4 }}>
+          <div style={{ fontSize: 9, color: 'var(--dim)' }}>
             {now.toLocaleString('en-GB', { hour12: false })}
             {' · '}
             <span style={{ color: 'var(--amber)' }}>{now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/New_York' })} ET</span>
           </div>
         </div>
 
-        {/* Right side: WD button + aggregate summary */}
-        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-end' }}>
-          <button
-            onClick={() => setView('withdrawal')}
-            style={{
-              background: 'transparent',
-              border: '1px solid var(--amber)',
-              color: 'var(--amber)',
-              fontFamily: 'var(--mono)',
-              fontSize: 10,
-              padding: '6px 12px',
-              cursor: 'pointer',
-              borderRadius: 2,
-              transition: 'all 200ms',
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = 'var(--amber)'
-              e.target.style.color = 'var(--bg)'
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = 'transparent'
-              e.target.style.color = 'var(--amber)'
-            }}
-          >
-            💰 WITHDRAWAL
+        {/* Right: aggregate + WD button */}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', fontFamily: 'var(--mono)' }}>
+          <Sum label="ALIVE"  value={`${agg.alive}/${bots.length}`} />
+          <Sum label="EQUITY" value={usd(agg.equity)} />
+          <Sum label="PNL"    value={sgnUsd(agg.totalPnl)} color={agg.totalPnl >= 0 ? 'var(--green)' : 'var(--red)'} />
+          <Sum label="DAILY"  value={sgnUsd(agg.dailyPnl)} color={agg.dailyPnl >= 0 ? 'var(--green)' : 'var(--red)'} />
+          <Sum label="W/L"    value={`${agg.wins}/${agg.losses}`} />
+          <button onClick={() => setView('withdrawal')} style={{ background: 'transparent', border: '1px solid var(--amber)', color: 'var(--amber)', fontFamily: 'var(--mono)', fontSize: 9, padding: '4px 10px', cursor: 'pointer', borderRadius: 2 }}>
+            💰 WD
           </button>
-
-          {/* Aggregate summary */}
-          <div style={{ display: 'flex', gap: 14, fontFamily: 'var(--mono)' }}>
-          <Sum label="BOTS ALIVE"  value={`${agg.alive}/${bots.length}`} />
-          <Sum label="TOTAL EQUITY" value={usd(agg.equity)} />
-          <Sum label="TOTAL PNL"   value={sgnUsd(agg.totalPnl)} color={agg.totalPnl >= 0 ? 'var(--green)' : 'var(--red)'} />
-          <Sum label="DAILY"       value={sgnUsd(agg.dailyPnl)} color={agg.dailyPnl >= 0 ? 'var(--green)' : 'var(--red)'} />
-          <Sum label="W/L"         value={`${agg.wins}/${agg.losses}`} />
-          </div>
         </div>
       </div>
 
-      {/* Bot cards grid */}
+      {/* Bot cards grid — fills remaining height */}
       {bots.length === 0 ? (
-        <div style={{ background: 'var(--bg1)', border: '1px solid var(--border2)', borderRadius: 4, padding: 30, textAlign: 'center', color: 'var(--dim)' }}>
-          No bots registered.<br />
-          Run <code style={{ background: 'var(--bg2)', padding: '2px 6px', borderRadius: 2, color: 'var(--amber)' }}>./orchestrator.sh discover</code> to scan <code style={{ color: 'var(--amber)' }}>backend/envs/real*.env</code>
+        <div style={{ flex: 1, background: 'var(--bg1)', border: '1px solid var(--border2)', borderRadius: 4, padding: 30, textAlign: 'center', color: 'var(--dim)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          No bots registered. Run <code style={{ background: 'var(--bg2)', padding: '2px 6px', marginLeft: 6, borderRadius: 2, color: 'var(--amber)' }}>./orchestrator.sh discover</code>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: 14 }}>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: `repeat(${Math.min(bots.length, 4)}, 1fr)`, gridTemplateRows: `repeat(${Math.ceil(bots.length / Math.min(bots.length, 4))}, 1fr)`, gap: 8 }}>
           {bots.map(b => <BotCard key={b.id} bot={b} data={data[b.id]} onStart={startBot} onStop={stopBot} onDayClick={openDayModal} onWithdrawal={handleWithdrawal} onHistory={handleHistory} />)}
         </div>
       )}
-
-      <div style={{ marginTop: 24, padding: '8px 12px', background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 3, fontSize: 9, color: 'var(--dim)' }}>
-        <span style={{ color: 'var(--amber)' }}>Tip:</span> Auto-refresh setiap 5s · Click <span style={{ color: 'var(--blue)' }}>↗ OPEN</span> untuk detail · Click <span style={{ color: 'var(--green)' }}>calendar day</span> untuk lihat trade detail · Manage via <code style={{ color: 'var(--amber)' }}>./orchestrator.sh</code>
-      </div>
 
       {dayModal && (
         <DayTradesModal
