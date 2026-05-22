@@ -9,6 +9,7 @@
   --sans:'Inter',system-ui,-apple-system,sans-serif;
 }
 html,body,#root{height:100%;background:var(--bg);color:var(--white);font-family:var(--mono);font-size:10px;line-height:1.4;overflow:hidden}
+@media(max-width:768px){html,body,#root{height:auto;min-height:100%;overflow:visible;overflow-y:auto}}
 body{font-feature-settings:"tnum" 1,"calt" 0;letter-spacing:0}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:#000}

@@ -36,6 +36,17 @@ function applyTheme(name) {
   localStorage.setItem('polypox-theme', name)
 }
 
+// ─── RESPONSIVE HOOK ─────────────────────────────────────────
+function useIsMobile() {
+  const [mob, setMob] = useState(() => window.innerWidth < 768)
+  useEffect(() => {
+    const fn = () => setMob(window.innerWidth < 768)
+    window.addEventListener('resize', fn)
+    return () => window.removeEventListener('resize', fn)
+  }, [])
+  return mob
+}
+
 // ─── LATENCY HOOK ────────────────────────────────────────────
 function useLatency(backendPort) {
   const [lat, setLat] = useState({ be: null, bnb: null })
@@ -539,7 +550,7 @@ function InfoStrip({ backendPort, storage, gas, stats }) {
 
 const RANK_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32']  // gold, silver, bronze
 
-function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHistory, rank }) {
+function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHistory, rank, isMobile }) {
   const { stats, hist, gas, storage, health } = data || {}
   const withdrawals = stats?.withdrawal_history || []
   const mode    = stats?.mode || '—'
@@ -570,7 +581,8 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
     <div style={{
       background: `var(--bg1)`, border: `1px solid ${rankColor}44`,
       borderTop: `3px solid ${rankColor}`,
-      borderRadius: 4, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6, overflow: 'hidden',
+      borderRadius: 4, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6,
+      overflow: isMobile ? 'visible' : 'hidden',
       backgroundImage: rankBg !== 'transparent' ? `linear-gradient(180deg, ${rankBg} 0%, transparent 60%)` : 'none',
     }}>
       {/* Header row — bot id + mode + status + actions */}
@@ -878,6 +890,7 @@ function WithdrawalView({ bots, data, onBack }) {
 // ─── MAIN APP ────────────────────────────────────────────────
 export default function App() {
   const { bots, data } = useDashboard()
+  const isMobile = useIsMobile()
   const [now, setNow] = useState(new Date())
   const [dayModal, setDayModal] = useState(null) // { bot, date, trades, withdrawals }
   const [view, setView] = useState('dashboard') // 'dashboard' | 'withdrawal'
@@ -967,8 +980,11 @@ export default function App() {
     return <WithdrawalView bots={bots} data={data} onBack={() => setView('dashboard')} />
   }
 
+  const cols = isMobile ? Math.min(bots.length, 2) : Math.min(bots.length, 4)
+  const rows = Math.ceil(bots.length / cols)
+
   return (
-    <div style={{ height: '100vh', overflow: 'hidden', background: 'var(--bg)', padding: '8px 12px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ height: isMobile ? 'auto' : '100vh', minHeight: '100vh', overflow: isMobile ? 'visible' : 'hidden', background: 'var(--bg)', padding: isMobile ? '8px' : '8px 12px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 8 }}>
       {/* Header — compact single row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -1014,7 +1030,7 @@ export default function App() {
           No bots registered. Run <code style={{ background: 'var(--bg2)', padding: '2px 6px', marginLeft: 6, borderRadius: 2, color: 'var(--amber)' }}>./orchestrator.sh discover</code>
         </div>
       ) : (
-        <div style={{ flex: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: `repeat(${Math.min(bots.length, 4)}, 1fr)`, gridTemplateRows: `repeat(${Math.ceil(bots.length / Math.min(bots.length, 4))}, 1fr)`, gap: 8 }}>
+        <div style={{ flex: 1, overflow: isMobile ? 'visible' : 'hidden', display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: isMobile ? 'none' : `repeat(${rows}, 1fr)`, gap: 8, minHeight: isMobile ? 0 : undefined }}>
           {(() => {
             // Rank bots by total PnL descending (only alive bots ranked)
             const ranked = [...bots].sort((a, b) => {
@@ -1024,7 +1040,7 @@ export default function App() {
             })
             return bots.map(b => {
               const rank = data[b.id]?.health ? ranked.findIndex(r => r.id === b.id) : null
-              return <BotCard key={b.id} bot={b} data={data[b.id]} onStart={startBot} onStop={stopBot} onDayClick={openDayModal} onWithdrawal={handleWithdrawal} onHistory={handleHistory} rank={rank} />
+              return <BotCard key={b.id} bot={b} data={data[b.id]} onStart={startBot} onStop={stopBot} onDayClick={openDayModal} onWithdrawal={handleWithdrawal} onHistory={handleHistory} rank={rank} isMobile={isMobile} />
             })
           })()}
         </div>
