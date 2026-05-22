@@ -233,6 +233,14 @@ cmd_confirm() {
              | .locked = 0 \
              | .withdrawal_history += [$wd_entry]"
 
+    # Reset daily_loss in SQLite (so it doesn't reload on restart)
+    db_file="$DATA_DIR/$bot/trades.db"
+    if [ -f "$db_file" ]; then
+        today=$(date +"%Y-%m-%d")
+        sqlite3 "$db_file" "DELETE FROM daily_loss WHERE date='$today' AND bot_id='$bot'" 2>/dev/null || true
+        echo -e "${G}✓${X} reset daily_loss in database"
+    fi
+
     # Update env file
     env_file="backend/envs/${bot}.env"
     if [ -f "$env_file" ]; then
@@ -279,6 +287,83 @@ cmd_history() {
     echo ""
 }
 
+# ─── Sync: detect balance difference after manual REAL withdrawal ───
+cmd_sync() {
+    local bot=$1
+    local new_balance=""
+    local pol_balance=""
+
+    shift
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --balance=*) new_balance="${1#*=}" ;;
+            --pol=*) pol_balance="${1#*=}" ;;
+            *) echo -e "${R}✗ unknown flag: $1${X}"; return 1 ;;
+        esac
+        shift
+    done
+
+    if [ -z "$bot" ] || [ -z "$new_balance" ]; then
+        echo -e "${R}✗ usage: ./wd.sh sync <bot_id> --balance=AMOUNT [--pol=AMOUNT]${X}"
+        return 1
+    fi
+
+    if [ ! -d "$DATA_DIR/$bot" ]; then
+        echo -e "${R}✗ bot not found: $bot${X}"
+        return 1
+    fi
+
+    capital_before=$(get_state_value "$bot" "capital")
+    [ -z "$capital_before" ] && { echo -e "${R}✗ no state found for $bot${X}"; return 1; }
+
+    # Calculate withdrawal amount
+    withdrawn=$(echo "scale=2; $capital_before - $new_balance" | bc)
+
+    # Get bot mode
+    port=$((8000 + ${bot#real}))
+    if bot_is_running $port; then
+        mode=$(get_bot_mode $port)
+        echo -e "${Y}⚠ Bot $bot is still RUNNING. Stop it first:${X}"
+        echo -e "  ${D}./orchestrator.sh stop $bot${X}"
+        return 1
+    else
+        mode="—"
+    fi
+
+    capital_before_fmt=$(printf "%.2f" "$capital_before")
+    new_balance_fmt=$(printf "%.2f" "$new_balance")
+    withdrawn_fmt=$(printf "%.2f" "$withdrawn")
+
+    echo ""
+    echo -e "${B}BALANCE SYNC — $bot${X}"
+    echo -e "${B}────────────────────────────────────────────────────────────────${X}"
+    printf "  State capital (before): \$%s\n" "$capital_before_fmt"
+    printf "  Actual balance (after): \$%s\n" "$new_balance_fmt"
+    printf "  Withdrawn amount:       \$%s\n" "$withdrawn_fmt"
+    if [ -n "$pol_balance" ]; then
+        printf "  POL remaining:          %s\n" "$pol_balance"
+    fi
+    echo -e "${B}────────────────────────────────────────────────────────────────${X}"
+
+    # Validate withdrawal is positive
+    if (( $(echo "$withdrawn <= 0" | bc -l) )); then
+        echo -e "${R}✗ ERROR: Balance increased instead of decreased${X}"
+        echo -e "  ${D}Before: \$$capital_before_fmt, After: \$$new_balance_fmt${X}"
+        return 1
+    fi
+
+    echo ""
+    echo -e "${G}✓ Balance difference detected: \$$withdrawn_fmt withdrawn${X}"
+    echo ""
+    echo -e "${Y}NEXT STEP:${X} Confirm withdrawal to finalize"
+    if [ -n "$pol_balance" ]; then
+        echo -e "  ${D}./wd.sh confirm $bot real --usdc=$new_balance_fmt --pol=$pol_balance${X}"
+    else
+        echo -e "  ${D}./wd.sh confirm $bot real --usdc=$new_balance_fmt --pol=<remaining_pol>${X}"
+    fi
+    echo ""
+}
+
 # ─── Main dispatcher ───
 CMD="${1:-status}"
 
@@ -292,16 +377,20 @@ case "$CMD" in
     confirm)
         cmd_confirm "$2" "$3" "${@:4}"
         ;;
+    sync)
+        cmd_sync "$2" "${@:3}"
+        ;;
     history)
         cmd_history "$2"
         ;;
     *)
         echo "Usage:"
-        echo "  ./wd.sh status                                    # show all bots"
-        echo "  ./wd.sh suggest <bot_id> [percent]               # suggestion"
-        echo "  ./wd.sh confirm <bot_id> dry_run --amount=X      # DRY_RUN WD"
-        echo "  ./wd.sh confirm <bot_id> real --usdc=X --pol=Y   # REAL WD"
-        echo "  ./wd.sh history <bot_id>                          # show WD history"
+        echo "  ./wd.sh status                                      # show all bots"
+        echo "  ./wd.sh suggest <bot_id> [percent]                 # suggestion"
+        echo "  ./wd.sh confirm <bot_id> dry_run --amount=X        # DRY_RUN WD"
+        echo "  ./wd.sh confirm <bot_id> real --usdc=X --pol=Y     # REAL WD (after manual)"
+        echo "  ./wd.sh sync <bot_id> --balance=X [--pol=Y]        # detect balance diff (REAL)"
+        echo "  ./wd.sh history <bot_id>                            # show WD history"
         exit 1
         ;;
 esac
