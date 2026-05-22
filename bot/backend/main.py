@@ -2182,12 +2182,14 @@ def api_withdrawal_execute(bot_id: str, amount: float):
         if not wd_script.exists():
             return {"ok": False, "error": "wd.sh not found"}
         # Execute: ./wd.sh confirm {bot_id} dry_run --amount={amount}
+        # Pipe 'y' to confirm the withdrawal prompt
         result = subprocess.run(
             ["bash", str(wd_script), "confirm", bot_id, "dry_run", f"--amount={amount:.2f}"],
             cwd=str(bot_root),
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
+            input="y\n"  # Auto-confirm the withdrawal prompt
         )
         if result.returncode == 0:
             return {
