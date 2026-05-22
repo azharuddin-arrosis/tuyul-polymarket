@@ -55,9 +55,9 @@ update_state() {
 cmd_status() {
     echo ""
     echo -e "${B}WITHDRAWAL STATUS — All Bots${X}"
-    echo -e "${B}──────────────────────────────────────────────────────────────────${X}"
-    printf "  ${B}%-10s %-12s %-10s %-12s %-15s${X}\n" "BOT" "MODE" "STATUS" "CAPITAL" "WD READINESS"
-    echo -e "${B}──────────────────────────────────────────────────────────────────${X}"
+    echo -e "${B}═══════════════════════════════════════════════════════════════════${X}"
+    printf "  ${B}%-8s  %-10s  %-8s  %-10s  %-20s${X}\n" "BOT" "MODE" "STATUS" "CAPITAL" "WD STATUS"
+    echo -e "${B}───────────────────────────────────────────────────────────────────${X}"
 
     for bot_dir in "$DATA_DIR"/real*/; do
         bot=$(basename "$bot_dir")
@@ -72,30 +72,38 @@ cmd_status() {
 
         if bot_is_running $port; then
             mode=$(get_bot_mode $port)
-            status="${G}RUN${X}"
+            status_text="RUN"
+            status_color="$G"
         else
             mode="—"
-            status="${R}STOP${X}"
+            status_text="STOP"
+            status_color="$R"
         fi
 
         # Determine WD readiness
         if (( $(echo "$capital >= 100" | bc -l 2>/dev/null) )); then
             if [ "$mode" = "dry_run" ] || [ "$mode" = "DRY_RUN" ]; then
-                readiness="${G}✓ DRY${X}"
+                wd_text="✓ READY (DRY)"
+                wd_color="$G"
             elif [ "$mode" = "real" ] || [ "$mode" = "REAL" ]; then
-                readiness="${R}✓ REAL${X}"
+                wd_text="✓ READY (REAL)"
+                wd_color="$R"
             else
-                readiness="${G}✓ READY${X}"
+                wd_text="✓ READY"
+                wd_color="$G"
             fi
         else
             to_100=$(printf "%.2f" $(echo "100 - $capital" | bc -l))
-            readiness="${Y}⏳ +\$$to_100${X}"
+            wd_text="⏳ +\$$to_100 more"
+            wd_color="$Y"
         fi
 
-        printf "  %-10s %-12s %s \$%-11s %s\n" "$bot" "$mode" "$status" "$capital_fmt" "$readiness"
+        printf "  %-8s  %-10s  ${status_color}%-8s${X}  \$%-9s  ${wd_color}%s${X}\n" \
+            "$bot" "$mode" "$status_text" "$capital_fmt" "$wd_text"
     done
 
-    echo -e "${B}──────────────────────────────────────────────────────────────────${X}"
+    echo -e "${B}═══════════════════════════════════════════════════════════════════${X}"
+    echo -e "  ${D}Ready: ./wd.sh suggest <bot> [%] → ./wd.sh confirm ...${X}"
     echo ""
 }
 
