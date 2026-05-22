@@ -530,6 +530,38 @@ Frontend connect ke `/ws`. Saat connect, server kirim `init` dengan full state. 
 
 ---
 
+## VPS Deployment (6-Bot Production)
+
+**See `docs/VPS_DEPLOYMENT_GUIDE.md` for comprehensive 6-bot VPS setup guide.**
+
+### Quick Start
+1. **Env files:** Template files provided in `backend/envs/real*.env.template` (no secrets, ready to fill)
+2. **Auto-discovery:** `orchestrator.sh discover` scans `.env` files, falls back to `.template` if empty (allows dashboard to list all 6 bots before ENVs populated)
+3. **Security:** ENV files must have `600` permissions (owner-only), never commit to git
+4. **Auto-start:** Systemd service + cron health-check for 24/7 uptime
+5. **Monitoring:** Dashboard at port 3000 shows all bots status, logs per-bot
+
+### ENV File Strategy
+```bash
+# Store actual values ONLY on VPS, never in git
+/app/envs/real1.env        # actual secrets (600 perms)
+/app/envs/real1.env.template  # git-tracked template (no secrets)
+
+# Best practice: inject via CI/CD secrets, not manual file creation
+# GitHub Actions example in deployment guide
+```
+
+### Key Commands
+```bash
+./orchestrator.sh discover              # scan envs/ → generate bots.json
+./orchestrator.sh start all             # all 6 bots in background
+./orchestrator.sh start all real        # ⚠ REAL mode (requires Y confirmation)
+./orchestrator.sh status                # tabel BOT | M | ST | CAP | PNL | W/L | WD
+sudo systemctl restart polypox-bots     # restart via systemd (if deployed)
+```
+
+---
+
 ## Future Improvements (TODO)
 
 - **Phase 2 Dry-run soak test** — 24h dry_run dengan real1 creds, observe metrics

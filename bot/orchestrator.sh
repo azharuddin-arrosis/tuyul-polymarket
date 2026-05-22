@@ -26,11 +26,14 @@ DASHBOARD_PORT=3000
 DEFAULT_MODE="${ORCHESTRATOR_MODE:-dry_run}"   # override: ORCHESTRATOR_MODE=real
 MANIFEST="$BOT_ROOT/frontend-dashboard/public/bots.json"
 
-# ─── Discover: scan envs/real*.env ───────────────────────────
+# ─── Discover: scan envs/real*.env (or .template if no actual env) ────
 discover_bots() {
     local bots=()
+
+    # Method 1: from actual env files (if they exist)
     for f in backend/envs/real*.env; do
         [ -f "$f" ] || continue
+        [ -s "$f" ] || continue  # skip empty files
         local id=$(basename "$f" .env)
         local suffix=$(echo "$id" | grep -oE '[0-9]+$' || echo '')
         [ -z "$suffix" ] && suffix=99
@@ -38,6 +41,20 @@ discover_bots() {
         local fe_port=$((3000 + suffix))
         bots+=("$id:$be_port:$fe_port")
     done
+
+    # Method 2: if no actual envs exist, fall back to templates (for VPS initial setup)
+    if [ ${#bots[@]} -eq 0 ]; then
+        for f in backend/envs/real*.env.template; do
+            [ -f "$f" ] || continue
+            local id=$(basename "$f" .env.template)
+            local suffix=$(echo "$id" | grep -oE '[0-9]+$' || echo '')
+            [ -z "$suffix" ] && suffix=99
+            local be_port=$((8000 + suffix))
+            local fe_port=$((3000 + suffix))
+            bots+=("$id:$be_port:$fe_port")
+        done
+    fi
+
     echo "${bots[@]}"
 }
 

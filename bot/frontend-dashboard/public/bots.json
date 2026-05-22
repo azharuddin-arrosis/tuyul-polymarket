@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-22T08:38:56Z",
+  "generated_at": "2026-05-22T12:05:34Z",
   "dashboard_port": 3000,
   "bots": [
     { "id": "real1", "backend_port": 8001, "frontend_port": 3001 },
