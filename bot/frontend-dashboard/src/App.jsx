@@ -449,28 +449,41 @@ const td = { padding: '5px 10px', verticalAlign: 'middle' }
 
 // ─── BOT CARD ────────────────────────────────────────────────
 // ─── INFO STRIP — latency + gas + storage in one row ─────────
-function InfoStrip({ backendPort, storage, gas }) {
+function InfoStrip({ backendPort, storage, gas, stats }) {
   const lat = useLatency(backendPort)
   const ordersLeft = gas?.orders_left ?? null
   const polLeft    = gas?.pol_left ?? null
   const totalMb    = (storage?.data_mb ?? 0) + (storage?.db_mb ?? 0)
+  const open       = stats?.open_count ?? 0
+  const wins       = stats?.wins ?? 0
+  const losses     = stats?.losses ?? 0
 
   const latColor = (ms) => ms == null ? 'var(--dim2)' : ms < 150 ? 'var(--green)' : ms < 400 ? 'var(--amber)' : 'var(--red)'
   const gasColor = ordersLeft == null ? 'var(--dim)' : ordersLeft <= 3 ? 'var(--red)' : ordersLeft <= 10 ? 'var(--amber)' : 'var(--green)'
 
+  const Dot = ({ color }) => <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: color, marginRight: 2, verticalAlign: 'middle' }} />
+
   return (
-    <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 7, color: 'var(--dim)', flexShrink: 0, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 7, color: 'var(--dim)', flexShrink: 0, borderBottom: '1px solid var(--border)', paddingBottom: 5 }}>
       {/* Latency */}
-      <span>BE <span style={{ color: latColor(lat.be), fontWeight: 700 }}>{lat.be != null ? `${lat.be}ms` : '—'}</span></span>
-      <span>BNB <span style={{ color: latColor(lat.bnb), fontWeight: 700 }}>{lat.bnb != null ? `${lat.bnb}ms` : '—'}</span></span>
+      <span><Dot color={latColor(lat.be)} />BE <span style={{ color: latColor(lat.be), fontWeight: 700 }}>{lat.be != null ? `${lat.be}ms` : '—'}</span></span>
+      <span><Dot color={latColor(lat.bnb)} />BNB <span style={{ color: latColor(lat.bnb), fontWeight: 700 }}>{lat.bnb != null ? `${lat.bnb}ms` : '—'}</span></span>
+      {/* Separator */}
+      <span style={{ color: 'var(--border2)' }}>·</span>
+      {/* Orders */}
+      <span>OPEN <span style={{ color: open > 0 ? 'var(--amber)' : 'var(--dim2)', fontWeight: 700 }}>{open}</span></span>
+      <span style={{ color: 'var(--green)', fontWeight: 700 }}>W{wins}</span>
+      <span style={{ color: 'var(--red)', fontWeight: 700 }}>L{losses}</span>
+      {/* Separator */}
+      <span style={{ color: 'var(--border2)' }}>·</span>
       {/* Gas */}
       {ordersLeft != null && (
         <span>GAS <span style={{ color: gasColor, fontWeight: 700 }}>
-          {ordersLeft <= 3 ? '⚠ ' : ordersLeft <= 10 ? '! ' : ''}{ordersLeft} orders
+          {ordersLeft <= 3 ? '⚠' : ordersLeft <= 10 ? '!' : ''}{ordersLeft}
         </span></span>
       )}
       {polLeft != null && <span>POL <span style={{ color: polLeft < 0.5 ? 'var(--amber)' : 'var(--white)', fontWeight: 700 }}>{polLeft.toFixed(2)}</span></span>}
-      {/* Storage */}
+      {/* Storage — push to right */}
       {totalMb > 0 && <span style={{ marginLeft: 'auto', color: 'var(--dim2)' }}>{totalMb.toFixed(1)}MB</span>}
     </div>
   )
@@ -532,8 +545,8 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
         </div>
       </div>
 
-      {/* Info strip — latency + gas + storage */}
-      <InfoStrip backendPort={bot.backend_port} storage={storage} gas={gas} />
+      {/* Info strip — latency + orders + gas + storage */}
+      <InfoStrip backendPort={bot.backend_port} storage={storage} gas={gas} stats={stats} />
 
       {/* Stats grid — 4 cols */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, flexShrink: 0 }}>
