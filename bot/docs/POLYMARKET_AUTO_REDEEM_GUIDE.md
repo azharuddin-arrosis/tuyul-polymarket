@@ -1,66 +1,66 @@
-# Polymarket Auto-Redeem & Gasless Transactions Guide
+# Panduan Polymarket Auto-Redeem & Transaksi Tanpa Gas
 
-## Overview
+## Ringkasan
 
-Polymarket has introduced two major features for streamlined position management:
-1. **Auto-Redeem UI** — Users can enable automatic redemption of winnings
-2. **Builder Relayer Client** — Programmable zero-gas redemption for bots
+Polymarket baru saja meluncurkan dua fitur utama untuk mengelola posisi dengan lebih mudah:
+1. **Auto-Redeem UI** — Pengguna bisa mengaktifkan redemption otomatis untuk kemenangan
+2. **Builder Relayer Client** — Redemption terprogram dengan biaya gas NOL untuk bot
 
 ---
 
-## Part 1: Auto-Redeem UI Feature
+## Bagian 1: Fitur Auto-Redeem UI
 
-### What It Is
-Polymarket added an **Auto-Redeem setting** that automatically redeems winning tokens from resolved markets without manual intervention. Users can enable it from:
+### Apa Itu?
+Polymarket menambahkan setting **Auto-Redeem** yang otomatis menukar token pemenang dari pasar yang sudah resolved tanpa perlu tindakan manual. User bisa aktifkan dari:
 
 ```
 Settings → Trading → Auto-Redeem (toggle ON)
 ```
 
-### Benefits
-- **No manual claiming** — Winning positions redeem automatically when markets resolve
-- **Fewer transactions** — Single operation converts winning tokens → pUSD
-- **Better UX** — Set once, forget about it for 24/7 trading
+### Keuntungan
+- **Tidak perlu claim manual** — Posisi pemenang otomatis ditukar saat market resolved
+- **Lebih sedikit transaksi** — Satu operasi mengubah token → pUSD
+- **UX lebih baik** — Aktifkan sekali, lalu biarkan jalan 24/7
 
-### Current Limitations (From User Perspective)
-- UI-based only (no direct API endpoint yet)
-- Requires user to enable in Polymarket dashboard
-- No programmatic control from bot
+### Keterbatasan Saat Ini
+- Hanya via UI (belum ada API endpoint)
+- Butuh user aktifkan di dashboard Polymarket
+- Bot tidak bisa kontrol programmatically
 
 ---
 
-## Part 2: Builder Relayer Client (Gasless Redemption)
+## Bagian 2: Builder Relayer Client (Redemption Tanpa Gas)
 
-### The Problem
-Previously, our bot (and all Polymarket users) had to:
-1. Hold POL in their wallet to pay for gas
-2. Call `redeem_positions()` via smart contract directly
-3. Pay gas fees (typically 0.5-2 POL per redemption)
+### Masalahnya
+Sebelumnya, bot kami (dan semua pengguna Polymarket) harus:
+1. Simpan POL di wallet untuk bayar gas
+2. Panggil `redeem_positions()` langsung ke smart contract
+3. Bayar gas fee (biasanya 0.5-2 POL per redemption)
 
-**py-clob-client doesn't have a `redeem_positions()` method** — this is still a [requested feature](https://github.com/Polymarket/py-clob-client/issues/139) with 42+ upvotes but not yet implemented.
+**py-clob-client tidak punya method `redeem_positions()`** — ini masih menjadi [fitur yang diminta](https://github.com/Polymarket/py-clob-client/issues/139) dengan 42+ upvotes tapi belum diimplementasikan.
 
-### The Solution: Builder Relayer Client
+### Solusinya: Builder Relayer Client
 
-Polymarket provides the **Builder Relayer Client** which:
-- **Executes transactions with ZERO gas fees** (Polymarket pays the relayer)
-- **Requires only API credentials** (no POL needed in wallet)
-- **Handles smart contract calls** (redeem, approve, split, merge)
-- **Available in TypeScript + Python**
+Polymarket menyediakan **Builder Relayer Client** yang:
+- **Eksekusi transaksi dengan NOL biaya gas** (Polymarket bayar relayer)
+- **Hanya butuh API credentials** (tidak perlu POL di wallet)
+- **Handle smart contract calls** (redeem, approve, split, merge)
+- **Tersedia di TypeScript + Python**
 
-### How It Works
+### Cara Kerjanya
 
 ```
-Bot creates transaction
+Bot buat transaksi
     ↓
-Bot signs with private key
+Bot tanda-tangan dengan private key
     ↓
-Bot sends to Polymarket Relayer API
+Bot kirim ke Polymarket Relayer API
     ↓
-Relayer submits onchain (Polymarket pays gas)
+Relayer submit ke blockchain (Polymarket bayar gas)
     ↓
-Transaction executes from user's Safe wallet
+Transaksi eksekusi dari Safe wallet user
     ↓
-Winning tokens → pUSD (zero fees)
+Token pemenang → pUSD (nol biaya)
 ```
 
 ### Setup: Builder Relayer Client
@@ -70,28 +70,28 @@ Winning tokens → pUSD (zero fees)
 ```bash
 # Python
 pip install @polymarket/builder-relayer-client
-# or for Polygon
+# atau untuk Polygon
 pip install polymarket-py
 
 # TypeScript/Node
 npm install @polymarket/builder-relayer-client
 ```
 
-**2. Get API Credentials**
+**2. Dapatkan API Credentials**
 
-Go to [Polymarket Settings → API Keys](https://polymarket.com/settings?tab=builder) and create Builder API Key:
+Pergi ke [Polymarket Settings → API Keys](https://polymarket.com/settings?tab=builder) dan buat Builder API Key:
 - `RELAYER_API_KEY` — API key
-- `RELAYER_API_KEY_ADDRESS` — Address associated with key
+- `RELAYER_API_KEY_ADDRESS` — Alamat wallet yang terkait
 - `RELAYER_API_HOST` — `https://relayer-v2.polymarket.com/`
 
-Store in `.env`:
+Simpan di `.env`:
 ```bash
 RELAYER_API_KEY=your_key
 RELAYER_API_KEY_ADDRESS=0x...
 RELAYER_API_HOST=https://relayer-v2.polymarket.com/
 ```
 
-**3. Initialize Client**
+**3. Inisialisasi Client**
 
 ```typescript
 import { RelayClient } from "@polymarket/builder-relayer-client";
@@ -99,16 +99,16 @@ import { RelayClient } from "@polymarket/builder-relayer-client";
 const client = new RelayClient({
   host: process.env.RELAYER_API_HOST,
   chain: 137,  // Polygon
-  signer: userWallet,  // ethers.js Signer or equivalent
+  signer: userWallet,  // ethers.js Signer atau equivalent
   relayerApiKey: process.env.RELAYER_API_KEY,
   relayerApiKeyAddress: process.env.RELAYER_API_KEY_ADDRESS,
 });
 ```
 
-**4. Redeem Positions**
+**4. Redeem Posisi**
 
 ```typescript
-// Build redeem transaction
+// Buat transaksi redeem
 const redeemTx = {
   to: CTF_ADDRESS,  // Conditional Token Framework contract
   data: encodeFunctionData({
@@ -116,61 +116,61 @@ const redeemTx = {
     functionName: "redeemPositions",
     args: [
       collateralToken,  // USDC
-      parentCollectionId,  // 0 for most cases
-      conditionId,  // hex string from Polymarket
-      indexSets,  // [1] for YES or [2] for NO (or both)
+      parentCollectionId,  // 0 untuk kebanyakan kasus
+      conditionId,  // hex string dari Polymarket
+      indexSets,  // [1] untuk YES atau [2] untuk NO (atau keduanya)
     ],
   }),
   value: "0",
 };
 
-// Execute via relayer (zero gas)
-const response = await client.execute([redeemTx], "Redeem winning positions");
+// Eksekusi via relayer (nol gas)
+const response = await client.execute([redeemTx], "Redeem kemenangan");
 await response.wait();
 ```
 
 ---
 
-## Part 3: Implications for Our Bot
+## Bagian 3: Implikasi untuk Bot Kami
 
-### Current Implementation
-Our backend (`backend/main.py`) has:
+### Implementasi Saat Ini
+Backend kami (`backend/main.py`) sekarang punya:
 ```python
 async def redeem_winning_positions():
-    """Real mode only: poll for resolved markets and claim winnings"""
-    # Currently: uses py-clob-client (limited)
-    # Manually calls client.redeem_positions() if available
+    """Real mode saja: polling market resolved dan claim kemenangan"""
+    # Saat ini: pakai py-clob-client (terbatas)
+    # Manual panggil client.redeem_positions() jika tersedia
 ```
 
-**Current status:** We're already calling `redeem_positions()` via py-clob-client, but this may not work for all Polygon-based Safe wallets.
+**Status saat ini:** Sudah coba panggil `redeem_positions()` via py-clob-client, tapi mungkin tidak semua Safe wallet di Polygon support.
 
-### Recommended Upgrade Path
+### Jalur Upgrade yang Direkomendasikan
 
-**Option A: Add Builder Relayer Client (Recommended)**
+**Opsi A: Tambah Builder Relayer Client (DIREKOMENDASIKAN)**
 
-Benefits:
-- Zero gas fees (no POL needed)
-- Works reliably with Polygon Safe wallets
-- Direct smart contract call control
-- Future-proof for scale
+Keuntungan:
+- Nol biaya gas (tidak perlu POL)
+- Jalan reliable dengan Safe wallet Polygon
+- Kontrol smart contract call langsung
+- Future-proof untuk skala besar
 
-Implementation:
+Implementasi:
 ```python
 import asyncio
 from polymarket_py import RelayClient
 
 async def redeem_winning_positions_gasless():
-    """Redeem via Builder Relayer (zero gas)"""
+    """Redeem via Builder Relayer (nol gas)"""
     client = RelayClient(
         host=os.getenv("RELAYER_API_HOST"),
-        signer=wallet,  # ethers-like signer
+        signer=wallet,  # signer tipe ethers
         relayer_api_key=os.getenv("RELAYER_API_KEY"),
     )
     
-    # Find all resolved positions
+    # Cari semua posisi yang resolved
     for pos in S.positions:
         if pos["status"] == "resolved" and pos.get("won"):
-            # Build redeem call
+            # Buat redeem call
             tx = {
                 "to": CTF_ADDRESS,
                 "data": encode_redeem_call(
@@ -179,48 +179,48 @@ async def redeem_winning_positions_gasless():
                 )
             }
             
-            # Execute via relayer
+            # Eksekusi via relayer
             response = await client.execute([tx], f"Redeem {pos['id']}")
             await response.wait()
             
             add_log("REDEEM_SUCCESS", {"position_id": pos["id"], "gas_cost": "0"})
 ```
 
-**Option B: Stay with py-clob-client (Current)**
+**Opsi B: Tetap Pakai py-clob-client (Saat Ini)**
 
-- Simpler (minimal code changes)
-- Still requires POL for gas
-- May fail for Safe multisig wallets
-- Limited as py-clob-client doesn't officially support it
+- Lebih simpel (minimal perubahan kode)
+- Masih perlu POL untuk gas
+- Bisa fail untuk Safe multisig wallet
+- Terbatas karena py-clob-client tidak officially support
 
-### Cost Comparison
+### Perbandingan Biaya
 
-| Method | Gas Cost | Frequency | Monthly Cost |
+| Metode | Biaya Gas | Frekuensi | Biaya Bulanan |
 |---|---|---|---|
-| Direct contract calls | ~0.5-2 POL per tx | 1-5 per day | $60-600 (POL fluctuates) |
-| Builder Relayer | **$0** | 1-5 per day | **$0** |
-| UI Manual claim | Variable | Manual | Unpredictable |
+| Direct contract calls | ~0.5-2 POL per tx | 1-5 per hari | $60-600 (POL naik turun) |
+| Builder Relayer | **$0** | 1-5 per hari | **$0** |
+| UI Manual claim | Variabel | Manual | Tidak pasti |
 
-**At scale (6 bots):** Relayer saves ~$300-3600/month in gas fees.
-
----
-
-## Part 4: Integration Checklist
-
-To upgrade our bot for auto-redemption with Builder Relayer:
-
-- [ ] Install `polymarket-py` or TypeScript `@polymarket/builder-relayer-client`
-- [ ] Add RELAYER_API_KEY, RELAYER_API_KEY_ADDRESS to bot env files
-- [ ] Implement `redeem_winning_positions_gasless()` in `main.py`
-- [ ] Replace existing `redeem_winning_positions()` logic
-- [ ] Test on dry_run mode (mock relayer responses)
-- [ ] Test on real mode with small capital ($10-50)
-- [ ] Monitor redemption logs for success/failures
-- [ ] Set up cron alert if redemptions fail 3+ times
+**Skala besar (6 bots):** Relayer hemat ~$300-3600/bulan biaya gas.
 
 ---
 
-## Part 5: Resources
+## Bagian 4: Checklist Integrasi
+
+Untuk upgrade bot kami dengan auto-redemption via Builder Relayer:
+
+- [ ] Install `polymarket-py` atau TypeScript `@polymarket/builder-relayer-client`
+- [ ] Tambah RELAYER_API_KEY, RELAYER_API_KEY_ADDRESS ke env file bot
+- [ ] Implementasi `redeem_winning_positions_gasless()` di `main.py`
+- [ ] Ganti logika `redeem_winning_positions()` yang lama
+- [ ] Test di dry_run mode (mock relayer responses)
+- [ ] Test di real mode dengan modal kecil ($10-50)
+- [ ] Monitor log redemption untuk success/failure
+- [ ] Setup cron alert jika redemption gagal 3+ kali
+
+---
+
+## Bagian 5: Referensi
 
 | Resource | Link |
 |---|---|
@@ -233,20 +233,20 @@ To upgrade our bot for auto-redemption with Builder Relayer:
 
 ---
 
-## Next Decision
+## Keputusan Selanjutnya
 
-**Should we integrate Builder Relayer Client into our bot?**
+**Apakah kita integrate Builder Relayer Client ke bot kami?**
 
-**Pros:**
-- ✅ Zero gas fees (major cost saving at scale)
-- ✅ Works with all wallet types (EOA + Safe multisig)
-- ✅ More reliable than current approach
-- ✅ Future-proof for 6-bot VPS deployment
+**Keuntungan:**
+- ✅ Nol biaya gas (hemat besar di skala)
+- ✅ Support semua tipe wallet (EOA + Safe multisig)
+- ✅ Lebih reliable dari cara sekarang
+- ✅ Future-proof untuk 6-bot VPS
 
-**Cons:**
-- ❌ Requires additional API credentials setup
-- ❌ New dependency (slight complexity increase)
-- ❌ Need to test integration
+**Kekurangan:**
+- ❌ Butuh setup API credentials tambahan
+- ❌ Dependency baru (slight complexity increase)
+- ❌ Perlu test integrasi
 
-**Recommendation:** **YES** — integrate for VPS deployment phase to ensure reliable, cost-efficient redemptions at scale.
+**Rekomendasi:** **YA** — integrate saat phase VPS deployment biar redemption reliable dan cost-efficient di skala besar.
 
