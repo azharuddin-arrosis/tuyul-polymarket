@@ -12,7 +12,7 @@ Persist: SQLite + per-bot state.json
 Circuit breakers: balance floor, daily loss limit (persistent), per-trade stop-loss 30%
 Balance: auto-fetch USDC via CLOB API + POL via Polygon RPC, refresh every 5 min
 """
-import asyncio, json, os, random, time, sqlite3, threading, math
+import asyncio, json, os, random, time, sqlite3, threading, math, subprocess
 from datetime import datetime, timezone, date, timedelta
 from pathlib import Path
 from typing import Optional
@@ -2169,6 +2169,41 @@ def api_db_summary(): return db_summary()
 
 @app.get("/api/db/trades")
 def api_db_trades(bot_id: str = "", limit: int = 200): return db_trades(bot_id, limit)
+
+@app.post("/api/withdrawal/execute")
+def api_withdrawal_execute(bot_id: str, amount: float):
+    """Execute withdrawal via ./wd.sh — DRY_RUN only"""
+    try:
+        if not bot_id or amount <= 0:
+            return {"ok": False, "error": "Invalid bot_id or amount"}
+        # Get bot root directory (parent of backend/)
+        bot_root = Path(__file__).parent.parent
+        wd_script = bot_root / "wd.sh"
+        if not wd_script.exists():
+            return {"ok": False, "error": "wd.sh not found"}
+        # Execute: ./wd.sh confirm {bot_id} dry_run --amount={amount}
+        result = subprocess.run(
+            ["bash", str(wd_script), "confirm", bot_id, "dry_run", f"--amount={amount:.2f}"],
+            cwd=str(bot_root),
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if result.returncode == 0:
+            return {
+                "ok": True,
+                "bot_id": bot_id,
+                "amount": amount,
+                "output": result.stdout,
+            }
+        else:
+            return {
+                "ok": False,
+                "error": result.stderr or "Withdrawal failed",
+                "bot_id": bot_id,
+            }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):

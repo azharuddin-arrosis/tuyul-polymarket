@@ -484,6 +484,8 @@ const btnStyle = (c) => ({
 // ─── WITHDRAWAL VIEW ─────────────────────────────────────────
 function WithdrawalView({ bots, data, onBack }) {
   const [wdModal, setWdModal] = useState(null) // { botId, capital, mode, percent }
+  const [wdLoading, setWdLoading] = useState(false)
+  const [wdResult, setWdResult] = useState(null) // { ok, message, error }
 
   const ready = bots.filter(b => {
     const s = data[b.id]?.stats
@@ -535,7 +537,7 @@ function WithdrawalView({ bots, data, onBack }) {
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <button
-                        onClick={() => setWdModal({ botId: b.id, capital: s.capital, mode, percent: 50 })}
+                        onClick={() => setWdModal({ botId: b.id, capital: s.capital, mode, percent: 50, backendPort: b.backend_port })}
                         style={{
                           fontFamily: 'var(--mono)', fontSize: 8, padding: '4px 10px',
                           background: 'var(--green)', color: 'var(--bg)', border: 'none', borderRadius: 2,
@@ -634,24 +636,52 @@ function WithdrawalView({ bots, data, onBack }) {
               </div>
             </div>
 
+            {wdResult && (
+              <div style={{
+                background: wdResult.ok ? 'var(--green)' : 'var(--red)', borderRadius: 2, padding: 10,
+                marginBottom: 14, fontSize: 9, color: 'var(--white)', fontFamily: 'var(--mono)',
+              }}>
+                {wdResult.ok ? '✓ Withdrawal successful!' : `✗ ${wdResult.error}`}
+              </div>
+            )}
+
             <div style={{ background: 'var(--bg2)', border: '1px solid var(--amber)', borderRadius: 2, padding: 10, marginBottom: 14 }}>
-              <div style={{ fontSize: 8, color: 'var(--amber)', marginBottom: 6, fontFamily: 'var(--mono)' }}>COMMAND:</div>
+              <div style={{ fontSize: 8, color: 'var(--amber)', marginBottom: 6, fontFamily: 'var(--mono)' }}>EXECUTING:</div>
               <div style={{ fontSize: 8, color: 'var(--white)', fontFamily: 'var(--mono)', wordBreak: 'break-all', lineHeight: 1.4 }}>
                 ./wd.sh confirm <span style={{ color: 'var(--green)' }}>{wdModal.botId}</span> <span style={{ color: 'var(--amber)' }}>dry_run</span> --amount=<span style={{ color: 'var(--cyan)' }}>{(wdModal.capital * wdModal.percent / 100).toFixed(2)}</span>
               </div>
               <button
-                onClick={() => {
-                  const cmd = `./wd.sh confirm ${wdModal.botId} dry_run --amount=${(wdModal.capital * wdModal.percent / 100).toFixed(2)}`
-                  navigator.clipboard.writeText(cmd)
-                  alert('Command copied to clipboard!')
+                onClick={async () => {
+                  setWdLoading(true)
+                  setWdResult(null)
+                  try {
+                    const amount = (wdModal.capital * wdModal.percent / 100).toFixed(2)
+                    const url = `http://localhost:${wdModal.backendPort}/api/withdrawal/execute?bot_id=${wdModal.botId}&amount=${amount}`
+                    const response = await fetch(url, { method: 'POST' })
+                    const result = await response.json()
+                    if (result.ok) {
+                      setWdResult({ ok: true, message: `${wdModal.botId}: $${amount} withdrawn` })
+                      setTimeout(() => {
+                        setWdModal(null)
+                        setWdResult(null)
+                      }, 2000)
+                    } else {
+                      setWdResult({ ok: false, error: result.error || 'Unknown error' })
+                    }
+                  } catch (e) {
+                    setWdResult({ ok: false, error: e.message })
+                  }
+                  setWdLoading(false)
                 }}
+                disabled={wdLoading}
                 style={{
-                  marginTop: 8, fontFamily: 'var(--mono)', fontSize: 7, padding: '3px 8px',
-                  background: 'var(--amber)', color: 'var(--bg)', border: 'none', borderRadius: 2,
-                  cursor: 'pointer', fontWeight: 700,
+                  marginTop: 8, fontFamily: 'var(--mono)', fontSize: 8, padding: '6px 12px',
+                  background: wdLoading ? 'var(--dim)' : 'var(--green)', color: 'var(--bg)',
+                  border: 'none', borderRadius: 2, cursor: wdLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
                 }}
               >
-                COPY COMMAND
+                {wdLoading ? 'EXECUTING...' : 'EXECUTE WITHDRAWAL'}
               </button>
             </div>
 
