@@ -185,10 +185,12 @@ function CompactCalendar({ hist, withdrawals, onDayClick }) {
           const key = dateKey(day)
           const d = dayMap[key]
           const isToday = key === localDateKey(today)
+          const isFuture = key > localDateKey(today)
+          const isPast = !isToday && !isFuture
           const netPnl = d ? round2(d.pnl - d.wd) : 0
-          const { bg, border: bColor, cl } = d && (d.trades > 0 || d.wd > 0) ? tierStyle(netPnl) : { bg: 'var(--bg2)', border: 'var(--border)', cl: 'var(--dim2)' }
+          const { bg, border: bColor, cl } = d && (d.trades > 0 || d.wd > 0) ? tierStyle(netPnl) : { bg: isFuture ? 'transparent' : 'var(--bg2)', border: isFuture ? 'var(--border)' : 'var(--border)', cl: 'var(--dim2)' }
           const badge = badgeMap[key]
-          const clickable = d && onDayClick
+          const clickable = d && onDayClick && !isFuture
           const isGold = netPnl > 10
           const tooltip = d ? `${key}: ${sgnUsd(d.pnl)}${d.wd > 0 ? ` − $${d.wd.toFixed(2)} WD = ${sgnUsd(netPnl)}` : ''} · ${d.wins}W/${d.losses}L · click for detail` : key
           return (
@@ -198,15 +200,16 @@ function CompactCalendar({ hist, withdrawals, onDayClick }) {
                  onMouseLeave={clickable ? (e) => { e.currentTarget.style.filter = '' } : undefined}
                  style={{
                    aspectRatio: '1', borderRadius: 2, background: bg, minHeight: 0,
-                   border: `1px solid ${isToday ? 'var(--amber)' : bColor}`,
+                   border: `1px solid ${isToday ? 'var(--amber)' : isFuture ? 'var(--border)' : bColor}`,
                    boxShadow: isGold ? '0 0 6px rgba(255,215,0,0.4)' : 'none',
+                   opacity: isFuture ? 0.3 : 1,
                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                    padding: 1, cursor: clickable ? 'pointer' : 'default', transition: 'filter 0.1s',
                    position: 'relative', overflow: 'hidden',
                  }}>
               {/* Badge top-right */}
               {badge && <span style={{ position: 'absolute', top: 0, right: 1, fontSize: 7, lineHeight: 1, userSelect: 'none' }}>{badge}</span>}
-              <span style={{ fontSize: 8, color: isToday ? 'var(--amber)' : 'var(--white)', fontWeight: isToday ? 700 : 400 }}>{day}</span>
+              <span style={{ fontSize: 8, color: isToday ? 'var(--amber)' : isFuture ? 'var(--dim2)' : 'var(--white)', fontWeight: isToday ? 700 : 400 }}>{day}</span>
               {d && d.trades > 0 && <span style={{ fontSize: 7, color: cl, fontWeight: 700 }}>{netPnl >= 0 ? '+' : ''}{netPnl.toFixed(1)}</span>}
               {d && d.wd > 0 && !d.trades && <span style={{ fontSize: 6, color: 'var(--amber)' }}>WD</span>}
             </div>
@@ -495,6 +498,7 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
   const { stats, hist, gas, storage, health } = data || {}
   const withdrawals = stats?.withdrawal_history || []
   const mode    = stats?.mode || '—'
+  const botName = stats?.bot_name || bot.id
   const running = stats?.running
   const equity  = stats?.capital ?? 0
   const pnl     = stats?.pnl ?? 0
@@ -525,7 +529,8 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         {/* Left: id + mode badge + status dot */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--white)', letterSpacing: '.04em' }}>{bot.id}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--white)', letterSpacing: '.04em' }}>{botName}</span>
+          {botName !== bot.id && <span style={{ fontSize: 7, color: 'var(--dim)', letterSpacing: '.04em' }}>{bot.id}</span>}
           <span style={{ fontSize: 7, padding: '1px 5px', background: `${modeColor}22`, color: modeColor, border: `1px solid ${modeColor}44`, borderRadius: 2, fontWeight: 700, letterSpacing: '.06em' }}>{mode}</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: statusColor, boxShadow: `0 0 4px ${statusColor}`, animation: running ? 'pulse 2s infinite' : 'none', flexShrink: 0 }} />

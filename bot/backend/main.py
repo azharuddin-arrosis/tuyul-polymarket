@@ -42,6 +42,7 @@ _lock    = asyncio.Lock()
 _db_lock = threading.Lock()
 
 BOT_ID     = os.getenv("BOT_ID", "bot1")
+BOT_NAME   = os.getenv("BOT_NAME", BOT_ID)         # display name, fallback to BOT_ID
 MODE       = os.getenv("BOT_MODE", "sim")          # sim | dry_run | real — runtime-mutable
 VALID_MODES = ("sim", "dry_run", "real")
 DATA_DIR   = Path(os.getenv("DATA_DIR", "/app/data"))
@@ -2014,6 +2015,7 @@ def get_stats():
     sal   = S.salary_events[-1] if S.salary_events else {}
     return {
         "bot_id":          BOT_ID,
+        "bot_name":        BOT_NAME,
         "mode":            S.mode.upper(),
         "mode_raw":        S.mode,
         "credentials_ready": bool(C.poly_private_key and C.poly_api_key),
