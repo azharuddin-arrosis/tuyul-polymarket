@@ -134,6 +134,32 @@ function CompactCalendar({ hist, withdrawals, onDayClick }) {
   const mTrades = mEntries.reduce((s, [, v]) => s + v.trades, 0)
   const mWins   = mEntries.reduce((s, [, v]) => s + v.wins, 0)
 
+  // Top 3 profit days this month (by net PnL, positive only)
+  const top3 = mEntries
+    .map(([k, v]) => ({ key: k, net: round2(v.pnl - v.wd) }))
+    .filter(x => x.net > 0)
+    .sort((a, b) => b.net - a.net)
+    .slice(0, 3)
+    .map((x, i) => ({ ...x, badge: ['🥇','🥈','🥉'][i] }))
+  const badgeMap = Object.fromEntries(top3.map(x => [x.key, x.badge]))
+
+  // Absolute tier color helper
+  const tierStyle = (netPnl) => {
+    const abs = Math.abs(netPnl)
+    if (netPnl > 0) {
+      if (abs > 10) return { bg: 'rgba(255,215,0,0.22)', border: 'rgba(255,215,0,0.80)', cl: '#FFD700' }
+      if (abs > 3)  return { bg: 'rgba(31,217,122,0.35)', border: 'rgba(31,217,122,0.80)', cl: 'var(--green)' }
+      if (abs > 1)  return { bg: 'rgba(31,217,122,0.20)', border: 'rgba(31,217,122,0.55)', cl: 'var(--green)' }
+                    return { bg: 'rgba(31,217,122,0.09)', border: 'rgba(31,217,122,0.28)', cl: 'var(--green)' }
+    } else if (netPnl < 0) {
+      if (abs > 10) return { bg: 'rgba(120,0,30,0.55)',   border: 'rgba(240,64,96,0.90)',  cl: 'var(--red)' }
+      if (abs > 3)  return { bg: 'rgba(240,64,96,0.30)',  border: 'rgba(240,64,96,0.75)',  cl: 'var(--red)' }
+      if (abs > 1)  return { bg: 'rgba(240,64,96,0.16)',  border: 'rgba(240,64,96,0.50)',  cl: 'var(--red)' }
+                    return { bg: 'rgba(240,64,96,0.07)',  border: 'rgba(240,64,96,0.25)',  cl: 'var(--red)' }
+    }
+    return { bg: 'var(--bg2)', border: 'var(--border)', cl: 'var(--dim2)' }
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -160,25 +186,29 @@ function CompactCalendar({ hist, withdrawals, onDayClick }) {
           const d = dayMap[key]
           const isToday = key === localDateKey(today)
           const netPnl = d ? round2(d.pnl - d.wd) : 0
-          let bg = 'var(--bg2)', borderColor = 'var(--border)', cl = 'var(--dim2)'
-          if (d && (d.pnl !== 0 || d.wd !== 0)) {
-            const intensity = Math.min(0.85, 0.20 + (Math.abs(netPnl) / maxAbs) * 0.65)
-            if (netPnl > 0) { bg = `rgba(31,217,122,${intensity*0.30})`; borderColor = `rgba(31,217,122,${intensity*0.65})`; cl = 'var(--green)' }
-            else if (netPnl < 0) { bg = `rgba(240,64,96,${intensity*0.30})`; borderColor = `rgba(240,64,96,${intensity*0.65})`; cl = 'var(--red)' }
-            else cl = 'var(--dim)'
-          }
+          const { bg, border: bColor, cl } = d && (d.trades > 0 || d.wd > 0) ? tierStyle(netPnl) : { bg: 'var(--bg2)', border: 'var(--border)', cl: 'var(--dim2)' }
+          const badge = badgeMap[key]
           const clickable = d && onDayClick
-          const tooltip = d ? `${key}: ${sgnUsd(d.pnl)}${d.wd > 0 ? ` − ${d.wd.toFixed(1)} WD = ${sgnUsd(netPnl)}` : ''} (${d.wins}W/${d.losses}L) — click for detail` : key
+          const isGold = netPnl > 10
+          const tooltip = d ? `${key}: ${sgnUsd(d.pnl)}${d.wd > 0 ? ` − $${d.wd.toFixed(2)} WD = ${sgnUsd(netPnl)}` : ''} · ${d.wins}W/${d.losses}L · click for detail` : key
           return (
             <div key={key} title={tooltip}
                  onClick={clickable ? () => onDayClick(key) : undefined}
-                 onMouseEnter={clickable ? (e) => { e.currentTarget.style.filter = 'brightness(1.3)' } : undefined}
+                 onMouseEnter={clickable ? (e) => { e.currentTarget.style.filter = 'brightness(1.25)' } : undefined}
                  onMouseLeave={clickable ? (e) => { e.currentTarget.style.filter = '' } : undefined}
-                 style={{ aspectRatio: '1', border: `1px solid ${isToday ? 'var(--amber)' : borderColor}`, borderRadius: 2, background: bg,
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 1,
-                          cursor: clickable ? 'pointer' : 'default', transition: 'filter 0.1s', minHeight: 0 }}>
+                 style={{
+                   aspectRatio: '1', borderRadius: 2, background: bg, minHeight: 0,
+                   border: `1px solid ${isToday ? 'var(--amber)' : bColor}`,
+                   boxShadow: isGold ? '0 0 6px rgba(255,215,0,0.4)' : 'none',
+                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                   padding: 1, cursor: clickable ? 'pointer' : 'default', transition: 'filter 0.1s',
+                   position: 'relative', overflow: 'hidden',
+                 }}>
+              {/* Badge top-right */}
+              {badge && <span style={{ position: 'absolute', top: 0, right: 1, fontSize: 7, lineHeight: 1, userSelect: 'none' }}>{badge}</span>}
               <span style={{ fontSize: 8, color: isToday ? 'var(--amber)' : 'var(--white)', fontWeight: isToday ? 700 : 400 }}>{day}</span>
-              {d && <span style={{ fontSize: 7, color: cl, fontWeight: 700 }}>{netPnl >= 0 ? '+' : '-'}{Math.abs(netPnl).toFixed(1)}</span>}
+              {d && d.trades > 0 && <span style={{ fontSize: 7, color: cl, fontWeight: 700 }}>{netPnl >= 0 ? '+' : ''}{netPnl.toFixed(1)}</span>}
+              {d && d.wd > 0 && !d.trades && <span style={{ fontSize: 6, color: 'var(--amber)' }}>WD</span>}
             </div>
           )
         })}
