@@ -481,16 +481,132 @@ const btnStyle = (c) => ({
   borderRadius: 2, cursor: 'pointer', fontWeight: 700, letterSpacing: '.07em',
 })
 
+// ─── WITHDRAWAL VIEW ─────────────────────────────────────────
+function WithdrawalView({ bots, data, onBack }) {
+  const ready = bots.filter(b => {
+    const s = data[b.id]?.stats
+    return s && s.capital >= 100
+  })
+  const waiting = bots.filter(b => {
+    const s = data[b.id]?.stats
+    return s && s.capital < 100
+  })
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg0)', padding: '14px' }}>
+      <button
+        onClick={onBack}
+        style={{
+          marginBottom: 14, fontFamily: 'var(--mono)', fontSize: 9, padding: '6px 12px',
+          background: 'var(--border)', color: 'var(--white)', border: 'none', borderRadius: 2,
+          cursor: 'pointer', fontWeight: 700, letterSpacing: '.07em',
+        }}
+      >
+        ← Back to Dashboard
+      </button>
+
+      <div style={{ maxWidth: 1000 }}>
+        {/* Ready for WD */}
+        {ready.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)', marginBottom: 10, letterSpacing: '.08em' }}>
+              ✓ READY FOR WITHDRAWAL
+            </h2>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {ready.map(b => {
+                const s = data[b.id]?.stats
+                const cap = usd(s.capital)
+                const mode = s.mode_raw === 'dry_run' ? 'DRY' : s.mode_raw === 'real' ? 'REAL' : '?'
+                return (
+                  <div key={b.id} style={{
+                    background: 'var(--bg1)', border: '1px solid var(--green)', borderLeft: '3px solid var(--green)',
+                    borderRadius: 3, padding: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  }}>
+                    <div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--white)' }}>{b.id}</span>
+                      <span style={{ marginLeft: 8, fontSize: 9, color: mode === 'DRY' ? 'var(--amber)' : 'var(--red)', fontWeight: 600 }}>
+                        [{mode}]
+                      </span>
+                      <span style={{ marginLeft: 12, fontSize: 10, color: 'var(--green)', fontWeight: 700 }}>
+                        {cap} available
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 8, color: 'var(--dim)', fontFamily: 'var(--mono)' }}>
+                      ./wd.sh suggest {b.id} 50
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Waiting */}
+        {waiting.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--amber)', marginBottom: 10, letterSpacing: '.08em' }}>
+              ⏳ WAITING ({waiting.length})
+            </h2>
+            <div style={{ display: 'grid', gap: 6 }}>
+              {waiting.map(b => {
+                const s = data[b.id]?.stats
+                const cap = usd(s.capital)
+                const need = usd(100 - s.capital)
+                return (
+                  <div key={b.id} style={{
+                    background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 2,
+                    padding: 8, display: 'flex', justifyContent: 'space-between', fontSize: 9,
+                  }}>
+                    <span style={{ fontWeight: 600 }}>{b.id}: {cap}</span>
+                    <span style={{ color: 'var(--dim)' }}>need +{need} → $100</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Commands */}
+        <div style={{ marginTop: 30, background: 'var(--bg1)', border: '1px solid var(--border2)', borderRadius: 3, padding: 12 }}>
+          <h3 style={{ fontSize: 10, fontWeight: 700, color: 'var(--blue)', marginBottom: 8, letterSpacing: '.07em' }}>
+            QUICK COMMANDS
+          </h3>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--dim2)', lineHeight: 1.6 }}>
+            <div><span style={{ color: 'var(--blue)' }}>DRY_RUN:</span> <code>./wd.sh confirm {'{'}bot{'}'} dry_run --amount=X</code></div>
+            <div><span style={{ color: 'var(--red)' }}>REAL:</span> <code>./wd.sh sync {'{'}bot{'}'} --balance=X --pol=Y</code></div>
+            <div style={{ marginTop: 6, color: 'var(--dim)' }}><span style={{ color: 'var(--amber)' }}>Status:</span> <code>./wd.sh status</code> (terminal)</div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ marginTop: 20, fontSize: 8, color: 'var(--dim)', textAlign: 'center', paddingBottom: 20 }}>
+          Run commands in <code style={{ background: 'var(--bg2)', padding: '2px 5px', borderRadius: 1, color: 'var(--amber)' }}>
+            bot/
+          </code> directory · Use <code style={{ background: 'var(--bg2)', padding: '2px 5px', borderRadius: 1, color: 'var(--amber)' }}>
+            ./wd.sh --help
+          </code> for details
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── MAIN APP ────────────────────────────────────────────────
 export default function App() {
   const { bots, data } = useDashboard()
   const [now, setNow] = useState(new Date())
   const [dayModal, setDayModal] = useState(null) // { bot, date, trades }
+  const [view, setView] = useState('dashboard') // 'dashboard' | 'withdrawal'
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id) }, [])
 
   const openDayModal = (bot, dateKey, hist) => {
     const trades = (hist || []).filter(t => t.opened_at && localDateKey(t.opened_at) === dateKey)
     setDayModal({ bot, date: dateKey, trades })
+  }
+
+  // If withdrawal view is active, show it instead
+  if (view === 'withdrawal') {
+    return <WithdrawalView bots={bots} data={data} onBack={() => setView('dashboard')} />
   }
 
   const startBot = async (bot) => {
@@ -551,13 +667,41 @@ export default function App() {
           </div>
         </div>
 
-        {/* Aggregate summary */}
-        <div style={{ display: 'flex', gap: 14, fontFamily: 'var(--mono)' }}>
+        {/* Right side: WD button + aggregate summary */}
+        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-end' }}>
+          <button
+            onClick={() => setView('withdrawal')}
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--amber)',
+              color: 'var(--amber)',
+              fontFamily: 'var(--mono)',
+              fontSize: 10,
+              padding: '6px 12px',
+              cursor: 'pointer',
+              borderRadius: 2,
+              transition: 'all 200ms',
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'var(--amber)'
+              e.target.style.color = 'var(--bg)'
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'transparent'
+              e.target.style.color = 'var(--amber)'
+            }}
+          >
+            💰 WITHDRAWAL
+          </button>
+
+          {/* Aggregate summary */}
+          <div style={{ display: 'flex', gap: 14, fontFamily: 'var(--mono)' }}>
           <Sum label="BOTS ALIVE"  value={`${agg.alive}/${bots.length}`} />
           <Sum label="TOTAL EQUITY" value={usd(agg.equity)} />
           <Sum label="TOTAL PNL"   value={sgnUsd(agg.totalPnl)} color={agg.totalPnl >= 0 ? 'var(--green)' : 'var(--red)'} />
           <Sum label="DAILY"       value={sgnUsd(agg.dailyPnl)} color={agg.dailyPnl >= 0 ? 'var(--green)' : 'var(--red)'} />
           <Sum label="W/L"         value={`${agg.wins}/${agg.losses}`} />
+          </div>
         </div>
       </div>
 
