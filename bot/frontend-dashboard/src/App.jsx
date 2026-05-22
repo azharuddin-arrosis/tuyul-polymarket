@@ -385,7 +385,7 @@ function StorageRow({ storage, gas }) {
   )
 }
 
-function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal }) {
+function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHistory }) {
   const { stats, hist, gas, storage, health } = data || {}
   const mode    = stats?.mode || '—'
   const running = stats?.running
@@ -452,6 +452,7 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal }) {
           {running && <button onClick={() => onStop(bot)} style={btnStyle('var(--red)')}>■ STOP</button>}
           {!health && <span style={{ fontSize: 8, color: 'var(--red)' }}>start via terminal</span>}
           {equity >= 100 && onWithdrawal && <button onClick={() => onWithdrawal(bot)} style={btnStyle('var(--amber)')}>💰 WD</button>}
+          {onHistory && <button onClick={() => onHistory(bot)} style={btnStyle('var(--blue)')}>📋 HISTORY</button>}
         </div>
       </div>
 
@@ -714,6 +715,8 @@ export default function App() {
   const [wdModal, setWdModal] = useState(null) // { botId, capital, mode, percent, backendPort }
   const [wdLoading, setWdLoading] = useState(false)
   const [wdResult, setWdResult] = useState(null) // { ok, message, error }
+  const [historyModal, setHistoryModal] = useState(null) // { botId, history }
+  const [historyLoading, setHistoryLoading] = useState(false)
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id) }, [])
 
   const openDayModal = (bot, dateKey, hist) => {
@@ -751,6 +754,22 @@ export default function App() {
       const mode = s.mode_raw === 'dry_run' ? 'DRY' : s.mode_raw === 'real' ? 'REAL' : '?'
       setWdModal({ botId: bot.id, capital: s.capital, mode, percent: 50, backendPort: bot.backend_port })
     }
+  }
+
+  const handleHistory = async (bot) => {
+    setHistoryLoading(true)
+    try {
+      const response = await fetch(`http://localhost:${bot.backend_port}/api/withdrawal/history?bot_id=${bot.id}`)
+      const result = await response.json()
+      if (result.ok) {
+        setHistoryModal({ botId: bot.id, history: result.history || [] })
+      } else {
+        alert(`Failed to load history: ${result.error}`)
+      }
+    } catch (e) {
+      alert(`Error loading history: ${e.message}`)
+    }
+    setHistoryLoading(false)
   }
 
   // Aggregate stats across bots
@@ -838,7 +857,7 @@ export default function App() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: 14 }}>
-          {bots.map(b => <BotCard key={b.id} bot={b} data={data[b.id]} onStart={startBot} onStop={stopBot} onDayClick={openDayModal} onWithdrawal={handleWithdrawal} />)}
+          {bots.map(b => <BotCard key={b.id} bot={b} data={data[b.id]} onStart={startBot} onStop={stopBot} onDayClick={openDayModal} onWithdrawal={handleWithdrawal} onHistory={handleHistory} />)}
         </div>
       )}
 
@@ -935,6 +954,76 @@ export default function App() {
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setWdModal(null)}
+                style={{
+                  fontFamily: 'var(--mono)', fontSize: 8, padding: '6px 12px',
+                  background: 'var(--border)', color: 'var(--white)', border: 'none', borderRadius: 2,
+                  cursor: 'pointer', fontWeight: 700,
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Withdrawal History Modal */}
+      {historyModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 999,
+        }} onClick={() => setHistoryModal(null)}>
+          <div style={{
+            background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 4, padding: 16, maxWidth: 700,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)', maxHeight: '80vh', overflowY: 'auto',
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 14, color: 'var(--white)' }}>
+              Withdrawal History: <span style={{ color: 'var(--amber)' }}>{historyModal.botId}</span>
+            </div>
+
+            {historyModal.history.length === 0 ? (
+              <div style={{ color: 'var(--dim)', fontSize: 9, textAlign: 'center', padding: 20 }}>
+                (no withdrawals yet)
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{
+                  width: '100%', fontSize: 8, borderCollapse: 'collapse', fontFamily: 'var(--mono)',
+                  borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)',
+                }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg2)' }}>
+                      <th style={{ padding: 8, textAlign: 'left', color: 'var(--amber)', fontWeight: 700, borderBottom: '1px solid var(--border)' }}>DATE</th>
+                      <th style={{ padding: 8, textAlign: 'right', color: 'var(--amber)', fontWeight: 700, borderBottom: '1px solid var(--border)' }}>BEFORE</th>
+                      <th style={{ padding: 8, textAlign: 'right', color: 'var(--amber)', fontWeight: 700, borderBottom: '1px solid var(--border)' }}>WITHDRAWN</th>
+                      <th style={{ padding: 8, textAlign: 'right', color: 'var(--amber)', fontWeight: 700, borderBottom: '1px solid var(--border)' }}>AFTER</th>
+                      <th style={{ padding: 8, textAlign: 'center', color: 'var(--amber)', fontWeight: 700, borderBottom: '1px solid var(--border)' }}>MODE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyModal.history.map((h, i) => {
+                      const date = h.timestamp ? h.timestamp.split('T')[0] : '—'
+                      const modeColor = h.mode === 'DRY_RUN' || h.mode === 'dry_run' ? 'var(--amber)' : 'var(--red)'
+                      return (
+                        <tr key={i} style={{ borderBottom: '1px solid var(--border2)' }}>
+                          <td style={{ padding: 8, color: 'var(--white)' }}>{date}</td>
+                          <td style={{ padding: 8, textAlign: 'right', color: 'var(--dim2)' }}>${Number(h.capital_before).toFixed(2)}</td>
+                          <td style={{ padding: 8, textAlign: 'right', color: 'var(--green)', fontWeight: 600 }}>${Number(h.amount_withdrawn).toFixed(2)}</td>
+                          <td style={{ padding: 8, textAlign: 'right', color: 'var(--cyan)' }}>${Number(h.capital_after).toFixed(2)}</td>
+                          <td style={{ padding: 8, textAlign: 'center', color: modeColor, fontWeight: 600 }}>
+                            {h.mode === 'DRY_RUN' || h.mode === 'dry_run' ? 'DRY' : 'REAL'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
+              <button
+                onClick={() => setHistoryModal(null)}
                 style={{
                   fontFamily: 'var(--mono)', fontSize: 8, padding: '6px 12px',
                   background: 'var(--border)', color: 'var(--white)', border: 'none', borderRadius: 2,

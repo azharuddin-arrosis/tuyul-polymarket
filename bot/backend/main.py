@@ -2205,6 +2205,27 @@ def api_withdrawal_execute(bot_id: str, amount: float):
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
+@app.get("/api/withdrawal/history")
+def api_withdrawal_history(bot_id: str = ""):
+    """Get withdrawal history for a bot"""
+    try:
+        if not bot_id:
+            return {"ok": False, "error": "bot_id required"}
+        # Load state file
+        bot_root = Path(__file__).parent.parent
+        state_file = bot_root / "data" / bot_id / f"state_{bot_id}.json"
+        if not state_file.exists():
+            return {"ok": True, "history": []}
+        with open(state_file) as f:
+            state = json.load(f)
+        return {
+            "ok": True,
+            "bot_id": bot_id,
+            "history": state.get("withdrawal_history", [])
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
     await ws.accept(); S.ws_clients.add(ws)
