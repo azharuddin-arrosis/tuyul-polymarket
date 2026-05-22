@@ -561,7 +561,10 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
   const rankColor = rank != null && rank < 3 ? RANK_COLORS[rank] : (health ? 'var(--border2)' : 'var(--red)')
   const rankBg    = rank === 0 ? 'rgba(255,215,0,0.04)' : rank === 1 ? 'rgba(192,192,192,0.03)' : rank === 2 ? 'rgba(205,127,50,0.03)' : 'transparent'
 
-  const openDetail = () => window.open(`http://localhost:${bot.frontend_port}`, '_blank')
+  const openDetail = () => {
+    const t = localStorage.getItem('polypox-theme') || 'Midnight Indigo'
+    window.open(`http://localhost:${bot.frontend_port}?theme=${encodeURIComponent(t)}`, '_blank')
+  }
 
   return (
     <div style={{

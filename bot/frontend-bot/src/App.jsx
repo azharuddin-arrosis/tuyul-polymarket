@@ -1,6 +1,21 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useBot } from './hooks/useBot.js'
 
+// ─── THEME SYNC (reads ?theme= from dashboard URL param) ─────
+const THEMES = {
+  'Midnight Indigo': {'--bg':'#0a0812','--bg1':'#110f1e','--bg2':'#19172a','--bg3':'#211e36','--bg4':'#2a2742','--border':'#2d2848','--border2':'#3a3560','--white':'#e2dff0','--dim':'#6b6488','--dim2':'#3d3858','--green':'#00e5a0','--red':'#ff3d6b','--amber':'#ffb340','--blue':'#7c6dfa','--purple':'#b56bff'},
+  'Deep Navy':       {'--bg':'#080d1a','--bg1':'#0d1424','--bg2':'#121c30','--bg3':'#19253e','--bg4':'#1e2d4a','--border':'#1e2d47','--border2':'#283d60','--white':'#c8d6f0','--dim':'#5a6f8a','--dim2':'#2e3d55','--green':'#00d68f','--red':'#ff4757','--amber':'#ffa94d','--blue':'#4dabf7','--purple':'#9775fa'},
+  'Zinc Dark':       {'--bg':'#09090b','--bg1':'#18181b','--bg2':'#27272a','--bg3':'#3f3f46','--bg4':'#52525b','--border':'#3f3f46','--border2':'#52525b','--white':'#fafafa','--dim':'#71717a','--dim2':'#3f3f46','--green':'#22c55e','--red':'#ef4444','--amber':'#f59e0b','--blue':'#3b82f6','--purple':'#a855f7'},
+  'Slate Teal':      {'--bg':'#080e10','--bg1':'#0e1618','--bg2':'#141f22','--bg3':'#1a282c','--bg4':'#203235','--border':'#1e3035','--border2':'#274048','--white':'#d0e8e8','--dim':'#527080','--dim2':'#2a4048','--green':'#00ddb3','--red':'#ff5561','--amber':'#ffaa30','--blue':'#38bdf8','--purple':'#a78bfa'},
+}
+;(() => {
+  const params = new URLSearchParams(window.location.search)
+  const t = params.get('theme') || localStorage.getItem('polypox-theme') || 'Midnight Indigo'
+  const theme = THEMES[t] || THEMES['Midnight Indigo']
+  Object.entries(theme).forEach(([k, v]) => document.documentElement.style.setProperty(k, v))
+  localStorage.setItem('polypox-theme', t)
+})()
+
 // ─── FORMATTERS ──────────────────────────────────────────────
 // USD/IDR exchange rate — fetched on app start, fallback to default
 let USD_IDR = 16250
