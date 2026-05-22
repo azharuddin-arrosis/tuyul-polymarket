@@ -539,7 +539,26 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
           {!running && health && <button onClick={() => onStart(bot)} style={btnStyle('var(--green)')}>▶ RUN</button>}
           {running  && health && <button onClick={() => onStop(bot)}  style={btnStyle('var(--red)')}>■ STOP</button>}
           {!health  && <span style={{ fontSize: 7, color: 'var(--red)' }}>OFFLINE</span>}
-          {equity >= 100 && onWithdrawal && <button onClick={() => onWithdrawal(bot)} style={btnStyle('var(--amber)')}>💰 WD</button>}
+          {/* WD — always visible, disabled if equity < 100 */}
+          {(() => {
+            const wdReady = equity >= 100 && onWithdrawal
+            const wdTitle = !health ? 'Bot offline' : equity < 100 ? `Belum cukup — perlu $100 (saat ini ${usd(equity)})` : 'Tarik keuntungan'
+            return (
+              <button
+                onClick={wdReady ? () => onWithdrawal(bot) : undefined}
+                title={wdTitle}
+                style={{
+                  ...btnStyle(wdReady ? 'var(--amber)' : 'var(--border2)'),
+                  opacity: wdReady ? 1 : 0.4,
+                  cursor: wdReady ? 'pointer' : 'not-allowed',
+                  color: wdReady ? 'var(--amber)' : 'var(--dim)',
+                  borderColor: wdReady ? 'var(--amber)' : 'var(--border2)',
+                }}
+              >
+                💰 WD{!wdReady && equity > 0 ? ` $${equity.toFixed(0)}/$100` : ''}
+              </button>
+            )
+          })()}
           {onHistory && <button onClick={() => onHistory(bot)} style={btnStyle('var(--dim2)')}>HIST</button>}
           <button onClick={openDetail} style={btnStyle('var(--blue)')}>↗ OPEN</button>
         </div>
