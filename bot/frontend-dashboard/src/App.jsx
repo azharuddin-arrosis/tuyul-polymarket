@@ -555,7 +555,7 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
                   borderColor: wdReady ? 'var(--amber)' : 'var(--border2)',
                 }}
               >
-                💰 WD{!wdReady && equity > 0 ? ` $${equity.toFixed(0)}/$100` : ''}
+                💰 WD
               </button>
             )
           })()}
