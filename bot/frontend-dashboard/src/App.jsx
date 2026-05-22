@@ -1,4 +1,26 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+
+// ─── LATENCY HOOK ────────────────────────────────────────────
+function useLatency(backendPort) {
+  const [lat, setLat] = useState({ be: null, bnb: null })
+  useEffect(() => {
+    let cancelled = false
+    const ping = async () => {
+      // Backend ping
+      const t0 = performance.now()
+      try { await fetch(`http://localhost:${backendPort}/health`, { signal: AbortSignal.timeout(2000) }); if (!cancelled) setLat(l => ({ ...l, be: Math.round(performance.now() - t0) })) }
+      catch { if (!cancelled) setLat(l => ({ ...l, be: null })) }
+      // Binance ping
+      const t1 = performance.now()
+      try { await fetch('https://api.binance.com/api/v3/ping', { signal: AbortSignal.timeout(3000) }); if (!cancelled) setLat(l => ({ ...l, bnb: Math.round(performance.now() - t1) })) }
+      catch { if (!cancelled) setLat(l => ({ ...l, bnb: null })) }
+    }
+    ping()
+    const id = setInterval(ping, 10000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [backendPort])
+  return lat
+}
 
 // ─── FORMATTERS ──────────────────────────────────────────────
 const usd = (n, d=2) => n == null ? '—' : `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })}`
@@ -396,54 +418,37 @@ const th = { padding: '6px 10px', textAlign: 'left', fontSize: 7, color: 'var(--
 const td = { padding: '5px 10px', verticalAlign: 'middle' }
 
 // ─── BOT CARD ────────────────────────────────────────────────
-function GasBar({ orders }) {
-  if (orders == null) return null
-  const pct = Math.min(100, Math.max(0, orders / 200 * 100))
-  const color = orders <= 3 ? 'var(--red)' : orders <= 10 ? 'var(--amber)' : 'var(--green)'
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <div style={{ flex: 1, height: 4, background: 'var(--bg)', borderRadius: 2, overflow: 'hidden', border: '1px solid var(--border)' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 2, transition: 'width .4s' }} />
-      </div>
-      <span style={{ fontSize: 9, color, fontWeight: 700, minWidth: 30 }}>{orders}</span>
-    </div>
-  )
-}
-
-function StorageRow({ storage, gas }) {
-  if (!storage && !gas) return null
-  const totalMb = (storage?.data_mb ?? 0)
-  const logMb   = ((storage?.log_be_mb ?? 0) + (storage?.log_fe_mb ?? 0))
-  const polLeft = gas?.pol_left ?? null
+// ─── INFO STRIP — latency + gas + storage in one row ─────────
+function InfoStrip({ backendPort, storage, gas }) {
+  const lat = useLatency(backendPort)
   const ordersLeft = gas?.orders_left ?? null
+  const polLeft    = gas?.pol_left ?? null
+  const totalMb    = (storage?.data_mb ?? 0) + (storage?.db_mb ?? 0)
+
+  const latColor = (ms) => ms == null ? 'var(--dim2)' : ms < 150 ? 'var(--green)' : ms < 400 ? 'var(--amber)' : 'var(--red)'
   const gasColor = ordersLeft == null ? 'var(--dim)' : ordersLeft <= 3 ? 'var(--red)' : ordersLeft <= 10 ? 'var(--amber)' : 'var(--green)'
+
   return (
-    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 7, color: 'var(--dim)', letterSpacing: '.08em', fontWeight: 600 }}>STORAGE & GAS</span>
-        <div style={{ display: 'flex', gap: 10, fontSize: 8, color: 'var(--dim)' }}>
-          <span>data <span style={{ color: 'var(--white)' }}>{totalMb.toFixed(1)}MB</span></span>
-          <span>logs <span style={{ color: 'var(--white)' }}>{logMb.toFixed(1)}MB</span></span>
-          <span>db <span style={{ color: 'var(--white)' }}>{(storage?.db_mb ?? 0).toFixed(2)}MB</span></span>
-          {polLeft != null && <span>POL <span style={{ color: gasColor, fontWeight: 700 }}>{polLeft.toFixed(2)}</span></span>}
-        </div>
-      </div>
+    <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 7, color: 'var(--dim)', flexShrink: 0, flexWrap: 'wrap' }}>
+      {/* Latency */}
+      <span>BE <span style={{ color: latColor(lat.be), fontWeight: 700 }}>{lat.be != null ? `${lat.be}ms` : '—'}</span></span>
+      <span>BNB <span style={{ color: latColor(lat.bnb), fontWeight: 700 }}>{lat.bnb != null ? `${lat.bnb}ms` : '—'}</span></span>
+      {/* Gas */}
       {ordersLeft != null && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 7, color: 'var(--dim)', minWidth: 60 }}>GAS ORDERS</span>
-          <div style={{ flex: 1 }}><GasBar orders={ordersLeft} /></div>
-          {ordersLeft <= 10 && (
-            <span style={{ fontSize: 7, color: gasColor, fontWeight: 700, letterSpacing: '.06em' }}>
-              {ordersLeft <= 3 ? '⚠ CRITICAL' : '⚠ LOW'}
-            </span>
-          )}
-        </div>
+        <span>GAS <span style={{ color: gasColor, fontWeight: 700 }}>
+          {ordersLeft <= 3 ? '⚠ ' : ordersLeft <= 10 ? '! ' : ''}{ordersLeft} orders
+        </span></span>
       )}
+      {polLeft != null && <span>POL <span style={{ color: polLeft < 0.5 ? 'var(--amber)' : 'var(--white)', fontWeight: 700 }}>{polLeft.toFixed(2)}</span></span>}
+      {/* Storage */}
+      {totalMb > 0 && <span style={{ marginLeft: 'auto', color: 'var(--dim2)' }}>{totalMb.toFixed(1)}MB</span>}
     </div>
   )
 }
 
-function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHistory }) {
+const RANK_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32']  // gold, silver, bronze
+
+function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHistory, rank }) {
   const { stats, hist, gas, storage, health } = data || {}
   const withdrawals = stats?.withdrawal_history || []
   const mode    = stats?.mode || '—'
@@ -461,13 +466,17 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
   const statusColor = health ? (running ? 'var(--green)' : 'var(--amber)') : 'var(--red)'
   const statusLabel = !health ? 'OFFLINE' : running ? 'RUNNING' : 'PAUSED'
 
+  const rankColor = rank != null && rank < 3 ? RANK_COLORS[rank] : (health ? 'var(--border2)' : 'var(--red)')
+  const rankBg    = rank === 0 ? 'rgba(255,215,0,0.04)' : rank === 1 ? 'rgba(192,192,192,0.03)' : rank === 2 ? 'rgba(205,127,50,0.03)' : 'transparent'
+
   const openDetail = () => window.open(`http://localhost:${bot.frontend_port}`, '_blank')
 
   return (
     <div style={{
-      background: 'var(--bg1)', border: '1px solid var(--border2)',
-      borderTop: `2px solid ${health ? 'var(--green)' : 'var(--red)'}`,
+      background: `var(--bg1)`, border: `1px solid ${rankColor}44`,
+      borderTop: `3px solid ${rankColor}`,
       borderRadius: 4, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6, overflow: 'hidden',
+      backgroundImage: rankBg !== 'transparent' ? `linear-gradient(180deg, ${rankBg} 0%, transparent 60%)` : 'none',
     }}>
       {/* Header row — bot id + mode + status + actions */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
@@ -493,6 +502,9 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
         </div>
       </div>
 
+      {/* Info strip — latency + gas + storage */}
+      <InfoStrip backendPort={bot.backend_port} storage={storage} gas={gas} />
+
       {/* Stats grid — 4 cols */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, flexShrink: 0 }}>
         <Stat label="EQUITY"    value={usd(equity)} color="var(--white)" />
@@ -500,9 +512,6 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
         <Stat label="DAILY PNL" value={sgnUsd(dailyPnl)} sub="today" color={dailyPnl >= 0 ? 'var(--green)' : 'var(--red)'} />
         <Stat label="WIN RATE"  value={`${winRate.toFixed(0)}%`} sub={`${wins}W ${losses}L`} color={winRate >= 55 ? 'var(--green)' : winRate >= 45 ? 'var(--amber)' : 'var(--red)'} />
       </div>
-
-      {/* Storage + Gas — compact */}
-      <StorageRow storage={storage} gas={gas} />
 
       {/* Calendar — flex 1 fills remaining space */}
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, flex: 1, overflow: 'hidden', minHeight: 0 }}>
@@ -877,7 +886,18 @@ export default function App() {
         </div>
       ) : (
         <div style={{ flex: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: `repeat(${Math.min(bots.length, 4)}, 1fr)`, gridTemplateRows: `repeat(${Math.ceil(bots.length / Math.min(bots.length, 4))}, 1fr)`, gap: 8 }}>
-          {bots.map(b => <BotCard key={b.id} bot={b} data={data[b.id]} onStart={startBot} onStop={stopBot} onDayClick={openDayModal} onWithdrawal={handleWithdrawal} onHistory={handleHistory} />)}
+          {(() => {
+            // Rank bots by total PnL descending (only alive bots ranked)
+            const ranked = [...bots].sort((a, b) => {
+              const pa = data[a.id]?.stats?.pnl ?? -Infinity
+              const pb = data[b.id]?.stats?.pnl ?? -Infinity
+              return pb - pa
+            })
+            return bots.map(b => {
+              const rank = data[b.id]?.health ? ranked.findIndex(r => r.id === b.id) : null
+              return <BotCard key={b.id} bot={b} data={data[b.id]} onStart={startBot} onStop={stopBot} onDayClick={openDayModal} onWithdrawal={handleWithdrawal} onHistory={handleHistory} rank={rank} />
+            })
+          })()}
         </div>
       )}
 
