@@ -1,9 +1,10 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0d0d0f;--bg1:#131317;--bg2:#18181d;--bg3:#1e1e24;--bg4:#24242c;
-  --border:#242430;--border2:#2e2e3a;
-  --white:#dde1e9;--dim:#6b7080;--dim2:#3a3d4a;
-  --green:#1fd97a;--red:#f04060;--amber:#e8a020;--blue:#4488ff;--purple:#aa66ff;
+  --bg:#0a0812;--bg1:#110f1e;--bg2:#19172a;--bg3:#211e36;--bg4:#2a2742;
+  --border:#2d2848;--border2:#3a3560;
+  --white:#e2dff0;--dim:#6b6488;--dim2:#3d3858;
+  --green:#00e5a0;--red:#ff3d6b;--amber:#ffb340;--blue:#7c6dfa;--purple:#b56bff;
+  --cyan:#38d9f5;
   --mono:'JetBrains Mono','SF Mono','Menlo','Consolas','Courier New',monospace;
   --sans:'Inter',system-ui,-apple-system,sans-serif;
 }
