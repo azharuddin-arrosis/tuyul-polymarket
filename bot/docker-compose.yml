@@ -1,0 +1,321 @@
+version: '3.8'
+
+# Polypox Terminal — 8-bot Docker Compose
+#
+# Local:   ./orchestrator.sh start all dry_run
+# Docker:  docker compose up -d
+#
+# Ports:
+#   dashboard → :3000
+#   real1     → BE :8001 · FE :3001
+#   real2     → BE :8002 · FE :3002
+#   real3     → BE :8003 · FE :3003
+#   real4     → BE :8004 · FE :3004
+#   real5     → BE :8005 · FE :3005
+#   real6     → BE :8006 · FE :3006
+#   real7     → BE :8007 · FE :3007
+#   real8     → BE :8008 · FE :3008
+#
+# Env: fill backend/envs/realN.env sebelum docker compose up
+
+networks:
+  botnet:
+    driver: bridge
+
+volumes:
+  data-real1: data-real2: data-real3:
+  data-real4: data-real5: data-real6:
+  data-real7: data-real8:
+
+services:
+
+  # ─── Central Dashboard ───────────────────────────────────────
+  dashboard:
+    build:
+      context: ./frontend-dashboard
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend-dashboard/public/bots.json:/usr/share/nginx/html/bots.json:ro
+    networks: [botnet]
+    restart: unless-stopped
+
+  # ─── Bot 1 ──────────────────────────────────────────────────
+  real1-be:
+    build:
+      context: ./backend
+    env_file: ./backend/envs/real1.env
+    environment:
+      BE_PORT: "8000"
+      DATA_DIR: /app/data
+    volumes:
+      - data-real1:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8001:8000"
+    networks: [botnet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  real1-fe:
+    build:
+      context: ./frontend-bot
+    environment:
+      BACKEND_HOST: real1-be
+    ports:
+      - "3001:80"
+    depends_on:
+      real1-be:
+        condition: service_healthy
+    networks: [botnet]
+    restart: unless-stopped
+
+  # ─── Bot 2 ──────────────────────────────────────────────────
+  real2-be:
+    build:
+      context: ./backend
+    env_file: ./backend/envs/real2.env
+    environment:
+      BE_PORT: "8000"
+      DATA_DIR: /app/data
+    volumes:
+      - data-real2:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8002:8000"
+    networks: [botnet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  real2-fe:
+    build:
+      context: ./frontend-bot
+    environment:
+      BACKEND_HOST: real2-be
+    ports:
+      - "3002:80"
+    depends_on:
+      real2-be:
+        condition: service_healthy
+    networks: [botnet]
+    restart: unless-stopped
+
+  # ─── Bot 3 ──────────────────────────────────────────────────
+  real3-be:
+    build:
+      context: ./backend
+    env_file: ./backend/envs/real3.env
+    environment:
+      BE_PORT: "8000"
+      DATA_DIR: /app/data
+    volumes:
+      - data-real3:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8003:8000"
+    networks: [botnet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  real3-fe:
+    build:
+      context: ./frontend-bot
+    environment:
+      BACKEND_HOST: real3-be
+    ports:
+      - "3003:80"
+    depends_on:
+      real3-be:
+        condition: service_healthy
+    networks: [botnet]
+    restart: unless-stopped
+
+  # ─── Bot 4 ──────────────────────────────────────────────────
+  real4-be:
+    build:
+      context: ./backend
+    env_file: ./backend/envs/real4.env
+    environment:
+      BE_PORT: "8000"
+      DATA_DIR: /app/data
+    volumes:
+      - data-real4:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8004:8000"
+    networks: [botnet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  real4-fe:
+    build:
+      context: ./frontend-bot
+    environment:
+      BACKEND_HOST: real4-be
+    ports:
+      - "3004:80"
+    depends_on:
+      real4-be:
+        condition: service_healthy
+    networks: [botnet]
+    restart: unless-stopped
+
+  # ─── Bot 5 ──────────────────────────────────────────────────
+  real5-be:
+    build:
+      context: ./backend
+    env_file: ./backend/envs/real5.env
+    environment:
+      BE_PORT: "8000"
+      DATA_DIR: /app/data
+    volumes:
+      - data-real5:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8005:8000"
+    networks: [botnet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  real5-fe:
+    build:
+      context: ./frontend-bot
+    environment:
+      BACKEND_HOST: real5-be
+    ports:
+      - "3005:80"
+    depends_on:
+      real5-be:
+        condition: service_healthy
+    networks: [botnet]
+    restart: unless-stopped
+
+  # ─── Bot 6 ──────────────────────────────────────────────────
+  real6-be:
+    build:
+      context: ./backend
+    env_file: ./backend/envs/real6.env
+    environment:
+      BE_PORT: "8000"
+      DATA_DIR: /app/data
+    volumes:
+      - data-real6:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8006:8000"
+    networks: [botnet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  real6-fe:
+    build:
+      context: ./frontend-bot
+    environment:
+      BACKEND_HOST: real6-be
+    ports:
+      - "3006:80"
+    depends_on:
+      real6-be:
+        condition: service_healthy
+    networks: [botnet]
+    restart: unless-stopped
+
+  # ─── Bot 7 ──────────────────────────────────────────────────
+  real7-be:
+    build:
+      context: ./backend
+    env_file: ./backend/envs/real7.env
+    environment:
+      BE_PORT: "8000"
+      DATA_DIR: /app/data
+    volumes:
+      - data-real7:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8007:8000"
+    networks: [botnet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  real7-fe:
+    build:
+      context: ./frontend-bot
+    environment:
+      BACKEND_HOST: real7-be
+    ports:
+      - "3007:80"
+    depends_on:
+      real7-be:
+        condition: service_healthy
+    networks: [botnet]
+    restart: unless-stopped
+
+  # ─── Bot 8 ──────────────────────────────────────────────────
+  real8-be:
+    build:
+      context: ./backend
+    env_file: ./backend/envs/real8.env
+    environment:
+      BE_PORT: "8000"
+      DATA_DIR: /app/data
+    volumes:
+      - data-real8:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8008:8000"
+    networks: [botnet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  real8-fe:
+    build:
+      context: ./frontend-bot
+    environment:
+      BACKEND_HOST: real8-be
+    ports:
+      - "3008:80"
+    depends_on:
+      real8-be:
+        condition: service_healthy
+    networks: [botnet]
+    restart: unless-stopped

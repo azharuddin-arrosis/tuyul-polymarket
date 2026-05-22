@@ -1,8 +1,14 @@
 {
-  "generated_at": "2026-05-22T02:22:14Z",
+  "generated_at": "2026-05-22T06:45:42Z",
   "dashboard_port": 3000,
   "bots": [
     { "id": "real1", "backend_port": 8001, "frontend_port": 3001 },
-    { "id": "real2", "backend_port": 8002, "frontend_port": 3002 }
+    { "id": "real2", "backend_port": 8002, "frontend_port": 3002 },
+    { "id": "real3", "backend_port": 8003, "frontend_port": 3003 },
+    { "id": "real4", "backend_port": 8004, "frontend_port": 3004 },
+    { "id": "real5", "backend_port": 8005, "frontend_port": 3005 },
+    { "id": "real6", "backend_port": 8006, "frontend_port": 3006 },
+    { "id": "real7", "backend_port": 8007, "frontend_port": 3007 },
+    { "id": "real8", "backend_port": 8008, "frontend_port": 3008 }
   ]
 }

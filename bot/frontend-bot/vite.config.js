@@ -9,16 +9,18 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const fePort = parseInt(env.VITE_FE_PORT || process.env.VITE_FE_PORT || '3001')
   const bePort = parseInt(env.VITE_BE_PORT || process.env.VITE_BE_PORT || '8000')
+  const beHost = env.VITE_BE_HOST || process.env.VITE_BE_HOST || 'localhost'
   return {
     plugins: [react()],
     define: {
       '__BOT_ID__': JSON.stringify(env.VITE_BOT_ID || process.env.VITE_BOT_ID || ''),
     },
     server: {
+      host: '0.0.0.0',
       port: fePort,
       proxy: {
-        '/api': { target: `http://localhost:${bePort}`, changeOrigin: true },
-        '/ws':  { target: `ws://localhost:${bePort}`,   ws: true },
+        '/api': { target: `http://${beHost}:${bePort}`, changeOrigin: true },
+        '/ws':  { target: `ws://${beHost}:${bePort}`,   ws: true },
       },
     },
     build: { outDir: 'dist', chunkSizeWarningLimit: 1200 },

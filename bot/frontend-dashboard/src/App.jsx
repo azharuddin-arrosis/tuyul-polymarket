@@ -171,9 +171,9 @@ function DayTradesModal({ bot, date, trades, onClose }) {
 
   const onBackdrop = (e) => { if (e.target === e.currentTarget) onClose() }
 
-  // Summary stats
+  // Summary stats — newest first
   const sorted = useMemo(() =>
-    [...trades].sort((a, b) => (a.opened_at || '').localeCompare(b.opened_at || '')),
+    [...trades].sort((a, b) => (b.opened_at || '').localeCompare(a.opened_at || '')),
     [trades])
   const wins   = sorted.filter(t => t.status === 'won').length
   const losses = sorted.filter(t => t.status === 'lost').length

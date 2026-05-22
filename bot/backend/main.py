@@ -1086,6 +1086,9 @@ async def btc5m_entry(sig: dict, secs_left: int, sess):
         "resolve_sec":    secs_left,
         "resolve_fmt":    f"{secs_left}s",
         "spread":         0,
+        # Snapshot BTC reference prices for accurate dry_run resolve at window end
+        "win_open_btc":   float(b5.get("win_open", 0) or 0),
+        "win_ts":         int(b5.get("win_ts", 0) or 0),
     }
     sig_dict = {
         "strategy":   "btc5m",
@@ -1447,6 +1450,8 @@ async def open_position(market: dict, sig: dict):
             "id":           f"{_prefix}-{BOT_ID[-1]}-{S.pos_counter:04d}",
             "market_id":    market["id"],
             "condition_id": market.get("condition_id", ""),  # CLOB hex ID for redeem
+            "win_open_btc": market.get("win_open_btc", 0),   # BTC price at window open (for dry_run resolve)
+            "win_ts":       market.get("win_ts", 0),
             "question":     market["question"],
             "category":     market["category"],
             "outcome":      sig["outcome"],
@@ -1824,21 +1829,91 @@ async def scanner_loop():
             S.errors.append(f"housekeeping: {str(e)[:60]}")
         await asyncio.sleep(C.scan_sec)
 
+async def _fetch_btc_close_at(ts: int, sess: aiohttp.ClientSession) -> float:
+    """Fetch BTC close price at given UNIX timestamp using Binance 1m klines.
+    Returns 0 if all sources fail. Used by dry_run resolver."""
+    # Binance: get 1m kline starting at ts (close = price at ts+60)
+    try:
+        async with sess.get(f"{BINANCE}/klines", params={
+            "symbol": "BTCUSDT", "interval": "1m",
+            "startTime": (ts - 60) * 1000, "limit": 2,
+        }, headers=_CLOB_UA, timeout=aiohttp.ClientTimeout(total=8)) as r:
+            if r.status == 200:
+                data = await r.json()
+                if data:
+                    # Pick kline whose close timestamp matches ts
+                    for k in data:
+                        k_open_ts = int(k[0]) // 1000
+                        if k_open_ts + 60 >= ts:
+                            return float(k[4])  # close price
+                    return float(data[-1][4])
+    except: pass
+    # Fallback: CryptoCompare
+    try:
+        async with sess.get(f"{CRYPTOCOMPARE}/v2/histominute", params={
+            "fsym": "BTC", "tsym": "USD", "limit": 2, "toTs": ts,
+        }, timeout=aiohttp.ClientTimeout(total=8)) as r:
+            if r.status == 200:
+                data = await r.json()
+                rows = data.get("Data", {}).get("Data", [])
+                if rows: return float(rows[-1]["close"])
+    except: pass
+    return 0.0
+
+async def _resolve_dry_run(pos: dict, sess: aiohttp.ClientSession) -> tuple[bool, str]:
+    """Resolve position based on actual BTC price at window close.
+    Returns (won, reason). Falls back to random if BTC data unreachable."""
+    win_open = float(pos.get("win_open_btc", 0) or 0)
+    win_ts   = int(pos.get("win_ts", 0) or 0)
+    resolve_sec = int(pos.get("resolve_sec", 300))
+    outcome  = (pos.get("outcome") or "").upper()
+    # Window close timestamp
+    if win_ts > 0:
+        win_end_ts = win_ts + resolve_sec
+    else:
+        opened = datetime.fromisoformat(pos["opened_at"])
+        win_end_ts = int(opened.timestamp()) + resolve_sec
+    if win_open <= 0:
+        # No reference price — fallback to random
+        tp = pos.get("true_prob", 0.65)
+        return random.random() < (tp * 0.93), "random_fallback_no_ref"
+    win_close = await _fetch_btc_close_at(win_end_ts, sess)
+    if win_close <= 0:
+        tp = pos.get("true_prob", 0.65)
+        return random.random() < (tp * 0.93), "random_fallback_fetch_failed"
+    actual_up = win_close > win_open
+    if outcome == "UP":
+        won = actual_up
+    elif outcome == "DOWN":
+        won = not actual_up
+    else:
+        won = False
+    return won, f"btc {win_open:.2f}→{win_close:.2f} ({'UP' if actual_up else 'DOWN'})"
+
 async def resolver_loop():
-    """Sim & dry_run: auto-resolve positions on window expiry. Real positions resolve via redeem loop."""
-    while True:
-        if MODE in ("sim", "dry_run"):
-            now = datetime.now(timezone.utc)
-            for pos in list(S.positions):
-                if pos["status"] != "open": continue
-                if pos.get("mode") == "real": continue   # real position survives mode switch — let redeem handle
-                opened  = datetime.fromisoformat(pos["opened_at"])
-                elapsed = (now-opened).total_seconds()
-                if elapsed >= pos.get("resolve_sec", 86400):
-                    tp  = pos.get("true_prob", 0.65)
-                    won = random.random() < (tp * 0.93)
-                    await close_position(pos, won)
-        await asyncio.sleep(5)
+    """Sim & dry_run: auto-resolve positions on window expiry.
+    - SIM:    random.random() < true_prob * 0.93 (simulated outcome)
+    - DRY_RUN: fetch real BTC close price → deterministic resolve (matches Polymarket reality)
+    Real positions resolve via redeem loop."""
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as sess:
+        while True:
+            if MODE in ("sim", "dry_run"):
+                now = datetime.now(timezone.utc)
+                for pos in list(S.positions):
+                    if pos["status"] != "open": continue
+                    if pos.get("mode") == "real": continue
+                    opened  = datetime.fromisoformat(pos["opened_at"])
+                    elapsed = (now-opened).total_seconds()
+                    if elapsed >= pos.get("resolve_sec", 86400):
+                        if MODE == "sim":
+                            tp  = pos.get("true_prob", 0.65)
+                            won = random.random() < (tp * 0.93)
+                            print(f"[BOT] 🎲 SIM RESOLVE {pos['id']} {pos['outcome']} → {'WON' if won else 'LOST'} (random tp={tp:.2f})")
+                        else:
+                            won, reason = await _resolve_dry_run(pos, sess)
+                            print(f"[BOT] 📊 DRY_RUN RESOLVE {pos['id']} {pos['outcome']} → {'WON' if won else 'LOST'} ({reason})")
+                        await close_position(pos, won)
+            await asyncio.sleep(5)
 
 # ─── DATA HELPERS ────────────────────────────────────────────
 def open_pos(): return [p for p in S.positions if p["status"] == "open"]
