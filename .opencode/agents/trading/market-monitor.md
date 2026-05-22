@@ -1,5 +1,5 @@
 ---
-name: MarketMonitor
+name: market-monitor
 description: "Memantau kondisi pasar XAUUSD realtime — harga, spread, volatilitas, sesi, dan kondisi trading"
 mode: primary
 temperature: 0.1

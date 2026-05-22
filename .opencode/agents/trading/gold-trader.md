@@ -1,5 +1,5 @@
 ---
-name: GoldTrader
+name: gold-trader
 description: "Master orchestrator untuk trading XAUUSD Binary Options — koordinasi analisis teknikal, fundamental, news, dan eksekusi sinyal"
 mode: primary
 temperature: 0.1

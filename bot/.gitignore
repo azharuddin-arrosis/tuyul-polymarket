@@ -1,0 +1,30 @@
+# Secrets — NEVER commit
+envs/*.env
+backend/envs/*.env
+.env
+.env.*
+
+# Data
+data/
+*.db
+*.sqlite*
+state_*.json
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

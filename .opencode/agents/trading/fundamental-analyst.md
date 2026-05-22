@@ -1,5 +1,5 @@
 ---
-name: FundamentalAnalyst
+name: fundamental-analyst
 description: "Analisis fundamental XAUUSD — macro drivers, DXY, real yields, COT, inflasi, geopolitik, dan gold demand/supply"
 mode: primary
 temperature: 0.1

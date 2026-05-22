@@ -220,7 +220,25 @@
       "headers": {
         "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
       }
+    },
+    "stitch": {
+      "type": "remote",
+      "url": "https://stitch.googleapis.com/mcp",
+          "enabled": true,
+      "headers": {
+        "Accept": "application/json",
+        "X-Goog-Api-Key": "<GCP_API_KEY>"
+      }
+    },
+    "linear": {
+      "type": "remote",
+      "url": "https://mcp.linear.app/mcp",
+      "headers": {
+        "Authorization": "Bearer <LINEAR_API_KEY>"
+      }
     }
   },
-  "plugin": []
+  "plugin": [
+    "@lum1104/understand-anything"
+  ]
 }

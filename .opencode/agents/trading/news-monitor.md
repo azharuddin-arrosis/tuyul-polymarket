@@ -1,5 +1,5 @@
 ---
-name: NewsMonitor
+name: news-monitor
 description: "Memantau breaking news, event ekonomi, dan sentimen pasar yang mempengaruhi XAUUSD secara realtime"
 mode: primary
 temperature: 0.1
