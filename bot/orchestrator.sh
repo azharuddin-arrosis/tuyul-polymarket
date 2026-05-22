@@ -85,24 +85,76 @@ fe_status() {
 print_status() {
     local bots=($(discover_bots))
     echo ""
-    echo -e "${B}══════════════════════════════════════════════════════════${X}"
-    printf "  ${B}%-12s %-8s %-8s %-12s %-12s${X}\n" "BOT" "BE PORT" "FE PORT" "BACKEND" "FRONTEND"
-    echo -e "${B}──────────────────────────────────────────────────────────${X}"
+    echo -e "${B}BOT  M  ST   CAP    PNL   W/L  WD${X}"
+    echo -e "${B}────────────────────────────────${X}"
 
     local dash_st=$(fe_status $DASHBOARD_PORT)
     local dash_color="$([ "$dash_st" = "RUNNING" ] && echo "$G" || echo "$R")"
-    printf "  %-12s %-8s %-8s %-12s ${dash_color}%-12s${X}\n" "dashboard" "—" "$DASHBOARD_PORT" "—" "$dash_st"
+    printf "  ${dash_color}%-2s${X}  D  RUN  —     —     —\n" "🎨"
 
     for entry in "${bots[@]}"; do
         IFS=':' read -r id be fe <<< "$entry"
         local be_st=$(bot_status $be)
-        local fe_st=$(fe_status $fe)
         local be_color="$([ "$be_st" = "RUNNING" ] && echo "$G" || echo "$R")"
-        local fe_color="$([ "$fe_st" = "RUNNING" ] && echo "$G" || echo "$R")"
-        printf "  %-12s %-8s %-8s ${be_color}%-12s${X} ${fe_color}%-12s${X}\n" "$id" "$be" "$fe" "$be_st" "$fe_st"
+
+        # Fetch stats dari API
+        local stats=$(curl -s --max-time 2 "http://127.0.0.1:$be/api/stats" 2>/dev/null)
+        local mode=$(echo "$stats" | grep -o '"mode_raw":"[^"]*"' | cut -d'"' -f4 | head -1 || echo "—")
+        local capital=$(echo "$stats" | grep -o '"capital":[0-9.]*' | cut -d':' -f2 | head -1 || echo "—")
+        local pnl=$(echo "$stats" | grep -o '"pnl":[0-9.-]*' | cut -d':' -f2 | head -1 || echo "—")
+        local wins=$(echo "$stats" | grep -o '"wins":[0-9]*' | cut -d':' -f2 | head -1 || echo "0")
+        local losses=$(echo "$stats" | grep -o '"losses":[0-9]*' | cut -d':' -f2 | head -1 || echo "0")
+        local wd_ready=$(echo "$stats" | grep -o '"wd_ready":[^,}]*' | cut -d':' -f2 | head -1 || echo "false")
+
+        # Extract bot number
+        local num=$(echo "$id" | grep -oE '[0-9]+$' || echo "?")
+
+        # Abbreviate mode
+        local mode_char="?"
+        case "$mode" in
+            dry_run|DRY_RUN) mode_char="D" ;;
+            real|REAL) mode_char="R" ;;
+            sim|SIM) mode_char="S" ;;
+        esac
+
+        # Abbreviate status (RUN/STP)
+        local st_short="STP"
+        [ "$be_st" = "RUNNING" ] && st_short="RUN"
+
+        # Format capital + PNL (round to nearest dollar)
+        local cap_str="—"
+        local pnl_val="—"
+        local pnl_color=""
+        if [ "$capital" != "—" ]; then
+            cap_str="$(printf '%.0f' "$capital")"
+        fi
+        if [ "$pnl" != "—" ]; then
+            local pnl_abs=$(printf '%.0f' "$(echo "$pnl" | sed 's/-//')")
+            if (( $(echo "$pnl >= 0" | bc -l 2>/dev/null) )); then
+                pnl_val="+${pnl_abs}"
+                pnl_color="$G"
+            else
+                pnl_val="-${pnl_abs}"
+                pnl_color="$R"
+            fi
+        fi
+
+        # Format wins/losses
+        local wl_str="—"
+        if [ "$wins" != "0" ] || [ "$losses" != "0" ]; then
+            wl_str="${wins}/${losses}"
+        fi
+
+        # WD indicator
+        local wd_str="—"
+        if [ "$wd_ready" = "true" ] || [ "$wd_ready" = "True" ]; then
+            wd_str="${G}✓${X}"
+        fi
+
+        printf "  ${be_color}%-2s${X}  %s  %s  %5s  ${pnl_color}%5s${X}  %6s  %s\n" "$num" "$mode_char" "$st_short" "\$$cap_str" "$pnl_val" "$wl_str" "$wd_str"
     done
-    echo -e "${B}══════════════════════════════════════════════════════════${X}"
-    echo -e "  ${D}Dashboard URL: http://localhost:$DASHBOARD_PORT${X}"
+    echo -e "${B}─────────────────────────────${X}"
+    echo -e "  ${D}Dashboard: http://localhost:$DASHBOARD_PORT${X}"
     echo ""
 }
 

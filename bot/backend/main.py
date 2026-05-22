@@ -778,20 +778,23 @@ def check_compound_levelup():
     return False
 
 def check_salary():
+    # ⚠ AUTO-WITHDRAWAL DISABLED — manual withdrawal only
+    # Uncomment lines below to re-enable auto-withdrawal feature
     eq = equity()
     if eq < S.salary_target: return False
     withdrawn = round(eq * C.salary_withdraw_pct, 4)
     keep      = round(eq * C.salary_keep_pct, 4)
     ev = {"time": now_str(), "equity": round(eq, 4), "withdrawn": withdrawn, "kept": keep,
           "next_target": S.salary_target + C.salary_threshold}
-    S.salary_events.append(ev)
-    S.total_withdrawn = round(S.total_withdrawn + withdrawn, 4)
-    S.capital = keep; S.locked = 0.0
-    S.salary_target += C.salary_threshold
-    add_log("SALARY", {"equity": round(eq, 4), "withdrawn": withdrawn, "kept": keep,
-                       "next_target": S.salary_target})
-    save_state()
-    return True
+    # S.salary_events.append(ev)
+    # S.total_withdrawn = round(S.total_withdrawn + withdrawn, 4)
+    # S.capital = keep; S.locked = 0.0
+    # S.salary_target += C.salary_threshold
+    # add_log("SALARY", {"equity": round(eq, 4), "withdrawn": withdrawn, "kept": keep,
+    #                    "next_target": S.salary_target})
+    # save_state()
+    # return True
+    return False
 
 # ─── BTC 5M SIGNAL ENGINE (7 indicators, weighted) ───────────
 def btc5m_window_ts(now_ts=0) -> int:
@@ -1941,6 +1944,10 @@ def get_stats():
         "roi_pct":         round(pnl/S.initial*100, 2) if S.initial else 0,
         "lifetime_pnl":    round(S.lifetime_pnl, 4),
         "total_withdrawn": round(S.total_withdrawn, 4),
+        # withdrawal readiness
+        "wd_ready":        eq >= 100.0,
+        "wd_available":    round(eq, 4),
+        "wd_suggest_pct":  50,
         "total_trades":    total,
         "wins":            wins,
         "losses":          total-wins,
