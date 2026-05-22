@@ -120,10 +120,10 @@ function CompactCalendar({ hist, onDayClick }) {
           <span style={{ fontSize: 8, color: 'var(--dim2)' }}>no trades</span>
         )}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(7, ${cellSize}px)`, gap: 2, marginBottom: 2 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 2 }}>
         {days.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 7, color: 'var(--dim)' }}>{d}</div>)}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(7, ${cellSize}px)`, gap: 2 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
         {cells.map((day, i) => {
           if (!day) return <div key={`e${i}`} />
           const key = dateKey(day)
@@ -142,9 +142,9 @@ function CompactCalendar({ hist, onDayClick }) {
                  onClick={clickable ? () => onDayClick(key) : undefined}
                  onMouseEnter={clickable ? (e) => { e.currentTarget.style.filter = 'brightness(1.3)' } : undefined}
                  onMouseLeave={clickable ? (e) => { e.currentTarget.style.filter = '' } : undefined}
-                 style={{ height: cellSize, border: `1px solid ${isToday ? 'var(--amber)' : borderColor}`, borderRadius: 2, background: bg,
+                 style={{ aspectRatio: '1', border: `1px solid ${isToday ? 'var(--amber)' : borderColor}`, borderRadius: 2, background: bg,
                           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 1,
-                          cursor: clickable ? 'pointer' : 'default', transition: 'filter 0.1s' }}>
+                          cursor: clickable ? 'pointer' : 'default', transition: 'filter 0.1s', minHeight: 32 }}>
               <span style={{ fontSize: 8, color: isToday ? 'var(--amber)' : 'var(--white)', fontWeight: isToday ? 700 : 400 }}>{day}</span>
               {d && <span style={{ fontSize: 7, color: cl, fontWeight: 700 }}>{d.pnl >= 0 ? '+' : '-'}{Math.abs(d.pnl).toFixed(1)}</span>}
             </div>
