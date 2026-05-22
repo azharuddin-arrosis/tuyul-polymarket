@@ -2262,6 +2262,10 @@ async def startup():
         con.commit(); con.close()
     resumed = load_state()
     db_load_daily_loss()                           # Sprint 1: restore daily P&L from DB
+    # Auto-start trading for DRY_RUN and SIM modes (REAL mode requires manual RUN)
+    if MODE in ("dry_run", "sim"):
+        S.running = True
+        add_log("BOT_AUTO_START", {"mode": MODE, "auto": True})
     asyncio.create_task(btc5m_loop())
     asyncio.create_task(orderbook_loop())
     asyncio.create_task(scanner_loop())
