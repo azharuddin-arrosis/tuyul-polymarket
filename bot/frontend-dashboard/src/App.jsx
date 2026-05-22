@@ -471,20 +471,25 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
     }}>
       {/* Header row — bot id + mode + status + actions */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Left: id + mode badge + status dot */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--white)', letterSpacing: '.04em' }}>{bot.id}</span>
-          <span style={{ fontSize: 8, padding: '1px 6px', background: `${modeColor}22`, color: modeColor, border: `1px solid ${modeColor}55`, borderRadius: 2, fontWeight: 700 }}>{mode}</span>
-          <span style={{ width: 5, height: 5, borderRadius: '50%', background: statusColor, boxShadow: `0 0 4px ${statusColor}`, animation: running ? 'pulse 2s infinite' : 'none' }} />
-          <span style={{ fontSize: 8, color: statusColor, fontWeight: 700 }}>{statusLabel}</span>
+          <span style={{ fontSize: 7, padding: '1px 5px', background: `${modeColor}22`, color: modeColor, border: `1px solid ${modeColor}44`, borderRadius: 2, fontWeight: 700, letterSpacing: '.06em' }}>{mode}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: statusColor, boxShadow: `0 0 4px ${statusColor}`, animation: running ? 'pulse 2s infinite' : 'none', flexShrink: 0 }} />
+            <span style={{ fontSize: 7, color: statusColor, fontWeight: 700, letterSpacing: '.06em' }}>{statusLabel}</span>
+          </span>
           <span style={{ fontSize: 7, color: 'var(--dim)' }}>:{bot.backend_port}</span>
+          {pending > 0 && <span style={{ fontSize: 7, color: 'var(--amber)', fontWeight: 700 }}>· {pending} open</span>}
         </div>
+        {/* Right: all buttons same size/style */}
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <span style={{ fontSize: 8, color: 'var(--dim)' }}>P:<span style={{ color: pending > 0 ? 'var(--amber)' : 'var(--dim2)', fontWeight: 700 }}>{pending}</span></span>
-          {!running && health && <button onClick={() => onStart(bot)} style={btnStyle('var(--green)')}>▶</button>}
-          {running && <button onClick={() => onStop(bot)} style={btnStyle('var(--red)')}>■</button>}
-          {equity >= 100 && onWithdrawal && <button onClick={() => onWithdrawal(bot)} style={btnStyle('var(--amber)')}>WD</button>}
-          {onHistory && <button onClick={() => onHistory(bot)} style={btnStyle('var(--blue)')}>HIST</button>}
-          <button onClick={openDetail} style={{ fontFamily: 'var(--mono)', fontSize: 8, padding: '2px 8px', background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 2, cursor: 'pointer', fontWeight: 700 }}>↗</button>
+          {!running && health && <button onClick={() => onStart(bot)} style={btnStyle('var(--green)')}>▶ RUN</button>}
+          {running  && health && <button onClick={() => onStop(bot)}  style={btnStyle('var(--red)')}>■ STOP</button>}
+          {!health  && <span style={{ fontSize: 7, color: 'var(--red)' }}>OFFLINE</span>}
+          {equity >= 100 && onWithdrawal && <button onClick={() => onWithdrawal(bot)} style={btnStyle('var(--amber)')}>💰 WD</button>}
+          {onHistory && <button onClick={() => onHistory(bot)} style={btnStyle('var(--dim2)')}>HIST</button>}
+          <button onClick={openDetail} style={btnStyle('var(--blue)')}>↗ OPEN</button>
         </div>
       </div>
 
