@@ -199,17 +199,26 @@ function CompactCalendar({ hist, withdrawals, onDayClick }) {
                  onMouseEnter={clickable ? (e) => { e.currentTarget.style.filter = 'brightness(1.25)' } : undefined}
                  onMouseLeave={clickable ? (e) => { e.currentTarget.style.filter = '' } : undefined}
                  style={{
-                   aspectRatio: '1', borderRadius: 2, background: bg, minHeight: 0,
-                   border: `1px solid ${isToday ? 'var(--amber)' : isFuture ? 'var(--border)' : bColor}`,
+                   aspectRatio: '1', borderRadius: 2, minHeight: 0,
+                   background: isFuture ? 'transparent' : (!d || d.trades === 0) && isPast ? 'rgba(255,255,255,0.02)' : bg,
+                   border: `1px solid ${isToday ? 'var(--amber)' : isFuture ? 'rgba(255,255,255,0.06)' : (!d || d.trades === 0) && isPast ? 'rgba(255,255,255,0.08)' : bColor}`,
                    boxShadow: isGold ? '0 0 6px rgba(255,215,0,0.4)' : 'none',
-                   opacity: isFuture ? 0.3 : 1,
                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                    padding: 1, cursor: clickable ? 'pointer' : 'default', transition: 'filter 0.1s',
                    position: 'relative', overflow: 'hidden',
                  }}>
               {/* Badge top-right */}
               {badge && <span style={{ position: 'absolute', top: 0, right: 1, fontSize: 7, lineHeight: 1, userSelect: 'none' }}>{badge}</span>}
-              <span style={{ fontSize: 8, color: isToday ? 'var(--amber)' : isFuture ? 'var(--dim2)' : 'var(--white)', fontWeight: isToday ? 700 : 400 }}>{day}</span>
+              {/* Date number */}
+              <span style={{ fontSize: 8, fontWeight: isToday ? 700 : 400,
+                color: isToday ? 'var(--amber)' : isFuture ? 'rgba(255,255,255,0.18)' : isPast && (!d || d.trades === 0) ? 'var(--dim2)' : 'var(--white)' }}>
+                {day}
+              </span>
+              {/* Past no-trade: show '—' */}
+              {isPast && (!d || d.trades === 0) && !d?.wd && <span style={{ fontSize: 6, color: 'rgba(255,255,255,0.15)', lineHeight: 1 }}>—</span>}
+              {/* Future: show '·' faint */}
+              {isFuture && <span style={{ fontSize: 6, color: 'rgba(255,255,255,0.12)', lineHeight: 1 }}>·</span>}
+              {/* Trade result */}
               {d && d.trades > 0 && <span style={{ fontSize: 7, color: cl, fontWeight: 700 }}>{netPnl >= 0 ? '+' : ''}{netPnl.toFixed(1)}</span>}
               {d && d.wd > 0 && !d.trades && <span style={{ fontSize: 6, color: 'var(--amber)' }}>WD</span>}
             </div>
