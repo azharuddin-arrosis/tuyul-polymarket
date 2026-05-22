@@ -149,6 +149,7 @@ class BotState:
         self.compound_events      = []
         self.salary_events        = []
         self.total_withdrawn      = 0.0
+        self.withdrawal_history   = []  # list of {"timestamp": iso_str, "amount": float, "note": str}
         self.salary_target        = C.salary_threshold
         self.lifetime_pnl         = 0.0
         self.last_balance_refresh = ""
@@ -307,7 +308,8 @@ def save_state():
     try:
         data = {
             "capital": S.capital, "locked": S.locked, "initial": S.initial,
-            "total_withdrawn": S.total_withdrawn, "salary_target": S.salary_target,
+            "total_withdrawn": S.total_withdrawn, "withdrawal_history": S.withdrawal_history[-100:],
+            "salary_target": S.salary_target,
             "salary_events": S.salary_events, "compound_events": S.compound_events,
             "lifetime_pnl": S.lifetime_pnl, "pos_counter": S.pos_counter,
             "closed_trades": S.closed_trades[-300:],
@@ -327,6 +329,7 @@ def load_state():
         S.locked          = 0.0
         S.initial         = float(d.get("initial", C.usdc_capital))
         S.total_withdrawn = float(d.get("total_withdrawn", 0))
+        S.withdrawal_history = d.get("withdrawal_history", [])
         S.salary_target   = float(d.get("salary_target", C.salary_threshold))
         S.salary_events   = d.get("salary_events", [])
         S.compound_events = d.get("compound_events", [])
@@ -1986,6 +1989,8 @@ def get_stats():
             "balance_floor":     C.balance_floor,
             "daily_loss_limit":  C.daily_loss_limit,
         },
+        # withdrawal history
+        "withdrawal_history": S.withdrawal_history[-50:][::-1],  # newest first
     }
 
 # ─── API ROUTES ──────────────────────────────────────────────
@@ -2192,6 +2197,14 @@ def api_withdrawal_execute(bot_id: str, amount: float):
             input="y\n"  # Auto-confirm the withdrawal prompt
         )
         if result.returncode == 0:
+            # Record withdrawal to history (survive restart)
+            S.withdrawal_history.append({
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "amount": round(amount, 2),
+                "note": "WD via dashboard"
+            })
+            S.total_withdrawn += amount
+            save_state()
             return {
                 "ok": True,
                 "bot_id": bot_id,
@@ -2209,21 +2222,12 @@ def api_withdrawal_execute(bot_id: str, amount: float):
 
 @app.get("/api/withdrawal/history")
 def api_withdrawal_history(bot_id: str = ""):
-    """Get withdrawal history for a bot"""
+    """Get withdrawal history for current bot"""
     try:
-        if not bot_id:
-            return {"ok": False, "error": "bot_id required"}
-        # Load state file
-        bot_root = Path(__file__).parent.parent
-        state_file = bot_root / "data" / bot_id / f"state_{bot_id}.json"
-        if not state_file.exists():
-            return {"ok": True, "history": []}
-        with open(state_file) as f:
-            state = json.load(f)
         return {
             "ok": True,
-            "bot_id": bot_id,
-            "history": state.get("withdrawal_history", [])
+            "bot_id": BOT_ID,
+            "history": S.withdrawal_history[-100:][::-1]  # newest first
         }
     except Exception as e:
         return {"ok": False, "error": str(e)}

@@ -59,26 +59,32 @@ function useDashboard() {
 }
 
 // ─── COMPACT PNL CALENDAR ────────────────────────────────────
-function buildDayMap(hist) {
+function buildDayMap(hist, withdrawals) {
   const m = {}
   ;(hist || []).forEach(t => {
     if (!t.opened_at) return
     const d = localDateKey(t.opened_at)
-    if (!m[d]) m[d] = { pnl: 0, trades: 0, wins: 0, losses: 0 }
+    if (!m[d]) m[d] = { pnl: 0, trades: 0, wins: 0, losses: 0, wd: 0 }
     m[d].pnl    = round2(m[d].pnl + (t.pnl || 0))
     m[d].trades++
     if (t.status === 'won')  m[d].wins++
     if (t.status === 'lost') m[d].losses++
   })
+  ;(withdrawals || []).forEach(wd => {
+    if (!wd.timestamp) return
+    const d = localDateKey(wd.timestamp)
+    if (!m[d]) m[d] = { pnl: 0, trades: 0, wins: 0, losses: 0, wd: 0 }
+    m[d].wd = round2(m[d].wd + (wd.amount || 0))
+  })
   return m
 }
 
-function CompactCalendar({ hist, onDayClick }) {
+function CompactCalendar({ hist, withdrawals, onDayClick }) {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
 
-  const dayMap = useMemo(() => buildDayMap(hist), [hist])
+  const dayMap = useMemo(() => buildDayMap(hist, withdrawals), [hist, withdrawals])
   const monthName = new Date(year, month, 1).toLocaleString('en-US', { month: 'short' })
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const firstWd = ((new Date(year, month, 1).getDay() + 6) % 7)
@@ -101,6 +107,8 @@ function CompactCalendar({ hist, onDayClick }) {
   const prefix = `${year}-${pad2(month + 1)}-`
   const mEntries = Object.entries(dayMap).filter(([k]) => k.startsWith(prefix))
   const mPnl    = mEntries.reduce((s, [, v]) => s + v.pnl, 0)
+  const mWd     = mEntries.reduce((s, [, v]) => s + v.wd, 0)
+  const mNetPnl = mPnl - mWd
   const mTrades = mEntries.reduce((s, [, v]) => s + v.trades, 0)
   const mWins   = mEntries.reduce((s, [, v]) => s + v.wins, 0)
 
@@ -112,9 +120,9 @@ function CompactCalendar({ hist, onDayClick }) {
           <span style={{ color: 'var(--white)', fontSize: 10, fontWeight: 700, minWidth: 80, textAlign: 'center' }}>{monthName} {year}</span>
           <button onClick={nextMonth} style={navBtn}>▶</button>
         </div>
-        {mTrades > 0 ? (
+        {mTrades > 0 || mWd > 0 ? (
           <span style={{ fontSize: 9, color: 'var(--dim)' }}>
-            {mTrades}t · {mWins}W/{mTrades-mWins}L · <span style={{ color: mPnl >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{sgnUsd(mPnl)}</span>
+            {mTrades}t · {mWins}W/{mTrades-mWins}L · <span style={{ color: mPnl >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{sgnUsd(mPnl)}</span>{mWd > 0 && <span style={{ color: 'var(--amber)' }}> − ${mWd.toFixed(2)} WD</span>} = <span style={{ color: mNetPnl >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{sgnUsd(mNetPnl)}</span>
           </span>
         ) : (
           <span style={{ fontSize: 8, color: 'var(--dim2)' }}>no trades</span>
@@ -129,16 +137,18 @@ function CompactCalendar({ hist, onDayClick }) {
           const key = dateKey(day)
           const d = dayMap[key]
           const isToday = key === localDateKey(today)
+          const netPnl = d ? round2(d.pnl - d.wd) : 0
           let bg = 'var(--bg2)', borderColor = 'var(--border)', cl = 'var(--dim2)'
-          if (d) {
-            const intensity = Math.min(0.85, 0.20 + (Math.abs(d.pnl) / maxAbs) * 0.65)
-            if (d.pnl > 0) { bg = `rgba(31,217,122,${intensity*0.30})`; borderColor = `rgba(31,217,122,${intensity*0.65})`; cl = 'var(--green)' }
-            else if (d.pnl < 0) { bg = `rgba(240,64,96,${intensity*0.30})`; borderColor = `rgba(240,64,96,${intensity*0.65})`; cl = 'var(--red)' }
+          if (d && (d.pnl !== 0 || d.wd !== 0)) {
+            const intensity = Math.min(0.85, 0.20 + (Math.abs(netPnl) / maxAbs) * 0.65)
+            if (netPnl > 0) { bg = `rgba(31,217,122,${intensity*0.30})`; borderColor = `rgba(31,217,122,${intensity*0.65})`; cl = 'var(--green)' }
+            else if (netPnl < 0) { bg = `rgba(240,64,96,${intensity*0.30})`; borderColor = `rgba(240,64,96,${intensity*0.65})`; cl = 'var(--red)' }
             else cl = 'var(--dim)'
           }
           const clickable = d && onDayClick
+          const tooltip = d ? `${key}: ${sgnUsd(d.pnl)}${d.wd > 0 ? ` − ${d.wd.toFixed(1)} WD = ${sgnUsd(netPnl)}` : ''} (${d.wins}W/${d.losses}L) — click for detail` : key
           return (
-            <div key={key} title={d ? `${key}: ${sgnUsd(d.pnl)} (${d.wins}W/${d.losses}L) — click for detail` : key}
+            <div key={key} title={tooltip}
                  onClick={clickable ? () => onDayClick(key) : undefined}
                  onMouseEnter={clickable ? (e) => { e.currentTarget.style.filter = 'brightness(1.3)' } : undefined}
                  onMouseLeave={clickable ? (e) => { e.currentTarget.style.filter = '' } : undefined}
@@ -146,7 +156,7 @@ function CompactCalendar({ hist, onDayClick }) {
                           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 1,
                           cursor: clickable ? 'pointer' : 'default', transition: 'filter 0.1s', minHeight: 32 }}>
               <span style={{ fontSize: 8, color: isToday ? 'var(--amber)' : 'var(--white)', fontWeight: isToday ? 700 : 400 }}>{day}</span>
-              {d && <span style={{ fontSize: 7, color: cl, fontWeight: 700 }}>{d.pnl >= 0 ? '+' : '-'}{Math.abs(d.pnl).toFixed(1)}</span>}
+              {d && <span style={{ fontSize: 7, color: cl, fontWeight: 700 }}>{netPnl >= 0 ? '+' : '-'}{Math.abs(netPnl).toFixed(1)}</span>}
             </div>
           )
         })}
@@ -160,7 +170,7 @@ const navBtn = {
 }
 
 // ─── DAY TRADES MODAL (with WIN/LOSS filter + summary) ──────
-function DayTradesModal({ bot, date, trades, onClose }) {
+function DayTradesModal({ bot, date, trades, withdrawals, onClose }) {
   const [filter, setFilter] = useState('all') // all | win | loss
 
   useEffect(() => {
@@ -171,7 +181,7 @@ function DayTradesModal({ bot, date, trades, onClose }) {
 
   const onBackdrop = (e) => { if (e.target === e.currentTarget) onClose() }
 
-  // Summary stats — newest first
+  // Summary stats — newest first (trades only for stats)
   const sorted = useMemo(() =>
     [...trades].sort((a, b) => (b.opened_at || '').localeCompare(a.opened_at || '')),
     [trades])
@@ -179,6 +189,8 @@ function DayTradesModal({ bot, date, trades, onClose }) {
   const losses = sorted.filter(t => t.status === 'lost').length
   const opens  = sorted.filter(t => t.status !== 'won' && t.status !== 'lost').length
   const totPnl = sorted.reduce((s, t) => s + (t.pnl || 0), 0)
+  const totWd  = (withdrawals || []).reduce((s, wd) => s + (wd.amount || 0), 0)
+  const netPnl = round2(totPnl - totWd)
   const totSize = sorted.reduce((s, t) => s + (t.size || 0), 0)
   const totWinPnl  = sorted.filter(t => t.status === 'won').reduce((s, t) => s + (t.pnl || 0), 0)
   const totLossPnl = sorted.filter(t => t.status === 'lost').reduce((s, t) => s + (t.pnl || 0), 0)
@@ -233,13 +245,14 @@ function DayTradesModal({ bot, date, trades, onClose }) {
 
         {/* Summary stats grid */}
         <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg1)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${totWd > 0 ? 7 : 6}, 1fr)`, gap: 8 }}>
             <StatBox label="TRADES"   value={sorted.length} color="var(--white)" />
             <StatBox label="WINS"     value={wins}    sub={`${winRate.toFixed(0)}%`} color="var(--green)" />
             <StatBox label="LOSSES"   value={losses}  sub={`${(100-winRate).toFixed(0)}%`} color="var(--red)" />
             <StatBox label="VOLUME"   value={usd(totSize)} sub="capital wagered" color="var(--dim)" />
-            <StatBox label="NET P&L"  value={sgnUsd(totPnl)} color={totPnl >= 0 ? 'var(--green)' : 'var(--red)'} />
-            <StatBox label="AVG W/L"  value={`${sgnUsd(avgWin)} / ${sgnUsd(avgLoss)}`} sub="per trade" color="var(--white)" small />
+            <StatBox label="P&L"      value={sgnUsd(totPnl)} color={totPnl >= 0 ? 'var(--green)' : 'var(--red)'} />
+            {totWd > 0 && <StatBox label="WD" value={sgnUsd(-totWd)} color="var(--amber)" />}
+            <StatBox label={totWd > 0 ? "NET" : "AVG W/L"} value={totWd > 0 ? sgnUsd(netPnl) : `${sgnUsd(avgWin)} / ${sgnUsd(avgLoss)}`} sub={totWd > 0 ? "after WD" : "per trade"} color={totWd > 0 ? (netPnl >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--white)'} small />
           </div>
         </div>
 
@@ -273,43 +286,88 @@ function DayTradesModal({ bot, date, trades, onClose }) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((t, i) => {
-                  const won  = t.status === 'won'
-                  const lost = t.status === 'lost'
-                  const side = (t.outcome || '—').toUpperCase()
-                  const isUp = side === 'UP' || side === 'YES'
-                  const sc = isUp ? 'var(--green)' : 'var(--red)'
-                  const time = new Date(t.opened_at)
-                  const timeLocal = time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
-                  const timeET = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/New_York' })
-                  const pnl = t.pnl || 0
-                  const pnlPct = t.size ? (pnl / t.size) * 100 : 0
-                  const shares = t.shares || (t.size || 0) / Math.max(t.price || 0.01, 0.01)
-                  return (
-                    <tr key={t.id || i} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={td}><span style={{ color: 'var(--dim)' }}>{i + 1}</span></td>
-                      <td style={td}><span style={{ color: 'var(--white)', fontWeight: 600 }}>{t.id}</span></td>
-                      <td style={td}>
-                        <span style={{ color: 'var(--white)' }}>{timeLocal}</span>{' '}
-                        <span style={{ color: 'var(--dim)', fontSize: 9 }}>· {timeET.replace(' ', '')} ET</span>
-                      </td>
-                      <td style={td}><span style={{ color: sc, fontWeight: 700 }}>{isUp ? '▲' : '▼'} {side}</span></td>
-                      <td style={{ ...td, textAlign: 'right', color: 'var(--white)' }}>{Math.round((t.price || 0) * 100)}¢</td>
-                      <td style={{ ...td, textAlign: 'right', color: 'var(--white)' }}>{usd(t.size)}</td>
-                      <td style={{ ...td, textAlign: 'right', color: 'var(--dim)' }}>{shares.toFixed(2)}</td>
-                      <td style={{ ...td, textAlign: 'right', color: pnl >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{sgnUsd(pnl)}</td>
-                      <td style={{ ...td, textAlign: 'right', color: pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>{sgnPct(pnlPct)}</td>
-                      <td style={{ ...td, textAlign: 'center' }}>
-                        <span style={{
-                          padding: '2px 8px', borderRadius: 2, fontSize: 9, fontWeight: 700, letterSpacing: '.07em',
-                          background: won ? 'rgba(31,217,122,.15)' : lost ? 'rgba(240,64,96,.15)' : 'rgba(232,160,32,.15)',
-                          color:      won ? 'var(--green)'         : lost ? 'var(--red)'         : 'var(--amber)',
-                          border:     `1px solid ${won ? 'var(--green)' : lost ? 'var(--red)' : 'var(--amber)'}55`,
-                        }}>{won ? 'WIN' : lost ? 'LOSS' : 'OPEN'}</span>
-                      </td>
-                    </tr>
-                  )
-                })}
+                {(() => {
+                  // Merge trades + withdrawals, sort newest first
+                  const merged = [
+                    ...filtered.map(t => ({ type: 'trade', data: t })),
+                    ...(filter === 'all' ? (withdrawals || []).map(wd => ({ type: 'wd', data: wd })) : [])
+                  ].sort((a, b) => {
+                    const timeA = a.data.opened_at || a.data.timestamp || ''
+                    const timeB = b.data.opened_at || b.data.timestamp || ''
+                    return timeB.localeCompare(timeA)
+                  })
+
+                  return merged.map((item, i) => {
+                    if (item.type === 'trade') {
+                      const t = item.data
+                      const won  = t.status === 'won'
+                      const lost = t.status === 'lost'
+                      const side = (t.outcome || '—').toUpperCase()
+                      const isUp = side === 'UP' || side === 'YES'
+                      const sc = isUp ? 'var(--green)' : 'var(--red)'
+                      const time = new Date(t.opened_at)
+                      const timeLocal = time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+                      const timeET = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/New_York' })
+                      const pnl = t.pnl || 0
+                      const pnlPct = t.size ? (pnl / t.size) * 100 : 0
+                      const shares = t.shares || (t.size || 0) / Math.max(t.price || 0.01, 0.01)
+                      return (
+                        <tr key={t.id || `t${i}`} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={td}><span style={{ color: 'var(--dim)' }}>{i + 1}</span></td>
+                          <td style={td}><span style={{ color: 'var(--white)', fontWeight: 600 }}>{t.id}</span></td>
+                          <td style={td}>
+                            <span style={{ color: 'var(--white)' }}>{timeLocal}</span>{' '}
+                            <span style={{ color: 'var(--dim)', fontSize: 9 }}>· {timeET.replace(' ', '')} ET</span>
+                          </td>
+                          <td style={td}><span style={{ color: sc, fontWeight: 700 }}>{isUp ? '▲' : '▼'} {side}</span></td>
+                          <td style={{ ...td, textAlign: 'right', color: 'var(--white)' }}>{Math.round((t.price || 0) * 100)}¢</td>
+                          <td style={{ ...td, textAlign: 'right', color: 'var(--white)' }}>{usd(t.size)}</td>
+                          <td style={{ ...td, textAlign: 'right', color: 'var(--dim)' }}>{shares.toFixed(2)}</td>
+                          <td style={{ ...td, textAlign: 'right', color: pnl >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{sgnUsd(pnl)}</td>
+                          <td style={{ ...td, textAlign: 'right', color: pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>{sgnPct(pnlPct)}</td>
+                          <td style={{ ...td, textAlign: 'center' }}>
+                            <span style={{
+                              padding: '2px 8px', borderRadius: 2, fontSize: 9, fontWeight: 700, letterSpacing: '.07em',
+                              background: won ? 'rgba(31,217,122,.15)' : lost ? 'rgba(240,64,96,.15)' : 'rgba(232,160,32,.15)',
+                              color:      won ? 'var(--green)'         : lost ? 'var(--red)'         : 'var(--amber)',
+                              border:     `1px solid ${won ? 'var(--green)' : lost ? 'var(--red)' : 'var(--amber)'}55`,
+                            }}>{won ? 'WIN' : lost ? 'LOSS' : 'OPEN'}</span>
+                          </td>
+                        </tr>
+                      )
+                    } else {
+                      // WD row
+                      const wd = item.data
+                      const time = new Date(wd.timestamp)
+                      const timeLocal = time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+                      const timeET = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/New_York' })
+                      return (
+                        <tr key={`wd${i}`} style={{ borderBottom: '1px solid var(--border)', background: 'rgba(232,160,32,.05)' }}>
+                          <td style={td}><span style={{ color: 'var(--dim)' }}>{i + 1}</span></td>
+                          <td style={td}><span style={{ color: 'var(--amber)', fontWeight: 600 }}>WD</span></td>
+                          <td style={td}>
+                            <span style={{ color: 'var(--white)' }}>{timeLocal}</span>{' '}
+                            <span style={{ color: 'var(--dim)', fontSize: 9 }}>· {timeET.replace(' ', '')} ET</span>
+                          </td>
+                          <td style={td}><span style={{ color: 'var(--amber)', fontWeight: 700 }}>— WD —</span></td>
+                          <td style={{ ...td, textAlign: 'right', color: 'var(--dim)' }}>—</td>
+                          <td style={{ ...td, textAlign: 'right', color: 'var(--amber)' }}>−{usd(wd.amount)}</td>
+                          <td style={{ ...td, textAlign: 'right', color: 'var(--dim)' }}>—</td>
+                          <td style={{ ...td, textAlign: 'right', color: 'var(--amber)', fontWeight: 700 }}>−{usd(wd.amount)}</td>
+                          <td style={{ ...td, textAlign: 'right', color: 'var(--amber)' }}>—</td>
+                          <td style={{ ...td, textAlign: 'center' }}>
+                            <span style={{
+                              padding: '2px 8px', borderRadius: 2, fontSize: 9, fontWeight: 700, letterSpacing: '.07em',
+                              background: 'rgba(232,160,32,.15)',
+                              color: 'var(--amber)',
+                              border: '1px solid rgba(232,160,32,.55)',
+                            }}>WD</span>
+                          </td>
+                        </tr>
+                      )
+                    }
+                  })
+                })()}
               </tbody>
             </table>
           )}
@@ -317,7 +375,7 @@ function DayTradesModal({ bot, date, trades, onClose }) {
 
         {/* Footer */}
         <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border2)', background: 'var(--bg2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 9, color: 'var(--dim)' }}>
-          <span>Showing {filtered.length} of {sorted.length} trades</span>
+          <span>Showing {filtered.length} trades{withdrawals && withdrawals.length > 0 && ` + ${withdrawals.length} WD`} {filter !== 'all' ? `(filtered by ${filter.toUpperCase()})` : ''}</span>
           <span>ESC or click outside to close</span>
         </div>
       </div>
@@ -387,6 +445,7 @@ function StorageRow({ storage, gas }) {
 
 function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHistory }) {
   const { stats, hist, gas, storage, health } = data || {}
+  const withdrawals = stats?.withdrawal_history || []
   const mode    = stats?.mode || '—'
   const running = stats?.running
   const equity  = stats?.capital ?? 0
@@ -461,7 +520,7 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
 
       {/* Calendar */}
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8 }}>
-        <CompactCalendar hist={hist || []} onDayClick={(dateKey) => onDayClick && onDayClick(bot, dateKey, hist || [])} />
+        <CompactCalendar hist={hist || []} withdrawals={withdrawals || []} onDayClick={(dateKey) => onDayClick && onDayClick(bot, dateKey, hist || [], withdrawals || [])} />
       </div>
     </div>
   )
@@ -710,7 +769,7 @@ function WithdrawalView({ bots, data, onBack }) {
 export default function App() {
   const { bots, data } = useDashboard()
   const [now, setNow] = useState(new Date())
-  const [dayModal, setDayModal] = useState(null) // { bot, date, trades }
+  const [dayModal, setDayModal] = useState(null) // { bot, date, trades, withdrawals }
   const [view, setView] = useState('dashboard') // 'dashboard' | 'withdrawal'
   const [wdModal, setWdModal] = useState(null) // { botId, capital, mode, percent, backendPort }
   const [wdLoading, setWdLoading] = useState(false)
@@ -719,9 +778,10 @@ export default function App() {
   const [historyLoading, setHistoryLoading] = useState(false)
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id) }, [])
 
-  const openDayModal = (bot, dateKey, hist) => {
+  const openDayModal = (bot, dateKey, hist, wdList) => {
     const trades = (hist || []).filter(t => t.opened_at && localDateKey(t.opened_at) === dateKey)
-    setDayModal({ bot, date: dateKey, trades })
+    const withdrawals = (wdList || []).filter(wd => wd.timestamp && localDateKey(wd.timestamp) === dateKey)
+    setDayModal({ bot, date: dateKey, trades, withdrawals })
   }
 
   const startBot = async (bot) => {
@@ -870,6 +930,7 @@ export default function App() {
           bot={dayModal.bot}
           date={dayModal.date}
           trades={dayModal.trades}
+          withdrawals={dayModal.withdrawals}
           onClose={() => setDayModal(null)}
         />
       )}
