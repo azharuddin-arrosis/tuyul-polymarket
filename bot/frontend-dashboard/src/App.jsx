@@ -385,7 +385,7 @@ function StorageRow({ storage, gas }) {
   )
 }
 
-function BotCard({ bot, data, onStart, onStop, onDayClick }) {
+function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal }) {
   const { stats, hist, gas, storage, health } = data || {}
   const mode    = stats?.mode || '—'
   const running = stats?.running
@@ -451,6 +451,7 @@ function BotCard({ bot, data, onStart, onStop, onDayClick }) {
           {!running && health && <button onClick={() => onStart(bot)} style={btnStyle('var(--green)')}>▶ RUN</button>}
           {running && <button onClick={() => onStop(bot)} style={btnStyle('var(--red)')}>■ STOP</button>}
           {!health && <span style={{ fontSize: 8, color: 'var(--red)' }}>start via terminal</span>}
+          {equity >= 100 && onWithdrawal && <button onClick={() => onWithdrawal(bot)} style={btnStyle('var(--amber)')}>💰 WD</button>}
         </div>
       </div>
 
@@ -710,6 +711,9 @@ export default function App() {
   const [now, setNow] = useState(new Date())
   const [dayModal, setDayModal] = useState(null) // { bot, date, trades }
   const [view, setView] = useState('dashboard') // 'dashboard' | 'withdrawal'
+  const [wdModal, setWdModal] = useState(null) // { botId, capital, mode, percent, backendPort }
+  const [wdLoading, setWdLoading] = useState(false)
+  const [wdResult, setWdResult] = useState(null) // { ok, message, error }
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id) }, [])
 
   const openDayModal = (bot, dateKey, hist) => {
@@ -739,6 +743,14 @@ export default function App() {
   const stopBot = (bot) => {
     fetch(`http://localhost:${bot.backend_port}/api/bot/stop`, { method: 'POST' })
       .catch(() => alert(`Failed to stop ${bot.id}`))
+  }
+
+  const handleWithdrawal = (bot) => {
+    const s = data[bot.id]?.stats
+    if (s && s.capital >= 100) {
+      const mode = s.mode_raw === 'dry_run' ? 'DRY' : s.mode_raw === 'real' ? 'REAL' : '?'
+      setWdModal({ botId: bot.id, capital: s.capital, mode, percent: 50, backendPort: bot.backend_port })
+    }
   }
 
   // Aggregate stats across bots
@@ -826,7 +838,7 @@ export default function App() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: 14 }}>
-          {bots.map(b => <BotCard key={b.id} bot={b} data={data[b.id]} onStart={startBot} onStop={stopBot} onDayClick={openDayModal} />)}
+          {bots.map(b => <BotCard key={b.id} bot={b} data={data[b.id]} onStart={startBot} onStop={stopBot} onDayClick={openDayModal} onWithdrawal={handleWithdrawal} />)}
         </div>
       )}
 
@@ -841,6 +853,99 @@ export default function App() {
           trades={dayModal.trades}
           onClose={() => setDayModal(null)}
         />
+      )}
+
+      {/* Withdrawal Modal (App level) */}
+      {wdModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 999,
+        }} onClick={() => setWdModal(null)}>
+          <div style={{
+            background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 4, padding: 16, maxWidth: 500,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 12, color: 'var(--white)' }}>
+              Withdrawal: <span style={{ color: 'var(--amber)' }}>{wdModal.botId}</span> [{wdModal.mode}]
+            </div>
+
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 2, padding: 10, marginBottom: 12 }}>
+              <div style={{ fontSize: 9, color: 'var(--dim)', marginBottom: 6 }}>Current Capital</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--green)' }}>
+                ${Number(wdModal.capital).toFixed(2)}
+              </div>
+            </div>
+
+            <div style={{ fontSize: 9, color: 'var(--dim)', marginBottom: 6 }}>Suggestion: Withdraw {wdModal.percent}%</div>
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 2, padding: 8, marginBottom: 14, fontFamily: 'var(--mono)', fontSize: 9 }}>
+              <div style={{ color: 'var(--amber)', marginBottom: 4 }}>Withdraw Amount</div>
+              <div style={{ color: 'var(--green)', fontWeight: 700 }}>
+                ${(wdModal.capital * wdModal.percent / 100).toFixed(2)}
+              </div>
+              <div style={{ color: 'var(--dim)', fontSize: 8, marginTop: 4 }}>
+                Keep: ${(wdModal.capital * (100 - wdModal.percent) / 100).toFixed(2)}
+              </div>
+            </div>
+
+            {wdResult && (
+              <div style={{
+                background: wdResult.ok ? 'var(--green)' : 'var(--red)', borderRadius: 2, padding: 10,
+                marginBottom: 14, fontSize: 9, color: 'var(--white)', fontFamily: 'var(--mono)',
+              }}>
+                {wdResult.ok ? '✓ Withdrawal successful!' : `✗ ${wdResult.error}`}
+              </div>
+            )}
+
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--amber)', borderRadius: 2, padding: 10, marginBottom: 14 }}>
+              <button
+                onClick={async () => {
+                  setWdLoading(true)
+                  setWdResult(null)
+                  try {
+                    const amount = (wdModal.capital * wdModal.percent / 100).toFixed(2)
+                    const url = `http://localhost:${wdModal.backendPort}/api/withdrawal/execute?bot_id=${wdModal.botId}&amount=${amount}`
+                    const response = await fetch(url, { method: 'POST' })
+                    const result = await response.json()
+                    if (result.ok) {
+                      setWdResult({ ok: true, message: `${wdModal.botId}: $${amount} withdrawn` })
+                      setTimeout(() => {
+                        setWdModal(null)
+                        setWdResult(null)
+                      }, 2000)
+                    } else {
+                      setWdResult({ ok: false, error: result.error || 'Unknown error' })
+                    }
+                  } catch (e) {
+                    setWdResult({ ok: false, error: e.message })
+                  }
+                  setWdLoading(false)
+                }}
+                disabled={wdLoading}
+                style={{
+                  width: '100%', fontFamily: 'var(--mono)', fontSize: 8, padding: '8px 12px',
+                  background: wdLoading ? 'var(--dim)' : 'var(--green)', color: 'var(--bg)',
+                  border: 'none', borderRadius: 2, cursor: wdLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
+                }}
+              >
+                {wdLoading ? 'EXECUTING...' : 'EXECUTE WITHDRAWAL'}
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setWdModal(null)}
+                style={{
+                  fontFamily: 'var(--mono)', fontSize: 8, padding: '6px 12px',
+                  background: 'var(--border)', color: 'var(--white)', border: 'none', borderRadius: 2,
+                  cursor: 'pointer', fontWeight: 700,
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
