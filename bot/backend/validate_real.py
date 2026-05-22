@@ -172,7 +172,7 @@ try:
     params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=2)
     data = client.get_balance_allowance(params=params)
     raw = float(data.get("balance", 0) or 0)
-    usdc_balance = round(raw, 4)
+    usdc_balance = round(raw / 1e6, 4)  # API returns micro-USDC (6 decimals)
     ok_usdc = True
 except Exception as e:
     ok_usdc = False
@@ -323,7 +323,7 @@ try:
     from py_clob_client.clob_types import BalanceAllowanceParams, AssetType
     params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=2)
     data = client.get_balance_allowance(params=params)
-    allowance_val = float(data.get("allowance", 0) or 0)
+    allowance_val = float(data.get("allowance", 0) or 0) / 1e6  # micro-USDC → USDC
     ok_allowance = allowance_val > 0
 except Exception as e:
     print(f"    {C.D}error: {str(e)[:120]}{C.X}")

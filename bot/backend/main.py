@@ -452,8 +452,8 @@ async def fetch_balance_usdc(sess: aiohttp.ClientSession) -> float:
             params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=2)
             data = client.get_balance_allowance(params=params)
             raw = float(data.get("balance", 0) or 0)
-            # CLOB returns USDC as integer dollars (not 6-decimal micro-units)
-            return round(raw, 4)
+            # CLOB returns balance in micro-USDC (6 decimal places) — divide by 1e6
+            return round(raw / 1e6, 4)
 
         return await asyncio.get_event_loop().run_in_executor(None, _fetch)
     except: pass
