@@ -164,11 +164,11 @@ function useLogFile(type, active) {
   return { lines, total, error }
 }
 
-// ─── LOG MODAL ───────────────────────────────────────────────
-function LogModal({ onClose }) {
-  const [filter, setFilter]     = useState('')
+// ─── LOG PAGE ────────────────────────────────────────────────
+function LogPage({ onBack, stats }) {
+  const [filter, setFilter]         = useState('')
   const [autoScroll, setAutoScroll] = useState(true)
-  const [pause, setPause]       = useState(false)
+  const [pause, setPause]           = useState(false)
   const beRef = useRef(null)
   const feRef = useRef(null)
 
@@ -186,25 +186,18 @@ function LogModal({ onClose }) {
     return 'var(--dim)'
   }
 
-  const filtered = (lines) => filter ? lines.filter(l => l.toLowerCase().includes(filter.toLowerCase())) : lines
+  const applyFilter = (lines) => filter ? lines.filter(l => l.toLowerCase().includes(filter.toLowerCase())) : lines
 
-  // Auto-scroll
-  useEffect(() => {
-    if (!autoScroll) return
-    if (beRef.current) beRef.current.scrollTop = beRef.current.scrollHeight
-  }, [be.lines, autoScroll])
-  useEffect(() => {
-    if (!autoScroll) return
-    if (feRef.current) feRef.current.scrollTop = feRef.current.scrollHeight
-  }, [fe.lines, autoScroll])
+  useEffect(() => { if (autoScroll && beRef.current) beRef.current.scrollTop = beRef.current.scrollHeight }, [be.lines, autoScroll])
+  useEffect(() => { if (autoScroll && feRef.current) feRef.current.scrollTop = feRef.current.scrollHeight }, [fe.lines, autoScroll])
 
   const panel = (data, ref_, side) => {
-    const fl = filtered(data.lines)
-    const sideColor = side === 'BE' ? 'var(--blue)' : 'var(--purple)'
+    const fl = applyFilter(data.lines)
+    const col = side === 'BE' ? 'var(--blue)' : 'var(--purple)'
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         <div style={{ padding: '4px 10px', background: 'var(--bg2)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
-          <span style={{ fontSize: 8, fontWeight: 700, color: sideColor, letterSpacing: '.08em' }}>
+          <span style={{ fontSize: 8, fontWeight: 700, color: col, letterSpacing: '.08em' }}>
             {side === 'FE' ? '◀ FRONTEND' : 'BACKEND ▶'}
           </span>
           <span style={{ fontSize: 7, color: data.error ? 'var(--red)' : 'var(--dim)' }}>
@@ -213,53 +206,54 @@ function LogModal({ onClose }) {
         </div>
         <div
           ref={ref_}
-          onScroll={() => {
-            if (ref_.current) {
-              const el = ref_.current
-              if (el.scrollHeight - el.scrollTop - el.clientHeight > 40) setAutoScroll(false)
-            }
-          }}
-          style={{ flex: 1, overflowY: 'auto', padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 8.5, lineHeight: 1.65 }}
+          onScroll={() => { if (ref_.current) { const el = ref_.current; if (el.scrollHeight - el.scrollTop - el.clientHeight > 40) setAutoScroll(false) } }}
+          style={{ flex: 1, overflowY: 'auto', padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 8.5, lineHeight: 1.65, background: 'var(--bg)' }}
         >
           {fl.length === 0
             ? <div style={{ color: 'var(--dim2)', textAlign: 'center', padding: 16 }}>{data.error || '(no lines)'}</div>
-            : fl.map((l, i) => (
-                <div key={i} style={{ color: lineClr(l), whiteSpace: 'pre-wrap', wordBreak: 'break-all', paddingBottom: 1 }}>{l}</div>
-              ))
+            : fl.map((l, i) => <div key={i} style={{ color: lineClr(l), whiteSpace: 'pre-wrap', wordBreak: 'break-all', paddingBottom: 1 }}>{l}</div>)
           }
         </div>
       </div>
     )
   }
 
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-      {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px', borderBottom: '1px solid var(--border)', background: 'var(--bg1)', flexShrink: 0 }}>
-        <button onClick={onClose} style={ctrlBtn('var(--dim)')}>✕ CLOSE</button>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.04em' }}>
-          <span style={{ color: 'var(--cyan)' }}>LOG</span><span style={{ color: 'var(--white)' }}> VIEWER</span>
-        </span>
+  const botId   = stats?.bot_id   || '—'
+  const botName = stats?.bot_name || botId
+  const mode    = stats?.mode     || '—'
+  const running = stats?.running
 
+  return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', overflow: 'hidden' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 14px', borderBottom: '1px solid var(--border2)', background: 'var(--bg1)', flexShrink: 0 }}>
+        <button onClick={onBack} style={ctrlBtn('var(--dim)')}>← BACK</button>
+
+        {/* Bot identity */}
+        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '.04em' }}>
+          <span style={{ color: 'var(--green)' }}>Poly</span><span style={{ color: 'var(--white)' }}>pox</span>
+        </span>
+        <span style={{ fontSize: 8, color: 'var(--white)', fontWeight: 700 }}>{botName}</span>
+        {botName !== botId && <span style={{ fontSize: 7, color: 'var(--dim)' }}>{botId}</span>}
+        <span style={{ fontSize: 7, padding: '1px 6px', background: running ? 'rgba(0,229,160,.12)' : 'rgba(255,61,107,.12)', color: running ? 'var(--green)' : 'var(--red)', border: `1px solid ${running ? 'var(--green)' : 'var(--red)'}44`, borderRadius: 2, fontWeight: 700 }}>
+          {running ? '● RUNNING' : '○ PAUSED'}
+        </span>
+        <span style={{ fontSize: 7, color: 'var(--dim)', marginLeft: 2 }}>{mode}</span>
+
+        <span style={{ fontSize: 10, color: 'var(--cyan)', fontWeight: 700, marginLeft: 8, letterSpacing: '.06em' }}>LOG VIEWER</span>
+
+        {/* Controls — right side */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ fontSize: 8, color: 'var(--dim)' }}>FILTER</span>
           <input
             value={filter}
             onChange={e => setFilter(e.target.value)}
             placeholder="keyword..."
-            style={{
-              fontFamily: 'var(--mono)', fontSize: 9, padding: '3px 8px', width: 130,
-              background: 'var(--bg2)', color: 'var(--white)', border: '1px solid var(--border2)',
-              borderRadius: 2, outline: 'none',
-            }}
+            style={{ fontFamily: 'var(--mono)', fontSize: 9, padding: '3px 8px', width: 130, background: 'var(--bg2)', color: 'var(--white)', border: '1px solid var(--border2)', borderRadius: 2, outline: 'none' }}
           />
-          {filter && <button onClick={() => setFilter('')} style={{ ...ctrlBtn('var(--dim)'), padding: '3px 6px' }}>✕</button>}
-          <button onClick={() => setAutoScroll(a => !a)} style={ctrlBtn(autoScroll ? 'var(--green)' : 'var(--dim)')}>
-            ↓ {autoScroll ? 'SCROLL·ON' : 'SCROLL·OFF'}
-          </button>
-          <button onClick={() => setPause(p => !p)} style={ctrlBtn(pause ? 'var(--amber)' : 'var(--dim)')}>
-            {pause ? '⏸ PAUSED' : '▶ LIVE'}
-          </button>
+          {filter && <button onClick={() => setFilter('')} style={{ ...ctrlBtn('var(--dim)'), padding: '2px 6px' }}>✕</button>}
+          <button onClick={() => setAutoScroll(a => !a)} style={ctrlBtn(autoScroll ? 'var(--green)' : 'var(--dim)')}>↓ {autoScroll ? 'ON' : 'OFF'}</button>
+          <button onClick={() => setPause(p => !p)} style={ctrlBtn(pause ? 'var(--amber)' : 'var(--dim)')}>{pause ? '⏸ PAUSED' : '▶ LIVE'}</button>
         </div>
       </div>
 
@@ -2150,7 +2144,7 @@ export default function App() {
   const { stats, pos, hist, log, btc5m, balance, orderbook, config, conn,
           start, stop, resumeGas, setMode, setConfig } = useBot()
   const [showConfig, setShowConfig] = useState(false)
-  const [showLog, setShowLog] = useState(false)
+  const [page, setPage] = useState('main') // 'main' | 'logs'
   const [, forceUpdate] = useState(0)
   const latency = useLatency()
 
@@ -2163,12 +2157,15 @@ export default function App() {
     return () => clearInterval(id)
   }, [])
 
+  if (page === 'logs') {
+    return <LogPage onBack={() => setPage('main')} stats={stats} />
+  }
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', color: 'var(--white)', overflow: 'hidden' }}>
       <Header stats={stats} btc5m={btc5m} balance={balance} conn={conn} config={config} setMode={setMode}
               start={start} stop={stop} resumeGas={resumeGas} onConfigClick={() => setShowConfig(true)}
-              onLogClick={() => setShowLog(true)} log={log} />
-      {showLog && <LogModal onClose={() => setShowLog(false)} />}
+              onLogClick={() => setPage('logs')} log={log} />
       <StatsGrid stats={stats} btc5m={btc5m} balance={balance} />
 
       {/* Chart + Orderbook row — 2:1 ratio */}
