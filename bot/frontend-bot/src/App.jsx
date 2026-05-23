@@ -139,6 +139,140 @@ function LatencyChip({ label, ms }) {
   )
 }
 
+// ─── LOG FILE HOOK ───────────────────────────────────────────
+function useLogFile(type, active) {
+  const [lines, setLines]   = useState([])
+  const [total, setTotal]   = useState(0)
+  const [error, setError]   = useState(null)
+  useEffect(() => {
+    if (!active) return
+    let cancelled = false
+    const load = async () => {
+      try {
+        const r = await fetch(`/api/logs/file?type=${type}&lines=400`, { signal: AbortSignal.timeout(4000) })
+        const d = await r.json()
+        if (!cancelled) {
+          if (d.ok) { setLines(d.lines); setTotal(d.total); setError(null) }
+          else setError(d.error)
+        }
+      } catch(e) { if (!cancelled) setError(e.message) }
+    }
+    load()
+    const id = setInterval(load, 2000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [type, active])
+  return { lines, total, error }
+}
+
+// ─── LOG MODAL ───────────────────────────────────────────────
+function LogModal({ onClose }) {
+  const [filter, setFilter]     = useState('')
+  const [autoScroll, setAutoScroll] = useState(true)
+  const [pause, setPause]       = useState(false)
+  const beRef = useRef(null)
+  const feRef = useRef(null)
+
+  const be = useLogFile('backend',  !pause)
+  const fe = useLogFile('frontend', !pause)
+
+  const lineClr = (line) => {
+    const l = line.toLowerCase()
+    if (l.includes('traceback') || l.includes('critical') || l.includes('[error]') || (l.includes('error') && !l.includes('error_rate'))) return '#ff5561'
+    if (l.includes('warn') || l.includes('alert') || l.includes('gas_stop')) return 'var(--amber)'
+    if (l.includes('won') || l.includes('profit') || l.includes('redeem') || l.includes('compound_up')) return 'var(--green)'
+    if (l.includes('entry') || l.includes('fire') || l.includes('spike') || l.includes('signal') || l.includes('bet open')) return 'var(--cyan)'
+    if (l.includes('close_pos') || l.includes('lost')) return '#ff7a7a'
+    if (l.includes('balance') || l.includes('scanner')) return '#a08be0'
+    return 'var(--dim)'
+  }
+
+  const filtered = (lines) => filter ? lines.filter(l => l.toLowerCase().includes(filter.toLowerCase())) : lines
+
+  // Auto-scroll
+  useEffect(() => {
+    if (!autoScroll) return
+    if (beRef.current) beRef.current.scrollTop = beRef.current.scrollHeight
+  }, [be.lines, autoScroll])
+  useEffect(() => {
+    if (!autoScroll) return
+    if (feRef.current) feRef.current.scrollTop = feRef.current.scrollHeight
+  }, [fe.lines, autoScroll])
+
+  const panel = (data, ref_, side) => {
+    const fl = filtered(data.lines)
+    const sideColor = side === 'BE' ? 'var(--blue)' : 'var(--purple)'
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '4px 10px', background: 'var(--bg2)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
+          <span style={{ fontSize: 8, fontWeight: 700, color: sideColor, letterSpacing: '.08em' }}>
+            {side === 'FE' ? '◀ FRONTEND' : 'BACKEND ▶'}
+          </span>
+          <span style={{ fontSize: 7, color: data.error ? 'var(--red)' : 'var(--dim)' }}>
+            {data.error ? `⚠ ${data.error}` : `${data.total} lines · ${fl.length} shown`}
+          </span>
+        </div>
+        <div
+          ref={ref_}
+          onScroll={() => {
+            if (ref_.current) {
+              const el = ref_.current
+              if (el.scrollHeight - el.scrollTop - el.clientHeight > 40) setAutoScroll(false)
+            }
+          }}
+          style={{ flex: 1, overflowY: 'auto', padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 8.5, lineHeight: 1.65 }}
+        >
+          {fl.length === 0
+            ? <div style={{ color: 'var(--dim2)', textAlign: 'center', padding: 16 }}>{data.error || '(no lines)'}</div>
+            : fl.map((l, i) => (
+                <div key={i} style={{ color: lineClr(l), whiteSpace: 'pre-wrap', wordBreak: 'break-all', paddingBottom: 1 }}>{l}</div>
+              ))
+          }
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px', borderBottom: '1px solid var(--border)', background: 'var(--bg1)', flexShrink: 0 }}>
+        <button onClick={onClose} style={ctrlBtn('var(--dim)')}>✕ CLOSE</button>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.04em' }}>
+          <span style={{ color: 'var(--cyan)' }}>LOG</span><span style={{ color: 'var(--white)' }}> VIEWER</span>
+        </span>
+
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 8, color: 'var(--dim)' }}>FILTER</span>
+          <input
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+            placeholder="keyword..."
+            style={{
+              fontFamily: 'var(--mono)', fontSize: 9, padding: '3px 8px', width: 130,
+              background: 'var(--bg2)', color: 'var(--white)', border: '1px solid var(--border2)',
+              borderRadius: 2, outline: 'none',
+            }}
+          />
+          {filter && <button onClick={() => setFilter('')} style={{ ...ctrlBtn('var(--dim)'), padding: '3px 6px' }}>✕</button>}
+          <button onClick={() => setAutoScroll(a => !a)} style={ctrlBtn(autoScroll ? 'var(--green)' : 'var(--dim)')}>
+            ↓ {autoScroll ? 'SCROLL·ON' : 'SCROLL·OFF'}
+          </button>
+          <button onClick={() => setPause(p => !p)} style={ctrlBtn(pause ? 'var(--amber)' : 'var(--dim)')}>
+            {pause ? '⏸ PAUSED' : '▶ LIVE'}
+          </button>
+        </div>
+      </div>
+
+      {/* Dual panel */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1px 1fr', overflow: 'hidden' }}>
+        {panel(fe, feRef, 'FE')}
+        <div style={{ background: 'var(--border)' }} />
+        {panel(be, beRef, 'BE')}
+      </div>
+    </div>
+  )
+}
+
 const ASSETS = [
   { sym: 'BTC',  active: true  },
   { sym: 'ETH',  active: false },
@@ -260,7 +394,7 @@ function LogTicker({ entry }) {
 }
 
 // ─── HEADER + STATUS BAR ─────────────────────────────────────
-function Header({ stats, btc5m, balance, conn, config, setMode, start, stop, resumeGas, onConfigClick, log }) {
+function Header({ stats, btc5m, balance, conn, config, setMode, start, stop, resumeGas, onConfigClick, onLogClick, log }) {
   const mode = stats?.mode || 'SIM'
   const running = stats?.running
   const gasPaused = stats?.gas?.paused
@@ -313,6 +447,7 @@ function Header({ stats, btc5m, balance, conn, config, setMode, start, stop, res
           <StatusChip label="BTC"    value={usd(btc, 2)} color="var(--green)" big />
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {onLogClick    && <button onClick={onLogClick}    style={ctrlBtn('var(--cyan)')}>▤ LOG</button>}
           {onConfigClick && <button onClick={onConfigClick} style={ctrlBtn('var(--dim)')}>⚙ CONFIG</button>}
           {!running && start && <button onClick={start} style={ctrlBtn('var(--green)')}>▶ RUN</button>}
           {running && stop && <button onClick={stop} style={ctrlBtn('var(--red)')}>■ STOP</button>}
@@ -2015,6 +2150,7 @@ export default function App() {
   const { stats, pos, hist, log, btc5m, balance, orderbook, config, conn,
           start, stop, resumeGas, setMode, setConfig } = useBot()
   const [showConfig, setShowConfig] = useState(false)
+  const [showLog, setShowLog] = useState(false)
   const [, forceUpdate] = useState(0)
   const latency = useLatency()
 
@@ -2030,7 +2166,9 @@ export default function App() {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', color: 'var(--white)', overflow: 'hidden' }}>
       <Header stats={stats} btc5m={btc5m} balance={balance} conn={conn} config={config} setMode={setMode}
-              start={start} stop={stop} resumeGas={resumeGas} onConfigClick={() => setShowConfig(true)} log={log} />
+              start={start} stop={stop} resumeGas={resumeGas} onConfigClick={() => setShowConfig(true)}
+              onLogClick={() => setShowLog(true)} log={log} />
+      {showLog && <LogModal onClose={() => setShowLog(false)} />}
       <StatsGrid stats={stats} btc5m={btc5m} balance={balance} />
 
       {/* Chart + Orderbook row — 2:1 ratio */}

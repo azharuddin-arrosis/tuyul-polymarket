@@ -578,7 +578,7 @@ function InfoStrip({ backendPort, storage, gas, stats }) {
 
 const RANK_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32']  // gold, silver, bronze
 
-function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHistory, rank, isMobile }) {
+function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHistory, onLogs, rank, isMobile }) {
   const { stats, hist, gas, storage, health } = data || {}
   const withdrawals = stats?.withdrawal_history || []
   const mode    = stats?.mode || '—'
@@ -652,6 +652,7 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
             )
           })()}
           {onHistory && <button onClick={() => onHistory(bot)} style={btnStyle('var(--dim2)')}>HIST</button>}
+          {onLogs && <button onClick={() => onLogs(bot)} style={btnStyle('var(--cyan)')} title="View logs">LOG</button>}
           <button onClick={openDetail} style={btnStyle('var(--blue)')}>↗ OPEN</button>
         </div>
       </div>
@@ -917,8 +918,8 @@ function WithdrawalView({ bots, data, onBack }) {
 
 // ─── MAIN APP ────────────────────────────────────────────────
 // ─── LOG VIEWER ──────────────────────────────────────────────
-function LogViewer({ bots, onBack }) {
-  const [selBot, setSelBot] = useState(bots[0]?.id || '')
+function LogViewer({ bots, onBack, initialBot }) {
+  const [selBot, setSelBot] = useState(initialBot || bots[0]?.id || '')
   const [beLogs, setBeLogs]   = useState([])
   const [feLogs, setFeLogs]   = useState([])
   const [beInfo, setBeInfo]   = useState({ total: 0, error: null })
@@ -1142,6 +1143,7 @@ export default function App() {
   const [now, setNow] = useState(new Date())
   const [dayModal, setDayModal] = useState(null) // { bot, date, trades, withdrawals }
   const [view, setView] = useState('dashboard') // 'dashboard' | 'withdrawal' | 'logs'
+  const [logsBot, setLogsBot] = useState(null) // bot.id to pre-select in LogViewer
   const [wdModal, setWdModal] = useState(null) // { botId, capital, mode, percent, backendPort }
   const [wdLoading, setWdLoading] = useState(false)
   const [wdResult, setWdResult] = useState(null) // { ok, message, error }
@@ -1228,7 +1230,7 @@ export default function App() {
     return <WithdrawalView bots={bots} data={data} onBack={() => setView('dashboard')} />
   }
   if (view === 'logs') {
-    return <LogViewer bots={bots} onBack={() => setView('dashboard')} />
+    return <LogViewer bots={bots} initialBot={logsBot} onBack={() => { setView('dashboard'); setLogsBot(null) }} />
   }
 
   const cols = isMobile ? Math.min(bots.length, 2) : Math.min(bots.length, 4)
@@ -1318,7 +1320,7 @@ export default function App() {
             })
             return bots.map(b => {
               const rank = data[b.id]?.health ? ranked.findIndex(r => r.id === b.id) : null
-              return <BotCard key={b.id} bot={b} data={data[b.id]} onStart={startBot} onStop={stopBot} onDayClick={openDayModal} onWithdrawal={handleWithdrawal} onHistory={handleHistory} rank={rank} isMobile={isMobile} />
+              return <BotCard key={b.id} bot={b} data={data[b.id]} onStart={startBot} onStop={stopBot} onDayClick={openDayModal} onWithdrawal={handleWithdrawal} onHistory={handleHistory} onLogs={(bot) => { setLogsBot(bot.id); setView('logs') }} rank={rank} isMobile={isMobile} />
             })
           })()}
         </div>
