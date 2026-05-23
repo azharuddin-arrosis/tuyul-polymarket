@@ -2330,6 +2330,29 @@ def api_withdrawal_history(bot_id: str = ""):
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
+@app.get("/api/logs/file")
+def api_logs_file(type: str = "backend", lines: int = 300):
+    """Return last N lines of backend or frontend log file.
+    type=backend|frontend  lines=max 2000"""
+    lines = min(int(lines), 2000)
+    log_dir = Path(os.getenv("LOG_DIR", str(DATA_DIR.parent.parent / "logs")))
+    filename = f"{type}-{BOT_ID}.log"
+    log_file = log_dir / filename
+    try:
+        if not log_file.exists():
+            return {"ok": False, "error": f"not found: {filename}", "lines": [], "total": 0, "file": str(log_file)}
+        with open(log_file, "r", errors="replace") as f:
+            all_lines = f.readlines()
+        tail = all_lines[-lines:] if len(all_lines) > lines else all_lines
+        return {
+            "ok": True,
+            "file": filename,
+            "total": len(all_lines),
+            "lines": [l.rstrip("\n") for l in tail],
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e), "lines": [], "total": 0}
+
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
     await ws.accept(); S.ws_clients.add(ws)

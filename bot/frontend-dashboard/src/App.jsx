@@ -888,12 +888,231 @@ function WithdrawalView({ bots, data, onBack }) {
 }
 
 // ─── MAIN APP ────────────────────────────────────────────────
+// ─── LOG VIEWER ──────────────────────────────────────────────
+function LogViewer({ bots, onBack }) {
+  const [selBot, setSelBot] = useState(bots[0]?.id || '')
+  const [beLogs, setBeLogs]   = useState([])
+  const [feLogs, setFeLogs]   = useState([])
+  const [beInfo, setBeInfo]   = useState({ total: 0, error: null })
+  const [feInfo, setFeInfo]   = useState({ total: 0, error: null })
+  const [filter, setFilter]   = useState('')
+  const [autoScroll, setAutoScroll] = useState(true)
+  const [pause, setPause]     = useState(false)
+  const beRef = useRef(null)
+  const feRef = useRef(null)
+
+  const bot = bots.find(b => b.id === selBot)
+  const port = bot?.backend_port
+
+  // Reset on bot change
+  useEffect(() => { setBeLogs([]); setFeLogs([]) }, [selBot])
+
+  // Poll logs
+  useEffect(() => {
+    if (!port || pause) return
+    let cancelled = false
+    const load = async () => {
+      try {
+        const [br, fr] = await Promise.all([
+          fetch(`http://localhost:${port}/api/logs/file?type=backend&lines=400`,  { signal: AbortSignal.timeout(4000) }),
+          fetch(`http://localhost:${port}/api/logs/file?type=frontend&lines=400`, { signal: AbortSignal.timeout(4000) }),
+        ])
+        const [bd, fd] = await Promise.all([br.json(), fr.json()])
+        if (!cancelled) {
+          if (bd.ok) { setBeLogs(bd.lines); setBeInfo({ total: bd.total, error: null }) }
+          else setBeInfo(i => ({ ...i, error: bd.error }))
+          if (fd.ok) { setFeLogs(fd.lines); setFeInfo({ total: fd.total, error: null }) }
+          else setFeInfo(i => ({ ...i, error: fd.error }))
+        }
+      } catch(e) {
+        if (!cancelled) { setBeInfo(i => ({...i, error: e.message})); setFeInfo(i => ({...i, error: e.message})) }
+      }
+    }
+    load()
+    const id = setInterval(load, 2000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [port, pause])
+
+  // Auto-scroll
+  useEffect(() => {
+    if (!autoScroll) return
+    if (beRef.current) beRef.current.scrollTop = beRef.current.scrollHeight
+  }, [beLogs, autoScroll])
+  useEffect(() => {
+    if (!autoScroll) return
+    if (feRef.current) feRef.current.scrollTop = feRef.current.scrollHeight
+  }, [feLogs, autoScroll])
+
+  const applyFilter = (lines) =>
+    filter ? lines.filter(l => l.toLowerCase().includes(filter.toLowerCase())) : lines
+
+  const lineClr = (line) => {
+    const l = line.toLowerCase()
+    if (l.includes('critical') || l.includes('traceback') || l.includes(' error') || l.includes('[error]')) return '#ff5561'
+    if (l.includes('warn') || l.includes('alert') || l.includes('gas_stop')) return 'var(--amber)'
+    if (l.includes('win') || l.includes('won') || l.includes('profit') || l.includes('redeem') || l.includes('compound_up')) return 'var(--green)'
+    if (l.includes('entry') || l.includes('fire') || l.includes('signal') || l.includes('open_pos')) return 'var(--cyan)'
+    if (l.includes('close_pos') || l.includes('lost')) return '#ff7a7a'
+    if (l.includes('info') || l.includes('[info]')) return '#8ea6d0'
+    if (l.includes('btc') || l.includes('scanner') || l.includes('balance')) return '#a08be0'
+    return 'var(--dim)'
+  }
+
+  const tabBtn = (id) => ({
+    fontFamily: 'var(--mono)', fontSize: 8, padding: '3px 9px',
+    background: selBot === id ? 'var(--blue)' : 'transparent',
+    color: selBot === id ? '#fff' : 'var(--dim)',
+    border: `1px solid ${selBot === id ? 'var(--blue)' : 'var(--border2)'}`,
+    borderRadius: 2, cursor: 'pointer', fontWeight: selBot === id ? 700 : 400,
+    transition: 'all .12s',
+  })
+
+  const Panel = ({ lines, info, title, panelRef }) => {
+    const filtered = applyFilter(lines)
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+        {/* Panel header */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '5px 10px', background: 'var(--bg2)', borderBottom: '1px solid var(--border)',
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--amber)', letterSpacing: '.07em' }}>{title}</span>
+          <span style={{ fontSize: 8, color: 'var(--dim)' }}>
+            {info.error
+              ? <span style={{ color: 'var(--red)' }}>⚠ {info.error}</span>
+              : `${info.total} lines · showing ${filtered.length}`
+            }
+          </span>
+        </div>
+        {/* Log content */}
+        <div
+          ref={panelRef}
+          onScroll={() => {
+            if (panelRef.current) {
+              const el = panelRef.current
+              const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
+              if (!atBottom && autoScroll) setAutoScroll(false)
+            }
+          }}
+          style={{
+            flex: 1, overflowY: 'auto', padding: '6px 10px',
+            fontFamily: 'var(--mono)', fontSize: 8.5, lineHeight: 1.65,
+            background: 'var(--bg)', color: 'var(--dim)',
+          }}
+        >
+          {filtered.length === 0 ? (
+            <div style={{ color: 'var(--dim2)', padding: 10, textAlign: 'center' }}>
+              {info.error ? `Error: ${info.error}` : '(no lines)'}
+            </div>
+          ) : filtered.map((line, i) => (
+            <div key={i} style={{ color: lineClr(line), whiteSpace: 'pre-wrap', wordBreak: 'break-all', paddingBottom: 1 }}>
+              {line}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', overflow: 'hidden' }}>
+      {/* Toolbar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        padding: '7px 12px', borderBottom: '1px solid var(--border)', flexShrink: 0,
+        background: 'var(--bg1)',
+      }}>
+        <button onClick={onBack} style={{
+          fontFamily: 'var(--mono)', fontSize: 9, padding: '4px 10px',
+          background: 'transparent', color: 'var(--dim)', border: '1px solid var(--border2)',
+          borderRadius: 2, cursor: 'pointer',
+        }}>← Dashboard</button>
+
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.04em' }}>
+          <span style={{ color: 'var(--cyan)' }}>LOG</span>
+          <span style={{ color: 'var(--white)' }}> VIEWER</span>
+        </span>
+
+        {/* Bot tabs */}
+        <div style={{ display: 'flex', gap: 4, marginLeft: 4 }}>
+          {bots.map(b => (
+            <button key={b.id} onClick={() => setSelBot(b.id)} style={tabBtn(b.id)}>
+              {b.id}
+            </button>
+          ))}
+        </div>
+
+        {/* Filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+          <span style={{ fontSize: 8, color: 'var(--dim)' }}>FILTER</span>
+          <input
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+            placeholder="keyword..."
+            style={{
+              fontFamily: 'var(--mono)', fontSize: 9, padding: '3px 8px', width: 130,
+              background: 'var(--bg2)', color: 'var(--white)', border: '1px solid var(--border2)',
+              borderRadius: 2, outline: 'none',
+            }}
+          />
+          {filter && (
+            <button onClick={() => setFilter('')} style={{
+              fontFamily: 'var(--mono)', fontSize: 9, padding: '2px 6px',
+              background: 'transparent', color: 'var(--dim)', border: '1px solid var(--border2)',
+              borderRadius: 2, cursor: 'pointer',
+            }}>✕</button>
+          )}
+        </div>
+
+        {/* Controls */}
+        <button onClick={() => setAutoScroll(a => !a)} style={{
+          fontFamily: 'var(--mono)', fontSize: 8, padding: '3px 9px',
+          background: autoScroll ? 'rgba(0,229,160,.12)' : 'transparent',
+          color: autoScroll ? 'var(--green)' : 'var(--dim)',
+          border: `1px solid ${autoScroll ? 'var(--green)' : 'var(--border2)'}`,
+          borderRadius: 2, cursor: 'pointer',
+        }}>↓ {autoScroll ? 'SCROLL·ON' : 'SCROLL·OFF'}</button>
+
+        <button onClick={() => setPause(p => !p)} style={{
+          fontFamily: 'var(--mono)', fontSize: 8, padding: '3px 9px',
+          background: pause ? 'rgba(255,179,64,.12)' : 'transparent',
+          color: pause ? 'var(--amber)' : 'var(--dim)',
+          border: `1px solid ${pause ? 'var(--amber)' : 'var(--border2)'}`,
+          borderRadius: 2, cursor: 'pointer',
+        }}>{pause ? '⏸ PAUSED' : '▶ LIVE'}</button>
+      </div>
+
+      {/* Labels */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: '1fr 1px 1fr', flexShrink: 0,
+        borderBottom: '1px solid var(--border)',
+      }}>
+        <div style={{ padding: '4px 10px', fontSize: 8, color: 'var(--purple)', fontWeight: 700, letterSpacing: '.08em', background: 'var(--bg1)' }}>
+          ◀ FRONTEND &nbsp;·&nbsp; {selBot}
+        </div>
+        <div style={{ background: 'var(--border)' }} />
+        <div style={{ padding: '4px 10px', fontSize: 8, color: 'var(--blue)', fontWeight: 700, letterSpacing: '.08em', background: 'var(--bg1)', textAlign: 'right' }}>
+          {selBot} &nbsp;·&nbsp; BACKEND ▶
+        </div>
+      </div>
+
+      {/* Two panels */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1px 1fr', overflow: 'hidden' }}>
+        <Panel lines={feLogs} info={feInfo} title="" panelRef={feRef} />
+        <div style={{ background: 'var(--border)' }} />
+        <Panel lines={beLogs} info={beInfo} title="" panelRef={beRef} />
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const { bots, data } = useDashboard()
   const isMobile = useIsMobile()
   const [now, setNow] = useState(new Date())
   const [dayModal, setDayModal] = useState(null) // { bot, date, trades, withdrawals }
-  const [view, setView] = useState('dashboard') // 'dashboard' | 'withdrawal'
+  const [view, setView] = useState('dashboard') // 'dashboard' | 'withdrawal' | 'logs'
   const [wdModal, setWdModal] = useState(null) // { botId, capital, mode, percent, backendPort }
   const [wdLoading, setWdLoading] = useState(false)
   const [wdResult, setWdResult] = useState(null) // { ok, message, error }
@@ -979,6 +1198,9 @@ export default function App() {
   if (view === 'withdrawal') {
     return <WithdrawalView bots={bots} data={data} onBack={() => setView('dashboard')} />
   }
+  if (view === 'logs') {
+    return <LogViewer bots={bots} onBack={() => setView('dashboard')} />
+  }
 
   const cols = isMobile ? Math.min(bots.length, 2) : Math.min(bots.length, 4)
   const rows = Math.ceil(bots.length / cols)
@@ -1018,6 +1240,9 @@ export default function App() {
           >
             {Object.keys(THEMES).map(t => <option key={t} value={t}>{t}</option>)}
           </select>
+          <button onClick={() => setView('logs')} style={{ background: 'transparent', border: '1px solid var(--border2)', color: 'var(--dim)', fontFamily: 'var(--mono)', fontSize: 8, padding: '3px 9px', cursor: 'pointer', borderRadius: 2, letterSpacing: '.06em' }} title="Log viewer">
+            LOGS
+          </button>
           <button onClick={() => window.location.reload()} style={{ background: 'transparent', border: '1px solid var(--border2)', color: 'var(--dim)', fontFamily: 'var(--mono)', fontSize: 11, padding: '3px 9px', cursor: 'pointer', borderRadius: 2 }} title="Refresh dashboard">
             ↺
           </button>
