@@ -69,6 +69,34 @@ function useLatency(backendPort) {
   return lat
 }
 
+// ─── MULTI-BOT LATENCY HOOK ──────────────────────────────────
+// Pings all bots in parallel every 5s, returns { [botId]: ms | null }
+function useBotsLatency(bots) {
+  const [lats, setLats] = useState({})
+  useEffect(() => {
+    if (!bots.length) return
+    let cancelled = false
+    const ping = async () => {
+      const results = await Promise.all(
+        bots.map(async (b) => {
+          const t0 = performance.now()
+          try {
+            await fetch(`http://localhost:${b.backend_port}/health`, { signal: AbortSignal.timeout(2000) })
+            return [b.id, Math.round(performance.now() - t0)]
+          } catch {
+            return [b.id, null]
+          }
+        })
+      )
+      if (!cancelled) setLats(Object.fromEntries(results))
+    }
+    ping()
+    const id = setInterval(ping, 5000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [bots])
+  return lats
+}
+
 // ─── FORMATTERS ──────────────────────────────────────────────
 const usd = (n, d=2) => n == null ? '—' : `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })}`
 const sgnUsd = (n) => { const v = Number(n||0); return `${v >= 0 ? '+' : '-'}$${Math.abs(v).toFixed(2)}` }
@@ -1110,6 +1138,7 @@ function LogViewer({ bots, onBack }) {
 export default function App() {
   const { bots, data } = useDashboard()
   const isMobile = useIsMobile()
+  const botsLat  = useBotsLatency(bots)
   const [now, setNow] = useState(new Date())
   const [dayModal, setDayModal] = useState(null) // { bot, date, trades, withdrawals }
   const [view, setView] = useState('dashboard') // 'dashboard' | 'withdrawal' | 'logs'
@@ -1214,10 +1243,34 @@ export default function App() {
             <span style={{ color: 'var(--green)' }}>Poly</span><span style={{ color: 'var(--white)' }}>pox</span>
             <span style={{ color: 'var(--dim)', fontSize: 10, marginLeft: 10 }}>Multi-Bot</span>
           </div>
-          <div style={{ fontSize: 9, color: 'var(--dim)' }}>
-            {now.toLocaleString('en-GB', { hour12: false })}
-            {' · '}
-            <span style={{ color: 'var(--amber)' }}>{now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/New_York' })} ET</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 9, color: 'var(--dim)' }}>
+            <span>
+              {now.toLocaleString('en-GB', { hour12: false })}
+              {' · '}
+              <span style={{ color: 'var(--amber)' }}>{now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/New_York' })} ET</span>
+            </span>
+            {/* Per-bot ping indicators */}
+            {bots.length > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, borderLeft: '1px solid var(--border2)', paddingLeft: 10 }}>
+                {bots.map(b => {
+                  const ms = botsLat[b.id]
+                  const clr = ms == null ? 'var(--dim2)'
+                    : ms < 100  ? 'var(--green)'
+                    : ms < 300  ? 'var(--blue)'
+                    : ms < 600  ? 'var(--amber)'
+                    : 'var(--red)'
+                  const label = b.id.replace('real', 'r').replace('sim', 's')
+                  return (
+                    <span key={b.id} title={`${b.id} — ${ms != null ? ms + 'ms' : 'unreachable'}`}
+                      style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'default' }}>
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: clr, flexShrink: 0, boxShadow: ms != null && ms < 300 ? `0 0 4px ${clr}` : 'none' }} />
+                      <span style={{ fontSize: 8, color: clr, fontWeight: 700 }}>{label}</span>
+                      <span style={{ fontSize: 7, color: 'var(--dim)', fontWeight: 400 }}>{ms != null ? `${ms}` : '—'}</span>
+                    </span>
+                  )
+                })}
+              </span>
+            )}
           </div>
         </div>
 
