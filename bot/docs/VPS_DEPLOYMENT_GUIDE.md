@@ -1,552 +1,629 @@
-# VPS 6-Bot Deployment Guide
-
-## Overview
-Deploy Polypox Terminal with 6 bots (real1-real6) on a single VPS for 24/7 trading. This guide covers secure ENV file management, discovery, and auto-startup.
+# Polypox — VPS Deployment Guide (8 Bot, Real Mode)
+> Update: 2026-05-24 · Berdasarkan dry run 3 hari (WR 67.7%, +190% ROI)
 
 ---
 
-## 1. VPS Requirements
+## QUICK OVERVIEW — Flow dari Nol sampai Bot Jalan
 
-### Minimum Specs
-- **CPU:** 2-4 vCores (polling/WS is lightweight)
-- **RAM:** 4-8 GB (Node.js + Python + DBs)
-- **Disk:** 20 GB SSD (logs, SQLite)
-- **OS:** Ubuntu 22.04 LTS or 24.04 LTS
-- **Network:** 100 Mbps+ (Binance, Gamma API, Polymarket CLOB)
-- **Location:** SG or US datacenter (low latency to APIs)
+```
+PHASE 1 — PERSIAPAN MODAL (lakukan dari laptop/HP)
+  Binance → kirim USDC → Polymarket deposit address per wallet
+  Jalankan approve_usdc.py → set allowance
 
-### Dependencies
-```bash
-# On fresh Ubuntu 22.04 / 24.04
-sudo apt update && sudo apt install -y \
-  nodejs npm python3 python3-pip python3-venv \
-  git curl wget net-tools htop tmux
+PHASE 2 — SETUP VPS (Hetzner CPX32, Singapore)
+  Create server → SSH masuk → install deps → clone repo
+
+PHASE 3 — KONFIGURASI
+  Isi 8 env files → validate semua → discover bots
+
+PHASE 4 — JALANKAN
+  Dry run 1 jam → stop → start real mode → klik RUN di dashboard
+
+PHASE 5 — MONITORING
+  Pantau via dashboard (browser) atau log viewer
+  Bot jalan 24/7, kamu tinggal pantau
 ```
 
 ---
 
-## 2. ENV File Strategy: Secure Handling
+## PHASE 1 — Persiapan Modal
 
-### Challenge
-- 6 bots × 4 env vars each (POLY_PRIVATE_KEY, POLY_API_KEY, POLY_SECRET, POLY_PASSPHRASE) = **24 secrets**
-- Must NOT commit to git (exposed to public)
-- Must survive restart / persist across deployments
-- Must be accessible to bot processes at runtime
+### 1.1 Yang Dibutuhkan per Bot
 
-### Recommended Solution: Plaintext with Filesystem Permissions
+```
+Tiap bot butuh:
+  - 1 wallet Polygon (private key)
+  - 1 akun Polymarket (API Key + Secret + Passphrase)
+  - $10 USDC di Polymarket
+  - 10 POL untuk gas (~20 hari operasional)
 
-**Why not encrypted?**
-- Adds complexity (decrypt on startup, key management)
-- VPS deploys from CI/CD (secrets already in transit)
-- Simpler operational model: keep in `/app/envs/` with strict perms
-
-**Implementation:**
-```bash
-# 1. Create env directory with restricted permissions
-sudo mkdir -p /app/envs
-sudo chmod 700 /app/envs  # rwx for owner only, no group/other access
-
-# 2. Create env files (owner can read/write, nobody else)
-sudo touch /app/envs/real1.env
-sudo touch /app/envs/real2.env
-... (repeat for real6)
-sudo chmod 600 /app/envs/real*.env  # rw for owner only
-
-# 3. Populate with secrets (via CI/CD secrets, not manual)
-echo "POLY_PRIVATE_KEY=0x..." | sudo tee /app/envs/real1.env > /dev/null
-# ... (repeat for each bot)
-
-# 4. Verify access
-ls -la /app/envs/  # should show -rw------- (600) for each file
+Total 8 bot:
+  - $80 USDC (kirim $85 untuk cover fee Binance ~$0.80)
+  - 80 POL (~$32 at $0.40/POL)
 ```
 
-### Alternative: CI/CD Secrets Manager
+### 1.2 Deposit USDC dari Binance langsung ke Polymarket
 
-If using GitHub Actions / GitLab CI:
-1. Store secrets in GitHub Secrets / GitLab Variables
-2. Deploy script injects them: `echo "${{ secrets.REAL1_PRIVATE_KEY }}" > /app/envs/real1.env`
-3. Secrets never appear in logs or code
+**Cara paling simpel — skip MetaMask, langsung dari Binance:**
+
+```
+STEP 1: Buka polymarket.com → login wallet masing-masing
+        → klik Portfolio → Deposit → Use Crypto → Transfer Crypto
+
+STEP 2: Akan muncul deposit address unik per akun, contoh:
+        0x48620d5a4d69caec2E2bE62923A0B362B2261e96
+        (ini BUKAN alamat MetaMask — ini proxy Polymarket)
+
+STEP 3: Di Binance → Withdraw
+        Coin    : USDC
+        Network : POLYGON  ← wajib Polygon, bukan ERC20/ETH
+        Address : (paste deposit address dari step 2)
+        Amount  : $10
+
+STEP 4: Tunggu 2-5 menit → balance Polymarket bertambah
+
+STEP 5: Ulangi untuk setiap wallet (real1-real8)
+```
+
+> ⚠️ **Network wajib POLYGON** — kalau salah pilih ERC20/Ethereum, USDC masuk di chain yang salah dan tidak bisa dipakai Polymarket.
+
+### 1.3 Set Allowance setelah Deposit
+
+Karena deposit langsung (bukan lewat MetaMask flow), allowance perlu di-set manual:
+
+```bash
+cd /path/to/poly/bot
+
+# Set allowance semua bot sekaligus
+backend/approve_usdc.py all
+
+# Output yang diharapkan per bot:
+# ✅ OK    → allowance berhasil di-set
+# ⏭ SKIP  → sudah approved sebelumnya
+# ❌ FAIL  → cek credentials / pastikan USDC sudah masuk
+```
+
+### 1.4 Cara Dapat API Key Polymarket
+
+1. Buka [polymarket.com](https://polymarket.com) → login wallet
+2. Klik profile → **Settings** → **API Keys**
+3. Klik **Create Key**
+4. Simpan: `API Key`, `Secret`, `Passphrase`
+5. Ulangi untuk setiap akun (8 akun = 8 set credentials)
 
 ---
 
-## 3. Empty Template ENV Files
+## PHASE 2 — Setup VPS
 
-Create template files (no secrets, ready to fill):
+### 2.1 Spesifikasi VPS
 
-**`backend/envs/real1.env.template`**
+| Komponen | Recommended |
+|---|---|
+| Provider | **Hetzner** (paling murah, performa solid) |
+| Type | **CPX32** — 4 vCore AMD, 8 GB RAM, 160 GB NVMe |
+| Lokasi | **Singapore** — latency rendah ke Polymarket + Binance |
+| OS | **Ubuntu 24.04 LTS** |
+| Harga | ~€39/bulan (~$42) |
+
+### 2.2 Create Server di Hetzner
+
+1. Buka [console.hetzner.com](https://console.hetzner.com)
+2. **New Server** → pilih:
+   - Location: **Singapore**
+   - Image: **Ubuntu 24.04**
+   - Type: **CPX32** (tab Regular Performance → 4 vCore / 8 GB)
+   - SSH Key: tambahkan public key laptop kamu
+   - Name: `polypox`
+3. Klik **Create & Buy**
+4. Catat IP address server
+
+### 2.3 Generate SSH Key (kalau belum punya)
+
 ```bash
-# Polymarket Real Mode Bot #1
+# Di laptop
+ssh-keygen -t ed25519 -C "polypox-vps"
+# Enter → Enter → Enter (no passphrase)
+
+# Tampilkan public key → copy ke Hetzner
+cat ~/.ssh/id_ed25519.pub
+```
+
+### 2.4 Login ke VPS
+
+```bash
+# Login sebagai root
+ssh root@YOUR_VPS_IP
+
+# Verifikasi sudah masuk
+hostname && uname -a
+```
+
+### 2.5 Initial Server Setup
+
+```bash
+# Update system
+apt update && apt upgrade -y
+
+# Install semua dependencies
+apt install -y \
+  git curl wget nano htop \
+  python3 python3-pip python3-venv \
+  nodejs npm \
+  build-essential \
+  tmux \
+  ufw fail2ban
+
+# Cek versi
+python3 --version   # harus >= 3.10
+node --version      # harus >= 18
+npm --version
+```
+
+### 2.6 Setup Firewall
+
+```bash
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp            # SSH
+ufw allow 3000/tcp          # Dashboard multi-bot
+ufw allow 3001:3008/tcp     # Frontend per bot (real1-real8)
+ufw enable
+
+# Konfirmasi: y
+ufw status
+```
+
+### 2.7 Buat User (jangan pakai root untuk bot)
+
+```bash
+adduser polypox
+# isi password, sisanya enter saja
+
+usermod -aG sudo polypox
+su - polypox
+# sekarang kamu login sebagai polypox
+```
+
+---
+
+## PHASE 3 — Konfigurasi Project
+
+### 3.1 Clone Repository
+
+```bash
+# Pastikan sudah login sebagai user polypox
+cd ~
+
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git poly
+cd poly/bot
+
+# Verifikasi struktur
+ls
+# harus ada: backend/ frontend-bot/ frontend-dashboard/ orchestrator.sh run.sh
+```
+
+### 3.2 Setup Python Environment
+
+```bash
+cd ~/poly/bot
+
+# Buat virtualenv
+python3 -m venv venv
+
+# Install dependencies
+venv/bin/pip install -r backend/requirements.txt
+
+# Verifikasi
+venv/bin/python3 -c "import py_clob_client; print('✓ py_clob_client OK')"
+venv/bin/python3 -c "import fastapi; print('✓ fastapi OK')"
+```
+
+### 3.3 Setup Node.js Frontend
+
+```bash
+cd ~/poly/bot
+
+# Install deps
+cd frontend-bot && npm install && cd ..
+cd frontend-dashboard && npm install && cd ..
+
+# Build untuk production
+cd frontend-bot && npm run build && cd ..
+cd frontend-dashboard && npm run build && cd ..
+
+echo "✓ Frontend build done"
+```
+
+### 3.4 Buat ENV Files (8 bot)
+
+```bash
+cd ~/poly/bot/backend/envs
+```
+
+Buat file untuk setiap bot (isi sesuai credentials masing-masing):
+
+```bash
+nano real1.env
+```
+
+Template isi (ganti nilai setelah `=`):
+
+```bash
 BOT_ID=real1
+BOT_NAME=Alpha
 BOT_MODE=real
-DATA_DIR=/app/data/real1
-
-# ⚠ FILL THESE — DO NOT COMMIT ACTUAL VALUES
-POLY_PRIVATE_KEY=0x... # (64 hex chars)
-POLY_API_KEY=...
-POLY_SECRET=...
-POLY_PASSPHRASE=...
-
-# Capital (optional override, default $10)
-USDC_CAPITAL=100.0
-
-# Trading config (defaults safe for all)
-MAX_OPEN_POS=5
-DAILY_LOSS_LIMIT=50.0
-MIN_EV=0.03
-```
-
-### Generate All 6 Templates
-
-```bash
-#!/bin/bash
-for i in 1 2 3 4 5 6; do
-  cat > backend/envs/real${i}.env.template << EOF
-BOT_ID=real${i}
-BOT_MODE=real
-DATA_DIR=/app/data/real${i}
+USDC_CAPITAL=10
+POL_BALANCE=10
+MAX_OPEN_POS=3
+MIN_EV=0.04
+DAILY_LOSS_LIMIT=3.0
+SCAN_INTERVAL=12
+BALANCE_FLOOR=2
 
 POLY_PRIVATE_KEY=0x...
 POLY_API_KEY=...
 POLY_SECRET=...
 POLY_PASSPHRASE=...
+```
 
-USDC_CAPITAL=100.0
-MAX_OPEN_POS=5
-DAILY_LOSS_LIMIT=50.0
-EOF
-  chmod 644 backend/envs/real${i}.env.template
+Ulangi untuk real2-real8 (ganti BOT_ID, BOT_NAME, dan semua credentials):
+
+```bash
+# Nama per bot:
+# real1=Alpha  real2=Beta   real3=Gamma  real4=Delta
+# real5=Echo   real6=Zeta   real7=Sigma  real8=Omega
+
+nano real2.env   # BOT_NAME=Beta
+nano real3.env   # BOT_NAME=Gamma
+nano real4.env   # BOT_NAME=Delta
+nano real5.env   # BOT_NAME=Echo
+nano real6.env   # BOT_NAME=Zeta
+nano real7.env   # BOT_NAME=Sigma
+nano real8.env   # BOT_NAME=Omega
+
+# Set permission ketat
+chmod 600 *.env
+ls -la *.env
+# Output: -rw------- 1 polypox polypox ... (hanya owner bisa baca)
+```
+
+### 3.5 Set Allowance USDC di VPS
+
+```bash
+cd ~/poly/bot
+
+# Approve semua bot
+backend/approve_usdc.py all
+
+# Lihat summary — semua harus OK atau SKIP
+```
+
+### 3.6 Validasi Semua Bot
+
+```bash
+cd ~/poly/bot
+
+# Validasi satu per satu (17 checks per bot)
+for i in 1 2 3 4 5 6 7 8; do
+  echo ""
+  echo "════════════════════════════════"
+  echo "  Validating real$i..."
+  echo "════════════════════════════════"
+  backend/validate_real.py real$i 2>&1 | grep -E "✓|✗|PASS|FAIL|==="
 done
 ```
 
-Store `.template` files in git (no secrets), never commit actual `.env` files.
+**Target:** Semua 17 check ✓ untuk setiap bot sebelum lanjut.
 
----
+Check kritis yang harus PASS:
+- `#8 USDC balance > 0` — USDC sudah masuk Polymarket
+- `#9 POL balance > 0` — gas ada
+- `#13 USDC allowance > 0` — sudah approve
 
-## 4. Discovery: Bots Without Credentials
+### 3.7 Generate bots.json untuk Dashboard
 
-### Goal
-Dashboard should list all 6 bots even before ENV files are populated (empty credentials).
-
-### Current Behavior
-`orchestrator.sh discover` scans `backend/envs/real*.env` files and generates `frontend-dashboard/public/bots.json`.
-
-### What If ENV Files Don't Exist?
-- `discover_bots()` skips missing files → empty bots list
-- Dashboard shows "no bots found"
-
-### Solution: Auto-Generate Empty Bots List
-
-**Modified `orchestrator.sh discover`:**
 ```bash
-discover_bots() {
-    local bots=()
-    
-    # Method 1: From actual env files (if they exist)
-    for f in backend/envs/real*.env; do
-        [ -f "$f" ] || continue
-        local id=$(basename "$f" .env)
-        local suffix=$(echo "$id" | grep -oE '[0-9]+$' || echo '')
-        [ -z "$suffix" ] && suffix=99
-        local be_port=$((8000 + suffix))
-        local fe_port=$((3000 + suffix))
-        bots+=("$id:$be_port:$fe_port")
-    done
-    
-    # Method 2: If no actual envs, generate from templates
-    if [ ${#bots[@]} -eq 0 ]; then
-        for template in backend/envs/real*.env.template; do
-            [ -f "$template" ] || continue
-            local id=$(basename "$template" .env.template)
-            local suffix=$(echo "$id" | grep -oE '[0-9]+$' || echo '')
-            [ -z "$suffix" ] && suffix=99
-            local be_port=$((8000 + suffix))
-            local fe_port=$((3000 + suffix))
-            bots+=("$id:$be_port:$fe_port")
-        done
-    fi
-    
-    echo "${bots[@]}"
-}
-```
+cd ~/poly/bot
+./orchestrator.sh discover
 
-**Benefit:** Dashboard auto-discovers all 6 bots on first deploy, even with empty .env files. Users see:
-- real1 → 🔴 OFFLINE (no credentials yet)
-- real2 → 🔴 OFFLINE
-- ... etc
-
-Once ENVs are populated, bots come online after restart.
-
----
-
-## 5. Directory Structure on VPS
-
-```
-/app/
-├── polypox/                    # Git clone
-│   ├── bot/
-│   │   ├── backend/main.py
-│   │   ├── orchestrator.sh
-│   │   ├── frontend-bot/       # Per-bot detail dashboard
-│   │   ├── frontend-dashboard/ # Multi-bot overview (port 3000)
-│   │   ├── envs/
-│   │   │   ├── real1.env              # git-ignored, has secrets
-│   │   │   ├── real1.env.template     # git-tracked
-│   │   │   ├── real2.env
-│   │   │   ├── real2.env.template
-│   │   │   ... (repeat for 6 bots)
-│   │   └── venv/               # Python virtualenv
-│   └── docs/                   # This guide
-│
-├── data/                       # Persistent data (NOT git)
-│   ├── real1/
-│   │   ├── state_real1.json
-│   │   ├── trades.db
-│   │   └── ...
-│   ├── real2/
-│   │   ...
-│   └── ...
-│
-└── logs/                       # Daily logs
-    ├── backend-real1.log
-    ├── backend-real2.log
-    ├── frontend-real1.log
-    ├── frontend-real2.log
-    ├── dashboard.log
-    └── ...
-```
-
-### .gitignore (in polypox/bot/)
-```
-envs/*.env           # Never commit actual env files
-envs/**/real*.env    # Explicit double-glob
-data/                # Never commit persistent data
-logs/                # Never commit logs
-venv/                # Never commit virtualenv
-node_modules/        # Never commit NPM
-*.db                 # Never commit SQLite
-*.log                # Never commit logs
-.env                 # Root level env
+# Verifikasi
+cat frontend-dashboard/public/bots.json
+# Harus ada 8 entri: real1-real8
 ```
 
 ---
 
-## 6. Deployment Steps
+## PHASE 4 — Jalankan Bot
 
-### Step 1: Provision VPS
+### 4.1 Test Dry Run Dulu (1 jam)
+
 ```bash
-# SSH into fresh Ubuntu 22.04 instance
-ssh user@vps_ip
+cd ~/poly/bot
 
-# Create application user (non-root)
-sudo useradd -m -s /bin/bash polypox
-sudo usermod -aG sudo polypox
+# Start semua bot dalam dry_run mode
+./orchestrator.sh start all dry_run
 
-# Switch to app user
-sudo su - polypox
+# Cek status tabel
+./orchestrator.sh status
 
-# Install dependencies
-sudo apt update && sudo apt install -y \
-  nodejs npm python3 python3-pip python3-venv \
-  git curl wget htop tmux
+# Pantau log beberapa menit
+tail -f logs/backend-real1.log
+# Ctrl+C untuk keluar dari tail
 ```
 
-### Step 2: Clone & Setup Repo
+Buka browser: `http://YOUR_VPS_IP:3000`
+
+Pastikan semua bot card hijau dan ada signal firing di log.
+
+```
+Yang harus terlihat di log:
+  [BTC5m] Market FOUND  | YES=0.51 NO=0.49 ...  ← market ditemukan
+  [BTC5m] T-300s | BTC $... | UP conf=0.79 ...  ← signal berjalan
+  [BOT] 📈 BET OPEN [DRY] ...                   ← order masuk (dry)
+```
+
+### 4.2 Stop Dry Run
+
 ```bash
-cd /app
-git clone https://github.com/your-repo/polypox.git
-cd polypox/bot
+./orchestrator.sh stop all
 
-# Create Python virtualenv
-python3 -m venv venv
-source venv/bin/activate
-pip install -U pip
-pip install -r backend/requirements.txt
-
-# Install Node deps (both backend listener + frontend dashboards)
-cd frontend-dashboard && npm install --silent && cd ..
-cd frontend-bot && npm install --silent && cd ..
+# Tunggu sampai semua berhenti
+./orchestrator.sh status
+# Semua harus DOWN
 ```
 
-### Step 3: Populate ENV Files
+### 4.3 Start REAL Mode
 
-**Option A: Manual (for testing)**
 ```bash
-cat > backend/envs/real1.env << 'EOF'
-BOT_ID=real1
-BOT_MODE=real
-DATA_DIR=/app/data/real1
-POLY_PRIVATE_KEY=0x...
-POLY_API_KEY=...
-POLY_SECRET=...
-POLY_PASSPHRASE=...
-USDC_CAPITAL=100.0
-EOF
+cd ~/poly/bot
 
-# Repeat for real2-real6
+# Start real mode — akan minta konfirmasi
+./orchestrator.sh start all real
 
-chmod 600 backend/envs/real*.env
+# Ketik y lalu Enter saat muncul konfirmasi:
+# ⚠ REAL MODE — Bot akan trade USDC asli. Lanjutkan? (y/N)
 ```
 
-**Option B: CI/CD (Recommended)**
-```yaml
-# .github/workflows/deploy.yml
-deploy:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v3
-    - name: Deploy with secrets
-      env:
-        REAL1_PK: ${{ secrets.REAL1_PRIVATE_KEY }}
-        REAL1_KEY: ${{ secrets.REAL1_API_KEY }}
-        # ... etc for real1-real6
-      run: |
-        cd polypox/bot
-        echo "BOT_ID=real1" > backend/envs/real1.env
-        echo "POLY_PRIVATE_KEY=$REAL1_PK" >> backend/envs/real1.env
-        # ... etc
+### 4.4 Klik RUN di Dashboard
+
+Bot start dalam kondisi **PAUSED**. Buka dashboard dan klik RUN:
+
+```
+http://YOUR_VPS_IP:3000
+
+Di setiap bot card:
+  → Klik [▶ RUN]
+  → Status berubah: PAUSED → RUNNING
+  → Dot hijau berkedip
 ```
 
-### Step 4: Create Data Directories
+Atau via terminal kalau mau semua langsung:
+
 ```bash
-mkdir -p /app/data/real{1,2,3,4,5,6}
-mkdir -p /app/logs
+# Jalankan semua bot via API
+for port in 8001 8002 8003 8004 8005 8006 8007 8008; do
+  echo -n "Starting port $port... "
+  curl -s -X POST "http://localhost:$port/api/bot/start" | \
+    python3 -c "import json,sys; d=json.load(sys.stdin); print('OK' if d.get('ok') else d)"
+done
 ```
 
-### Step 5: Auto-Start on Reboot (Systemd)
+### 4.5 Verifikasi Bot Berjalan
 
-Create `/etc/systemd/system/polypox-bots.service`:
+```bash
+# Cek status semua bot
+./orchestrator.sh status
+
+# Cek equity dan PnL realtime
+for i in 1 2 3 4 5 6 7 8; do
+  curl -s http://localhost:$((8000+i))/api/stats | \
+    python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print(f'real$i ({d.get(\"bot_name\",\"?\"):6}) mode={d[\"mode\"]:8} running={str(d[\"running\"]):5} equity=\${d[\"capital\"]:.2f} pnl={d[\"pnl\"]:+.2f}')
+" 2>/dev/null
+done
+```
+
+---
+
+## PHASE 5 — Monitoring & Maintenance
+
+### 5.1 Dashboard dari Browser
+
+```
+http://YOUR_VPS_IP:3000          # Multi-bot overview
+http://YOUR_VPS_IP:3001          # Detail Alpha (real1)
+http://YOUR_VPS_IP:3002          # Detail Beta (real2)
+...
+http://YOUR_VPS_IP:3008          # Detail Omega (real8)
+```
+
+Di dashboard tersedia:
+- Equity + PnL per bot realtime
+- Win rate + streak
+- Ping indicator per bot (header)
+- LOG button → lihat log langsung dari browser
+- Kalender PnL harian
+
+### 5.2 SSH Tunnel (akses aman dari laptop)
+
+Kalau tidak mau buka port ke publik:
+
+```bash
+# Di laptop — buat tunnel
+ssh -N \
+  -L 3000:localhost:3000 \
+  -L 3001:localhost:3001 \
+  -L 3002:localhost:3002 \
+  -L 3003:localhost:3003 \
+  -L 3004:localhost:3004 \
+  -L 3005:localhost:3005 \
+  -L 3006:localhost:3006 \
+  -L 3007:localhost:3007 \
+  -L 3008:localhost:3008 \
+  polypox@YOUR_VPS_IP
+```
+
+Simpan di `~/.ssh/config`:
+```
+Host polypox
+  HostName YOUR_VPS_IP
+  User polypox
+  LocalForward 3000 localhost:3000
+  LocalForward 3001 localhost:3001
+  LocalForward 3002 localhost:3002
+  LocalForward 3003 localhost:3003
+  LocalForward 3004 localhost:3004
+  LocalForward 3005 localhost:3005
+  LocalForward 3006 localhost:3006
+  LocalForward 3007 localhost:3007
+  LocalForward 3008 localhost:3008
+```
+
+Cukup ketik `ssh -N polypox` lalu buka browser ke `http://localhost:3000`.
+
+### 5.3 Pantau Log Realtime
+
+```bash
+# Log satu bot
+tail -f logs/backend-real7.log       # Sigma (top performer)
+
+# Semua bot sekaligus (pakai tmux)
+tmux new-session -d -s logs
+tmux split-window -h
+tmux split-window -v
+# dst... atau pakai cara sederhana:
+
+# Lihat 3 baris terakhir semua bot
+watch -n 5 'for i in 1 2 3 4 5 6 7 8; do
+  echo "=== real$i ==="; tail -2 logs/backend-real$i.log; done'
+```
+
+### 5.4 Auto-restart dengan Systemd
+
+```bash
+# Buat service (jalankan sebagai root)
+sudo nano /etc/systemd/system/polypox.service
+```
+
 ```ini
 [Unit]
-Description=Polypox 6-Bot Orchestrator
-After=network.target
+Description=Polypox Trading Bots
+After=network-online.target
+Wants=network-online.target
 
 [Service]
-Type=simple
+Type=forking
 User=polypox
-WorkingDirectory=/app/polypox/bot
-Environment="PATH=/app/polypox/bot/venv/bin:$PATH"
-ExecStart=/bin/bash -c 'source /app/polypox/bot/venv/bin/activate && ./orchestrator.sh start all dry_run'
-ExecStop=/bin/bash -c 'source /app/polypox/bot/venv/bin/activate && ./orchestrator.sh stop all'
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
+WorkingDirectory=/home/polypox/poly/bot
+ExecStart=/home/polypox/poly/bot/orchestrator.sh start all real
+ExecStop=/home/polypox/poly/bot/orchestrator.sh stop all
+Restart=on-failure
+RestartSec=30
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-Enable & start:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable polypox-bots.service
-sudo systemctl start polypox-bots.service
-
-# Check status
-sudo systemctl status polypox-bots.service
-sudo journalctl -u polypox-bots.service -f  # live log
+sudo systemctl enable polypox
+sudo systemctl start polypox
+sudo systemctl status polypox
 ```
 
-### Step 6: Verify Dashboard
-```bash
-# Check orchestrator status
-./orchestrator.sh status
-
-# Open browser (tunnel if VPS is private)
-# http://vps_ip:3000  (multi-bot dashboard)
-# http://vps_ip:3001  (real1 detail)
-# http://vps_ip:3002  (real2 detail)
-# etc
-```
-
----
-
-## 7. Managing Secrets in CI/CD
-
-### GitHub Actions Example
-```yaml
-name: Deploy to VPS
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: polypox
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /app/polypox && git pull origin main
-            
-            # Populate env files from GH secrets
-            cat > bot/backend/envs/real1.env << 'EOF'
-            BOT_ID=real1
-            BOT_MODE=real
-            DATA_DIR=/app/data/real1
-            POLY_PRIVATE_KEY=${{ secrets.REAL1_PRIVATE_KEY }}
-            POLY_API_KEY=${{ secrets.REAL1_API_KEY }}
-            POLY_SECRET=${{ secrets.REAL1_SECRET }}
-            POLY_PASSPHRASE=${{ secrets.REAL1_PASSPHRASE }}
-            USDC_CAPITAL=100.0
-            EOF
-            
-            # Repeat for real2-real6...
-            
-            chmod 600 bot/backend/envs/real*.env
-            
-            # Restart orchestrator
-            cd bot && ./orchestrator.sh restart all dry_run
-```
-
-**GitHub Secrets setup:**
-- REAL1_PRIVATE_KEY = `0x...`
-- REAL1_API_KEY = `api...`
-- REAL1_SECRET = `secret...`
-- REAL1_PASSPHRASE = `pass...`
-- (repeat for real2-real6)
-
----
-
-## 8. Monitoring & Alerts
-
-### Daily Checks
-```bash
-# SSH into VPS
-ssh user@vps_ip
-
-# Check all bots running
-cd /app/polypox/bot && ./orchestrator.sh status
-
-# Watch logs
-tail -f /app/logs/backend-real1.log
-tail -f /app/logs/dashboard.log
-
-# Check disk / RAM
-df -h
-free -h
-```
-
-### Automated Monitoring (Optional)
-
-Use `systemd-timer` to auto-restart failed bots:
-```ini
-# /etc/systemd/system/polypox-health-check.service
-[Unit]
-Description=Polypox Health Check & Auto-Recover
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/polypox-health-check.sh
-User=polypox
-```
+### 5.5 Watchdog Cron
 
 ```bash
-# /usr/local/bin/polypox-health-check.sh
+# Buat script watchdog
+mkdir -p ~/poly/bot/scripts
+cat > ~/poly/bot/scripts/healthcheck.sh << 'EOF'
 #!/bin/bash
-set -e
-
-cd /app/polypox/bot
-source venv/bin/activate
-
-# Check each bot
-for bot in real1 real2 real3 real4 real5 real6; do
-    be_port=$((8000 + ${bot: -1}))
-    if ! curl -s --max-time 2 "http://127.0.0.1:$be_port/health" > /dev/null; then
-        echo "[$bot] OFFLINE — restarting..."
-        ./run.sh stop "$bot" 2>/dev/null || true
-        sleep 2
-        ./run.sh "$bot" -d
-    fi
+cd /home/polypox/poly/bot
+TS=$(date '+%Y-%m-%d %H:%M:%S')
+for i in 1 2 3 4 5 6 7 8; do
+  PORT=$((8000+i))
+  STATUS=$(curl -s --max-time 3 "http://localhost:$PORT/health" 2>/dev/null \
+    | python3 -c "import json,sys; print(json.load(sys.stdin).get('status','fail'))" 2>/dev/null)
+  if [ "$STATUS" != "ok" ]; then
+    echo "[$TS] real$i OFFLINE — restarting"
+    ./orchestrator.sh restart real$i real
+  fi
 done
-```
+EOF
+chmod +x ~/poly/bot/scripts/healthcheck.sh
 
-Schedule daily:
-```bash
-sudo crontab -e
-# Add: 0 4 * * * /usr/local/bin/polypox-health-check.sh
+# Tambahkan ke crontab
+(crontab -l 2>/dev/null; echo "*/5 * * * * /home/polypox/poly/bot/scripts/healthcheck.sh >> /home/polypox/poly/bot/logs/healthcheck.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "5 0 * * * find /home/polypox/poly/bot/logs -name '*.log' -size +50M -exec truncate -s 10M {} \;") | crontab -
 ```
 
 ---
 
-## 9. Safety Checklist
+## Command Cheat Sheet
 
-- [ ] `.env` files have `600` permissions (owner-only read/write)
-- [ ] `.env` files are in `.gitignore` (not committed)
-- [ ] `.env.template` files are tracked (no secrets)
-- [ ] VPS firewall allows inbound to ports 3000-3006 only (restrict by IP if possible)
-- [ ] Data directory (`/app/data/`) is NOT in git and survives redeploy
-- [ ] Systemd service runs as non-root `polypox` user
-- [ ] Logs are rotated (use `logrotate` if >1GB)
-- [ ] Backup daily state JSON: `cp /app/data/real*/state_*.json /backup/`
-- [ ] Database (`trades.db`) is backed up before code updates
-- [ ] Test first deploy on staging VPS before production
-
----
-
-## 10. Rollback & Disaster Recovery
-
-### If Bot Crashes
 ```bash
-./orchestrator.sh restart real1 dry_run
-```
+cd ~/poly/bot
 
-### If All Bots Crash
-```bash
+# ── STATUS ──────────────────────────────────────────────────
+./orchestrator.sh status              # tabel semua bot
+
+# ── START / STOP ─────────────────────────────────────────────
+./orchestrator.sh start all real      # start semua
+./orchestrator.sh stop all            # stop semua
+./orchestrator.sh restart real7 real  # restart satu bot
+
+# ── RUN / PAUSE bot (tanpa browser) ─────────────────────────
+curl -X POST http://localhost:8001/api/bot/start  # real1 RUN
+curl -X POST http://localhost:8001/api/bot/stop   # real1 PAUSE
+
+# ── CEK EQUITY SEMUA BOT ─────────────────────────────────────
+for i in 1 2 3 4 5 6 7 8; do
+  curl -s http://localhost:$((8000+i))/api/stats | \
+    python3 -c "import json,sys; d=json.load(sys.stdin)
+print(f'real$i {d.get(\"bot_name\",\"\"):6} \${d[\"capital\"]:6.2f} pnl={d[\"pnl\"]:+.2f} wr={d[\"win_rate\"]:.0f}%')" 2>/dev/null
+done
+
+# ── LOG REALTIME ─────────────────────────────────────────────
+tail -f logs/backend-real7.log        # Sigma
+tail -f logs/backend-real8.log        # Omega
+
+# ── APPROVE USDC (kalau perlu) ────────────────────────────────
+backend/approve_usdc.py all
+
+# ── VALIDATE ─────────────────────────────────────────────────
+backend/validate_real.py real1
+
+# ── UPDATE CODE ──────────────────────────────────────────────
+git pull
+cd frontend-dashboard && npm run build && cd ..
+cd frontend-bot && npm run build && cd ..
+./orchestrator.sh restart all real
+
+# ── EMERGENCY STOP ───────────────────────────────────────────
 ./orchestrator.sh stop all
-# Check logs
-tail -f /app/logs/backend-real1.log
-./orchestrator.sh start all dry_run
 ```
 
-### If Data is Corrupted
-State + trades stored in `/app/data/` and `/app/logs/`. Keep daily backup:
-```bash
-#!/bin/bash
-# /usr/local/bin/polypox-backup.sh
-cp -r /app/data /backup/data-$(date +%Y%m%d)
-find /backup -type d -name 'data-*' -mtime +30 -exec rm -rf {} \;  # keep 30 days
-```
+---
 
-Cron: `0 2 * * * /usr/local/bin/polypox-backup.sh`
+## Estimasi Performa Real Mode
+
+Berdasarkan dry run 3 hari (WR 67.7%, +190% ROI total):
+
+| Skenario | Win Rate | Est. Profit/bulan |
+|---|---|---|
+| Konservatif | 60% | ~$50-80 |
+| Realistis | 65% | ~$100-150 |
+| Optimis (≈ dry run) | 68% | ~$200+ |
+
+**Top performers dari dry run:**
+- Sigma (real7): +590% ROI, WR 80% — prioritaskan modal lebih
+- Omega (real8): +469% ROI, WR 76% — idem
+- Gamma (real3): -10% ROI, WR 50% — pantau ketat hari pertama
+
+> Dry run tidak ada slippage nyata. Estimasi real mode = 50-70% dari dry run.
 
 ---
 
-## 11. Scaling Beyond 6 Bots
-
-If deploying 7+ bots later:
-1. Follow port formula: `BE_PORT = 8000 + suffix`, `FE_PORT = 3000 + suffix`
-2. Ensure VPS has enough RAM (each bot ≈ 150-200 MB for Python + Node)
-3. Monitor CPU & connection limits (ulimit)
-
----
-
-## Quick Reference
-
-| Task | Command |
-|---|---|
-| Check status | `./orchestrator.sh status` |
-| Start all (DRY_RUN) | `./orchestrator.sh start all` |
-| Start specific bot | `./orchestrator.sh start real1 dry_run` |
-| Stop all | `./orchestrator.sh stop all` |
-| Restart (preserve mode) | `./orchestrator.sh restart all dry_run` |
-| View logs | `tail -f /app/logs/backend-real1.log` |
-| Dashboard | http://vps_ip:3000 |
-
----
-
-## Support
-
-For issues:
-1. Check logs: `tail -f /app/logs/backend-real*.log`
-2. Verify env files: `ls -la backend/envs/`
-3. Test health: `curl http://127.0.0.1:8001/health`
-4. Restart service: `sudo systemctl restart polypox-bots.service`
-
+*Guide dibuat berdasarkan dry run aktual 2026-05-22 → 2026-05-24.*
