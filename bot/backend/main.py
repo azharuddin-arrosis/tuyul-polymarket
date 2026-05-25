@@ -79,6 +79,8 @@ class C:
     poly_api_key        = os.getenv("POLY_API_KEY", "")
     poly_secret         = os.getenv("POLY_SECRET", "")
     poly_passphrase     = os.getenv("POLY_PASSPHRASE", "")
+    # Builder code for order attribution (bytes32)
+    builder_code        = os.getenv("BUILDER_CODE", "0x0000000000000000000000000000000000000000000000000000000000000000")
     # Builder Relayer (gasless redemption) — optional, falls back to py-clob-client if not set
     relayer_api_key     = os.getenv("RELAYER_API_KEY", "")
     relayer_api_address = os.getenv("RELAYER_API_ADDRESS", "")
@@ -647,6 +649,32 @@ def _build_clob_client() -> "ClobClient | None":
         S.errors.append(f"[clob_init] {str(e)[:60]}")
         return None
 
+def _clob_post_order(client, signed_order, order_type) -> dict:
+    """Augment order body with timestamp+builder (CLOB v2 API) and POST."""
+    from py_clob_client.utilities import order_to_json
+    from py_clob_client.clob_types import RequestArgs
+    from py_clob_client.headers.headers import create_level_2_headers
+    from py_clob_client.http_helpers.helpers import post
+    from py_clob_client.endpoints import POST_ORDER as _EP
+    import json as _json, time as _time
+
+    body = order_to_json(signed_order, client.creds.api_key, order_type, False)
+    body["order"]["timestamp"] = str(int(_time.time() * 1000))
+    body["order"]["builder"]  = C.builder_code
+
+    ra = RequestArgs(
+        method="POST", request_path=_EP, body=body,
+        serialized_body=_json.dumps(body, separators=(",", ":"), ensure_ascii=False),
+    )
+    hdrs = create_level_2_headers(client.signer, client.creds, ra)
+
+    if client.can_builder_auth():
+        bh = client._generate_builder_headers(ra, hdrs)
+        if bh is not None:
+            return post(f"{client.host}{_EP}", headers=bh, data=ra.serialized_body)
+    return post(f"{client.host}{_EP}", headers=hdrs, data=ra.serialized_body)
+
+
 async def place_order_with_retry(
     market_id: str, outcome: str, price: float, size: float, sess,
     clob_token_id: str = ""
@@ -728,7 +756,7 @@ async def place_order_with_retry(
         )
         def _fok():
             ord = client.create_order(fok_args)
-            return client.post_order(ord, OrderType.FOK)
+            return _clob_post_order(client, ord, OrderType.FOK)
         resp = await asyncio.get_event_loop().run_in_executor(None, _fok)
         lat_ms = int((time.time() - t0) * 1000)
         order_id = resp.get("orderID") or resp.get("id") or ""
@@ -768,7 +796,7 @@ async def place_order_with_retry(
         )
         def _gtl():
             ord = client.create_order(gtl_args)
-            return client.post_order(ord, OrderType.GTD)
+            return _clob_post_order(client, ord, OrderType.GTD)
         resp = await asyncio.get_event_loop().run_in_executor(None, _gtl)
         lat_ms = int((time.time() - t1) * 1000)
         order_id = resp.get("orderID") or resp.get("id") or ""
