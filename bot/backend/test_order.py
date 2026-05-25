@@ -89,7 +89,7 @@ try:
     from py_clob_client_v2.order_utils.model.order_data_v2 import order_to_json_v2
 
     signer = Signer(pk, chain_id=137)
-    builder = OrderBuilder(signer, signature_type=SignatureTypeV2.POLY_1271 if funder else SignatureTypeV2.EOA, funder=funder or None)
+    builder = OrderBuilder(signer, signature_type=SignatureTypeV2.POLY_GNOSIS_SAFE, funder=funder or None)
 
     args = OrderArgs(token_id="1234567890", price=0.50, size=1.00, side=BUY, builder_code=builder_code or "0x"+"0"*64)
     opts = CreateOrderOptions(tick_size="0.01", neg_risk=False)

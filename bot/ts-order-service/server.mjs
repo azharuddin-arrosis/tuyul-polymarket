@@ -37,9 +37,10 @@ const client = new ClobClient({
         passphrase: PASSPHRASE,
     },
     signatureType: 2,
+    funderAddress: FUNDER || undefined,
 });
 
-console.log('CLOB client ready — SAFE mode (sig_type=2)');
+console.log('CLOB client ready — SAFE sig=2 funder=' + (FUNDER || 'none'));
 
 // ── HTTP Server ───────────────────────────────────────────────
 const server = createServer(async (req, res) => {
