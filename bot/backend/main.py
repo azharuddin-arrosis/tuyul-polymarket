@@ -2423,6 +2423,7 @@ async def ws_endpoint(ws: WebSocket):
         }}, default=str))
         while True: await ws.receive_text()
     except WebSocketDisconnect: pass
+    except Exception: pass
     finally: S.ws_clients.discard(ws)
 
 @app.on_event("startup")
