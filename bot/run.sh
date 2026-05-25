@@ -43,6 +43,7 @@ if [ "${1:-}" = "stop" ]; then
         [ -z "$_SUFFIX" ] && _SUFFIX=99
         pkill -f "uvicorn main:app.*$((8000 + _SUFFIX))" 2>/dev/null || true
         pkill -f "vite --port $((3000 + _SUFFIX))"       2>/dev/null || true
+        pkill -f "ts-order-service.*$((3100 + _SUFFIX))" 2>/dev/null || true
         echo -e "${G}✓ stopped $TARGET_BOT${X}"
     else
         echo -e "${Y}→ stopping ALL bots...${X}"
@@ -154,6 +155,11 @@ if [ ! -d "$BOT_ROOT/frontend-bot/node_modules" ]; then
     (cd frontend-bot && npm install --silent)
 fi
 
+if [ "$MODE" = "real" ] && [ ! -d "$BOT_ROOT/ts-order-service/node_modules" ]; then
+    echo -e "${Y}→ installing TS order service deps (first run)...${X}"
+    (cd ts-order-service && npm install --silent)
+fi
+
 # ─── Pre-flight validator for real mode ──────────────────────
 if [ "$MODE" = "real" ]; then
     echo -e "${B}→ running pre-flight validator...${X}"
@@ -180,6 +186,35 @@ case "$MODE" in
 esac
 BE_LOG="$BOT_ROOT/logs/backend-${BOT_ID}-${MODE_SUFFIX}.log"
 FE_LOG="$BOT_ROOT/logs/frontend-${BOT_ID}-${MODE_SUFFIX}.log"
+TS_LOG="$BOT_ROOT/logs/ts-order-${BOT_ID}.log"
+
+# ─── Start TS Order Service (real mode only) ──────────────────
+if [ "$MODE" = "real" ] && [ -f "$BOT_ROOT/ts-order-service/server.mjs" ]; then
+    TS_PORT=$((3100 + _SUFFIX))
+    echo -e "${B}→ starting TS order service${X} ${D}(port=$TS_PORT)${X}"
+    (
+        cd "$BOT_ROOT/ts-order-service"
+        echo "" >> "$TS_LOG"
+        echo "══ [$(date '+%H:%M:%S')] TS ORDER SERVICE START bot=$BOT_ID port=$TS_PORT ══" >> "$TS_LOG"
+        ORDER_SERVICE_PORT="$TS_PORT" \
+            node --env-file="../backend/envs/${BOT_ID}.env" server.mjs >> "$TS_LOG" 2>&1
+    ) &
+    TS_PID=$!
+    # Wait for TS service ready
+    echo -n "  ts-order "
+    for i in $(seq 1 10); do
+        if curl -s "http://127.0.0.1:$TS_PORT/health" > /dev/null 2>&1; then
+            echo -e "${G}✓${X}"
+            break
+        fi
+        if [ $i -eq 10 ]; then
+            echo -e "${R}✗ timeout${X}"
+            tail -10 "$TS_LOG" | sed 's/^/    /'
+            kill $TS_PID 2>/dev/null || true
+        fi
+        sleep 1; echo -n "."
+    done
+fi
 
 # ─── Start backend ───────────────────────────────────────────
 echo -e "${B}→ starting backend${X} ${D}(BOT_ID=$BOT_ID MODE=$MODE BE=$BE_PORT DATA=$DATA_DIR)${X}"
@@ -251,6 +286,7 @@ echo -e "  ${B}Frontend:${X}  http://localhost:$FE_PORT"
 echo -e "  ${B}Backend:${X}   http://localhost:$BE_PORT"
 echo -e "  ${B}Mode:${X}      $MODE"
 echo -e "  ${B}Bot ID:${X}    $BOT_ID"
+[ -n "${TS_PORT:-}" ] && echo -e "  ${B}TS Order:${X}  http://localhost:$TS_PORT"
 echo -e "  ${B}Data dir:${X}  $DATA_DIR"
 echo -e "  ${B}Logs:${X}      $BE_LOG  /  $FE_LOG"
 echo -e "${G}══════════════════════════════════════════════${X}"
@@ -260,6 +296,7 @@ if [ "$DETACH" = "1" ]; then
     PID_FILE="$BOT_ROOT/logs/polypox-${BOT_ID}.pid"
     echo "$BACKEND_PID"  > "$PID_FILE"
     echo "$FRONTEND_PID" >> "$PID_FILE"
+    [ -n "${TS_PID:-}" ] && echo "$TS_PID" >> "$PID_FILE"
     echo -e "  ${B}Mode:${X}      DETACHED (background)"
     echo -e "  ${B}PIDs:${X}      BE=$BACKEND_PID FE=$FRONTEND_PID → $PID_FILE"
     echo -e "  ${Y}Tail logs:${X} tail -f $BE_LOG"
@@ -277,18 +314,29 @@ _BE_PORT_TRAP="$BE_PORT" _FE_PORT_TRAP="$FE_PORT"
 cleanup() {
     echo ""
     echo -e "${Y}→ stopping $BOT_ID...${X}"
-    kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+    kill $BACKEND_PID $FRONTEND_PID ${TS_PID:-} 2>/dev/null || true
     pkill -f "uvicorn main:app.*$_BE_PORT_TRAP" 2>/dev/null || true
     pkill -f "vite --port $_FE_PORT_TRAP"       2>/dev/null || true
+    [ -n "${TS_PORT:-}" ] && pkill -f "ORDER_SERVICE_PORT=$TS_PORT" 2>/dev/null || true
     echo -e "${G}✓ stopped${X}"
     exit 0
 }
 trap cleanup SIGINT SIGTERM
 
 # Stream logs with prefixes
-tail -F -q "$BE_LOG" "$FE_LOG" 2>/dev/null \
-    | awk -v G="$G" -v B="$B" -v D="$D" -v X="$X" '
-        /uvicorn|FastAPI|BTC5m|Orderbook|BOT_|MODE|REDEEM|BREAKER|RECONCILE/ { print B"[BE]"X" "$0; next }
-        /VITE|vite|HMR|ready|Local:|hmr/                                     { print G"[FE]"X" "$0; next }
-        { print D"   "X" "$0 }
-    '
+if [ -f "$TS_LOG" ]; then
+    tail -F -q "$BE_LOG" "$FE_LOG" "$TS_LOG" 2>/dev/null \
+        | awk -v G="$G" -v B="$B" -v D="$D" -v X="$X" '
+            /uvicorn|FastAPI|BTC5m|Orderbook|BOT_|MODE|REDEEM|BREAKER|RECONCILE/ { print B"[BE]"X" "$0; next }
+            /VITE|vite|HMR|ready|Local:|hmr/                                     { print G"[FE]"X" "$0; next }
+            /ORDER|CLOB/                                                         { print "[TS]"X" "$0; next }
+            { print D"   "X" "$0 }
+        '
+else
+    tail -F -q "$BE_LOG" "$FE_LOG" 2>/dev/null \
+        | awk -v G="$G" -v B="$B" -v D="$D" -v X="$X" '
+            /uvicorn|FastAPI|BTC5m|Orderbook|BOT_|MODE|REDEEM|BREAKER|RECONCILE/ { print B"[BE]"X" "$0; next }
+            /VITE|vite|HMR|ready|Local:|hmr/                                     { print G"[FE]"X" "$0; next }
+            { print D"   "X" "$0 }
+        '
+fi

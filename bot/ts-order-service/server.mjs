@@ -85,12 +85,21 @@ const server = createServer(async (req, res) => {
             orderType,
         );
 
-        console.log(`[ORDER] ${resp.status} ${resp.orderID?.slice(0, 16)}... size=${size} price=${price}`);
-        res.writeHead(200);
-        res.end(JSON.stringify({ ok: true, orderID: resp.orderID, status: resp.status, ...resp }));
+        const success = resp?.success === true || !!resp?.orderID;
+        console.log(`[ORDER] ${success ? 'OK' : 'FAIL'} status=${resp?.status || '?'} orderID=${(resp?.orderID || '').slice(0, 16)}... size=${size} price=${price}`);
+        console.log(`[ORDER] response: ${JSON.stringify(resp)}`);
+
+        if (success) {
+            res.writeHead(200);
+            res.end(JSON.stringify({ ok: true, orderID: resp.orderID, status: resp.status }));
+        } else {
+            res.writeHead(400);
+            res.end(JSON.stringify({ ok: false, error: resp?.errorMsg || 'order rejected', raw: resp }));
+        }
     } catch (e) {
-        console.error(`[ORDER] FAILED: ${e.message}`);
-        res.writeHead(400);
+        console.error(`[ORDER] EXCEPTION: ${e.message}`);
+        console.error(`[ORDER] stack: ${e.stack?.split('\n').slice(0,3).join(' | ')}`);
+        res.writeHead(500);
         res.end(JSON.stringify({ ok: false, error: e.message }));
     }
 });

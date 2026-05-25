@@ -102,7 +102,8 @@ BINANCE_MIRRORS = [
 ]
 CRYPTOCOMPARE = "https://min-api.cryptocompare.com/data"
 COINGECKO = "https://api.coingecko.com/api/v3"
-ORDER_SVC   = os.getenv("ORDER_SERVICE_URL", "http://127.0.0.1:3100")
+_TS_PORT  = 3100 + (int(BOT_ID.replace("real","")) if BOT_ID.startswith("real") and BOT_ID[4:].isdigit() else 0)
+ORDER_SVC = os.getenv("ORDER_SERVICE_URL", f"http://127.0.0.1:{_TS_PORT}")
 CLOB     = "https://clob.polymarket.com"
 BTC5M_WIN = 300
 
