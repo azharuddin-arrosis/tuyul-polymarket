@@ -45,6 +45,8 @@ BOT_ID     = os.getenv("BOT_ID", "bot1")
 BOT_NAME   = os.getenv("BOT_NAME", BOT_ID)         # display name, fallback to BOT_ID
 MODE       = os.getenv("BOT_MODE", "sim")          # sim | dry_run | real — runtime-mutable
 VALID_MODES = ("sim", "dry_run", "real")
+# Log file suffix per mode (biar dry/real tidak campur)
+_MODE_SUFFIX = {"sim": "sim", "dry_run": "dry", "real": "real"}.get(MODE, MODE)
 DATA_DIR   = Path(os.getenv("DATA_DIR", "/app/data"))
 STATE_FILE = DATA_DIR / f"state_{BOT_ID}.json"
 DB_PATH    = DATA_DIR / "trades.db"
@@ -703,7 +705,8 @@ async def place_order_with_retry(
     token_id = clob_token_id
 
     # ── Step 1: FOK (Fill-or-Kill) ────────────────────────────
-    # create_order(args) tanpa options → client auto-fetch tick_size & neg_risk dari API
+    print(f"[ORDER] 🔄 FOK {outcome} ${size:.2f}@{int(price*100)}¢ token={token_id[:16]}…")
+    t0 = time.time()
     try:
         fok_args = OrderArgs(
             price=price,
@@ -715,23 +718,35 @@ async def place_order_with_retry(
             ord = client.create_order(fok_args)
             return client.post_order(ord, OrderType.FOK)
         resp = await asyncio.get_event_loop().run_in_executor(None, _fok)
+        lat_ms = int((time.time() - t0) * 1000)
         order_id = resp.get("orderID") or resp.get("id") or ""
+        status   = resp.get("status", "")
         if resp.get("status") in ("matched", "MATCHED") or order_id:
+            print(f"[ORDER] ✅ FOK FILLED {outcome} ${size:.2f}@{int(price*100)}¢ "
+                  f"order={order_id[:16]}… lat={lat_ms}ms")
             add_log("ORDER_FOK_OK", {
                 "market_id": market_id, "outcome": outcome,
                 "order_id": order_id, "size": size, "price": price,
-                "message": f"FOK filled: {order_id}",
+                "latency_ms": lat_ms,
+                "message": f"FOK filled ({lat_ms}ms): {order_id}",
             })
             return {"ok": True, "type": "FOK", "order_id": order_id}
+        else:
+            print(f"[ORDER] ⚠ FOK no fill status={status!r} lat={lat_ms}ms — trying GTL")
     except Exception as e:
+        lat_ms = int((time.time() - t0) * 1000)
+        err_str = str(e)[:120]
+        print(f"[ORDER] ❌ FOK ERROR lat={lat_ms}ms — {err_str}")
         add_log("ORDER_FOK_FAIL", {
             "market_id": market_id, "outcome": outcome,
-            "error": str(e)[:80],
-            "message": "FOK failed — attempting GTL fallback",
+            "error": err_str, "latency_ms": lat_ms,
+            "message": f"FOK failed ({lat_ms}ms) — attempting GTL fallback",
         })
 
     # ── Step 2: GTL limit order @ $0.95 ──────────────────────
     gtl_price = min(0.95, price)
+    print(f"[ORDER] 🔄 GTL fallback {outcome} ${size:.2f}@{int(gtl_price*100)}¢ (limit)")
+    t1 = time.time()
     try:
         gtl_args = OrderArgs(
             price=gtl_price,
@@ -743,22 +758,32 @@ async def place_order_with_retry(
             ord = client.create_order(gtl_args)
             return client.post_order(ord, OrderType.GTD)
         resp = await asyncio.get_event_loop().run_in_executor(None, _gtl)
+        lat_ms = int((time.time() - t1) * 1000)
         order_id = resp.get("orderID") or resp.get("id") or ""
         if order_id:
+            print(f"[ORDER] ✅ GTL POSTED {outcome} ${size:.2f}@{int(gtl_price*100)}¢ "
+                  f"order={order_id[:16]}… lat={lat_ms}ms")
             add_log("ORDER_GTL_FALLBACK", {
                 "market_id": market_id, "outcome": outcome,
                 "order_id": order_id, "size": size, "price": gtl_price,
-                "message": f"GTL limit posted @ ${gtl_price}: {order_id}",
+                "latency_ms": lat_ms,
+                "message": f"GTL limit posted @ {int(gtl_price*100)}¢ ({lat_ms}ms): {order_id}",
             })
             return {"ok": True, "type": "GTL", "order_id": order_id}
+        else:
+            print(f"[ORDER] ⚠ GTL no order_id resp={resp} lat={lat_ms}ms")
     except Exception as e:
+        lat_ms = int((time.time() - t1) * 1000)
+        err_str = str(e)[:120]
+        print(f"[ORDER] ❌ GTL ERROR lat={lat_ms}ms — {err_str}")
         add_log("ORDER_GTL_FAIL", {
             "market_id": market_id, "outcome": outcome,
-            "error": str(e)[:80],
-            "message": "GTL fallback also failed",
+            "error": err_str, "latency_ms": lat_ms,
+            "message": f"GTL fallback failed ({lat_ms}ms)",
         })
 
     # ── Step 3: Both failed → MISSED_TRADE ───────────────────
+    print(f"[ORDER] 💀 MISSED TRADE — both FOK and GTL failed for {outcome} ${size:.2f}")
     add_log("MISSED_TRADE", {
         "market_id": market_id, "outcome": outcome,
         "message": "Both FOK and GTL failed — trade missed",
@@ -1071,8 +1096,11 @@ async def btc5m_entry(sig: dict, secs_left: int, sess):
 
     true_prob = min(0.92, sig["confidence"])
     ev_val    = (true_prob*(1-tgt_price)) - ((1-true_prob)*tgt_price)
-    if ev_val < 0.01:
-        print(f"[BOT] ⚠ ENTRY SKIP — EV too low: ev={ev_val:.4f} conf={sig['confidence']:.2f} price={tgt_price:.2f}")
+    min_ev    = getattr(C, "min_ev", 0.01)
+    if ev_val < min_ev:
+        print(f"[BOT] ⚠ ENTRY SKIP — EV {ev_val:+.4f} < min {min_ev:.2f} "
+              f"| conf={sig['confidence']:.2f} price={int(tgt_price*100)}¢ dir={sig['dir']} "
+              f"trueProb={true_prob:.2f}")
         return
 
     mkt_dict = {
@@ -1503,12 +1531,15 @@ async def open_position(market: dict, sig: dict):
                 S.capital  = round(S.capital + size, 4)
                 S.locked   = round(S.locked  - size, 4)
                 S.pos_counter -= 1
+            fail_type = order_result.get("type", "UNKNOWN")
+            print(f"[BOT] ❌ ORDER FAIL [{fail_type}] {sig['outcome']} ${size:.2f} "
+                  f"— capital rolled back → ${S.capital:.4f} | {market['question'][:50]}")
             add_log("ORDER_FAIL", {
                 "question":  market["question"][:55],
                 "outcome":   sig["outcome"],
                 "size":      size,
-                "order_type": order_result.get("type", ""),
-                "message":   f"Order not placed — capital rolled back ${size:.2f}",
+                "order_type": fail_type,
+                "message":   f"Order not placed ({fail_type}) — capital rolled back ${size:.2f}",
             })
             await broadcast({"type": "stats", "data": get_stats()})
             return
@@ -1572,9 +1603,14 @@ async def close_position(pos: dict, won: bool):
         db_save_daily_loss()   # Sprint 1: persist daily loss
         save_state()
         result_icon = "✅" if won else "❌"
+        hold_sec = int((datetime.now(timezone.utc) - datetime.fromisoformat(
+            pos.get("opened_at", datetime.now(timezone.utc).isoformat())
+        )).total_seconds())
         print(f"[BOT] {result_icon} BET CLOSE {pos['id']} {pos['outcome']} "
               f"{pos['status'].upper()} pnl={pnl:+.2f} | "
-              f"daily={S.daily_pnl:+.2f} capital=${equity():.2f}")
+              f"daily={S.daily_pnl:+.2f} capital=${equity():.2f} "
+              f"held={hold_sec}s bet=${pos['size']:.2f}@{int(pos['price']*100)}¢ "
+              f"ev={pos.get('ev',0):+.3f} conf={pos.get('confidence',0):.2f}")
     await broadcast({"type": "log",      "data": entry})
     if leveled:  await broadcast({"type": "compound_up", "data": S.compound_events[-1]})
     if salaried: await broadcast({"type": "salary",      "data": S.salary_events[-1]})
@@ -2104,8 +2140,8 @@ def api_storage():
         try: return round(p.stat().st_size / 1048576, 3)
         except: return 0.0
     log_dir = Path(os.getenv("LOG_DIR", str(DATA_DIR.parent.parent / "logs")))
-    be_log  = log_dir / f"backend-{BOT_ID}.log"
-    fe_log  = log_dir / f"frontend-{BOT_ID}.log"
+    be_log  = log_dir / f"backend-{BOT_ID}-{_MODE_SUFFIX}.log"
+    fe_log  = log_dir / f"frontend-{BOT_ID}-{_MODE_SUFFIX}.log"
     return {
         "data_mb":    dir_mb(DATA_DIR),
         "db_mb":      file_mb(DB_PATH),
@@ -2336,7 +2372,7 @@ def api_logs_file(type: str = "backend", lines: int = 300):
     type=backend|frontend  lines=max 2000"""
     lines = min(int(lines), 2000)
     log_dir = Path(os.getenv("LOG_DIR", str(DATA_DIR.parent.parent / "logs")))
-    filename = f"{type}-{BOT_ID}.log"
+    filename = f"{type}-{BOT_ID}-{_MODE_SUFFIX}.log"
     log_file = log_dir / filename
     try:
         if not log_file.exists():

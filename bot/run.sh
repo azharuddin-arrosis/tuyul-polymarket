@@ -70,9 +70,11 @@ if [ "${1:-}" = "clean" ]; then
     G='\033[0;32m'; X='\033[0m'
     TARGET_BOT="${2:-}"
     if [ -n "$TARGET_BOT" ]; then
-        > "$BOT_ROOT/logs/backend-${TARGET_BOT}.log"
-        > "$BOT_ROOT/logs/frontend-${TARGET_BOT}.log"
-        echo -e "${G}✓ logs cleared for $TARGET_BOT${X}"
+        # clear semua mode-variant log untuk bot ini
+        for f in "$BOT_ROOT/logs/backend-${TARGET_BOT}-"*.log "$BOT_ROOT/logs/frontend-${TARGET_BOT}-"*.log; do
+            [ -f "$f" ] && > "$f"
+        done
+        echo -e "${G}✓ logs cleared for $TARGET_BOT (all modes)${X}"
     else
         for f in "$BOT_ROOT/logs/"*.log; do [ -f "$f" ] && > "$f"; done
         echo -e "${G}✓ all logs cleared${X}"
@@ -168,9 +170,16 @@ if [ "$MODE" = "real" ]; then
     fi
 fi
 
-# Per-bot log files (multi-bot safe)
-BE_LOG="$BOT_ROOT/logs/backend-${BOT_ID}.log"
-FE_LOG="$BOT_ROOT/logs/frontend-${BOT_ID}.log"
+# Per-bot log files — suffix mode biar dry/real tidak campur
+# backend-real1-real.log | backend-real1-dry.log | backend-real1-sim.log
+case "$MODE" in
+  real)    MODE_SUFFIX="real" ;;
+  dry_run) MODE_SUFFIX="dry"  ;;
+  sim)     MODE_SUFFIX="sim"  ;;
+  *)       MODE_SUFFIX="$MODE" ;;
+esac
+BE_LOG="$BOT_ROOT/logs/backend-${BOT_ID}-${MODE_SUFFIX}.log"
+FE_LOG="$BOT_ROOT/logs/frontend-${BOT_ID}-${MODE_SUFFIX}.log"
 
 # ─── Start backend ───────────────────────────────────────────
 echo -e "${B}→ starting backend${X} ${D}(BOT_ID=$BOT_ID MODE=$MODE BE=$BE_PORT DATA=$DATA_DIR)${X}"
