@@ -62,7 +62,7 @@ What it checks (NO order placement, NO state mutation):
     1. Python deps present (py_clob_client, web3)
     2. Env vars set (POLY_PRIVATE_KEY, POLY_API_KEY, POLY_SECRET, POLY_PASSPHRASE)
     3. CLOB client builds + returns EOA address
-    4. USDC balance fetched from Polymarket proxy (signature_type=2)
+    4. USDC balance fetched from Polymarket proxy (signature_type=1)
     5. POL/MATIC balance fetched from Polygon RPC
     6. Gamma API reachable, returns active BTC 5m market dgn outcomes UP/DOWN
     7. CLOB public orderbook endpoint reachable for active market token
@@ -112,12 +112,12 @@ def fetal_exit():
 section("1. Dependencies & Environment")
 
 try:
-    from py_clob_client.client import ClobClient
-    from py_clob_client.clob_types import ApiCreds, BalanceAllowanceParams, AssetType
+    from py_clob_client_v2.client import ClobClient
+    from py_clob_client_v2.clob_types import ApiCreds, BalanceAllowanceParams, AssetType
     CLOB_OK = True
 except Exception as e:
     CLOB_OK = False
-check("py_clob_client import", CLOB_OK)
+check("py_clob_client_v2 import", CLOB_OK)
 
 try:
     from eth_account import Account as EthAccount
@@ -152,7 +152,7 @@ POLYGON_CHAIN = 137
 client = None
 addr   = ""
 try:
-    client = ClobClient(host=CLOB_HOST, chain_id=POLYGON_CHAIN, key=PK, signature_type=2)
+    client = ClobClient(host=CLOB_HOST, chain_id=POLYGON_CHAIN, key=PK, signature_type=1)
     client.set_api_creds(ApiCreds(api_key=APIK, api_secret=SEC, api_passphrase=PASS_))
     addr = client.get_address()
     ok_client = bool(addr and addr.startswith("0x"))
@@ -169,7 +169,7 @@ section("3. USDC Balance (Polymarket Proxy)")
 
 usdc_balance = 0.0
 try:
-    params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=2)
+    params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=1)
     data = client.get_balance_allowance(params=params)
     raw = float(data.get("balance", 0) or 0)
     usdc_balance = round(raw / 1e6, 4)  # API returns micro-USDC (6 decimals)
@@ -320,8 +320,8 @@ section("8. USDC Allowance (Proxy Contract)")
 ok_allowance = False
 allowance_val = 0.0
 try:
-    from py_clob_client.clob_types import BalanceAllowanceParams, AssetType
-    params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=2)
+    from py_clob_client_v2.clob_types import BalanceAllowanceParams, AssetType
+    params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=1)
     data = client.get_balance_allowance(params=params)
     # API v2 returns "allowances" (dict) instead of "allowance" (scalar)
     _allowances = data.get("allowances") or {}
@@ -436,7 +436,7 @@ section("12. Order Signing (No Submission)")
 ok_sign = False
 if ok_gamma and clob_token_ids and CLOB_OK:
     try:
-        from py_clob_client.clob_types import OrderArgs
+        from py_clob_client_v2.clob_types import OrderArgs
         token_id = clob_token_ids[0]
         args = OrderArgs(price=0.50, size=1.0, side="BUY", token_id=token_id)
         signed = client.create_order(args)
