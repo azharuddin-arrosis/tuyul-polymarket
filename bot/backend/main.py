@@ -639,6 +639,9 @@ def _build_clob_client() -> "ClobClient | None":
             api_secret=C.poly_secret,
             api_passphrase=C.poly_passphrase,
         ))
+        # POLY_1271: POLY_ADDRESS header must be deposit wallet, not EOA
+        if C.poly_funder:
+            client.signer.address = lambda: C.poly_funder
         return client
     except Exception as e:
         S.errors.append(f"[clob_init] {str(e)[:60]}")
