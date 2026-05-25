@@ -36,11 +36,10 @@ const client = new ClobClient({
         secret: SECRET,
         passphrase: PASSPHRASE,
     },
-    signatureType: 3,
-    funderAddress: FUNDER,
+    signatureType: 1,
 });
 
-console.log(`CLOB client ready — funder: ${FUNDER}`);
+console.log(`CLOB client ready — POLY_PROXY mode`);
 
 // ── HTTP Server ───────────────────────────────────────────────
 const server = createServer(async (req, res) => {
