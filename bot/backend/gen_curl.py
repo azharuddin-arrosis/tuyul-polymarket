@@ -4,7 +4,7 @@ import os, json, time, hmac, hashlib, base64, urllib.request, sys
 from dotenv import load_dotenv
 
 bot_id = sys.argv[1] if len(sys.argv) > 1 else 'real1'
-load_dotenv(f'backend/envs/{bot_id}.env')
+load_dotenv(f'backend/envs/{bot_id}.env', override=True)
 
 pk = os.getenv('POLY_PRIVATE_KEY').strip()
 if not pk.startswith('0x'): pk = '0x' + pk

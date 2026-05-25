@@ -6,7 +6,7 @@ import json, os, sys
 from dotenv import load_dotenv
 
 env_name = sys.argv[1] if len(sys.argv) > 1 else "real1"
-load_dotenv(f"backend/envs/{env_name}.env")
+load_dotenv(f"backend/envs/{env_name}.env", override=True)
 
 from py_clob_client_v2.client import ClobClient
 from py_clob_client_v2.clob_types import ApiCreds, OrderArgs, BalanceAllowanceParams, AssetType
