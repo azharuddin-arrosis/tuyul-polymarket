@@ -542,6 +542,10 @@ async def balance_refresh_loop():
 # ─── CIRCUIT BREAKERS ─────────────────────────────────────────
 _breaker_paused_reason = ""  # set when bot auto-paused; cleared on resume
 
+def _ts() -> str:
+    """Timestamp prefix untuk semua log penting — format: [DD/MM HH:MM:SS]"""
+    return datetime.now(timezone.utc).strftime("%d/%m %H:%M:%S")
+
 def _in_trading_hours(start_hhmm: str, end_hhmm: str) -> bool:
     """Check current local time (server) is within HH:MM..HH:MM window. Wrap-around OK."""
     if not start_hhmm or not end_hhmm: return True
@@ -713,7 +717,7 @@ async def place_order_with_retry(
     token_id = clob_token_id
 
     # ── Step 1: FOK (Fill-or-Kill) ────────────────────────────
-    print(f"[ORDER] 🔄 FOK {outcome} ${size:.2f}@{int(price*100)}¢ token={token_id[:16]}…")
+    print(f"[{_ts()}][ORDER] 🔄 FOK {outcome} ${size:.2f}@{int(price*100)}¢ token={token_id[:16]}…")
     t0 = time.time()
     try:
         fok_args = OrderArgs(
@@ -730,7 +734,7 @@ async def place_order_with_retry(
         order_id = resp.get("orderID") or resp.get("id") or ""
         status   = resp.get("status", "")
         if resp.get("status") in ("matched", "MATCHED") or order_id:
-            print(f"[ORDER] ✅ FOK FILLED {outcome} ${size:.2f}@{int(price*100)}¢ "
+            print(f"[{_ts()}][ORDER] ✅ FOK FILLED {outcome} ${size:.2f}@{int(price*100)}¢ "
                   f"order={order_id[:16]}… lat={lat_ms}ms")
             add_log("ORDER_FOK_OK", {
                 "market_id": market_id, "outcome": outcome,
@@ -740,11 +744,11 @@ async def place_order_with_retry(
             })
             return {"ok": True, "type": "FOK", "order_id": order_id}
         else:
-            print(f"[ORDER] ⚠ FOK no fill status={status!r} lat={lat_ms}ms — trying GTL")
+            print(f"[{_ts()}][ORDER] ⚠ FOK no fill status={status!r} lat={lat_ms}ms — trying GTL")
     except Exception as e:
         lat_ms = int((time.time() - t0) * 1000)
         err_str = str(e)[:120]
-        print(f"[ORDER] ❌ FOK ERROR lat={lat_ms}ms — {err_str}")
+        print(f"[{_ts()}][ORDER] ❌ FOK ERROR lat={lat_ms}ms — {err_str}")
         add_log("ORDER_FOK_FAIL", {
             "market_id": market_id, "outcome": outcome,
             "error": err_str, "latency_ms": lat_ms,
@@ -753,7 +757,7 @@ async def place_order_with_retry(
 
     # ── Step 2: GTL limit order @ $0.95 ──────────────────────
     gtl_price = min(0.95, price)
-    print(f"[ORDER] 🔄 GTL fallback {outcome} ${size:.2f}@{int(gtl_price*100)}¢ (limit)")
+    print(f"[{_ts()}][ORDER] 🔄 GTL fallback {outcome} ${size:.2f}@{int(gtl_price*100)}¢ (limit)")
     t1 = time.time()
     try:
         gtl_args = OrderArgs(
@@ -769,7 +773,7 @@ async def place_order_with_retry(
         lat_ms = int((time.time() - t1) * 1000)
         order_id = resp.get("orderID") or resp.get("id") or ""
         if order_id:
-            print(f"[ORDER] ✅ GTL POSTED {outcome} ${size:.2f}@{int(gtl_price*100)}¢ "
+            print(f"[{_ts()}][ORDER] ✅ GTL POSTED {outcome} ${size:.2f}@{int(gtl_price*100)}¢ "
                   f"order={order_id[:16]}… lat={lat_ms}ms")
             add_log("ORDER_GTL_FALLBACK", {
                 "market_id": market_id, "outcome": outcome,
@@ -779,11 +783,11 @@ async def place_order_with_retry(
             })
             return {"ok": True, "type": "GTL", "order_id": order_id}
         else:
-            print(f"[ORDER] ⚠ GTL no order_id resp={resp} lat={lat_ms}ms")
+            print(f"[{_ts()}][ORDER] ⚠ GTL no order_id resp={resp} lat={lat_ms}ms")
     except Exception as e:
         lat_ms = int((time.time() - t1) * 1000)
         err_str = str(e)[:120]
-        print(f"[ORDER] ❌ GTL ERROR lat={lat_ms}ms — {err_str}")
+        print(f"[{_ts()}][ORDER] ❌ GTL ERROR lat={lat_ms}ms — {err_str}")
         add_log("ORDER_GTL_FAIL", {
             "market_id": market_id, "outcome": outcome,
             "error": err_str, "latency_ms": lat_ms,
@@ -791,7 +795,7 @@ async def place_order_with_retry(
         })
 
     # ── Step 3: Both failed → MISSED_TRADE ───────────────────
-    print(f"[ORDER] 💀 MISSED TRADE — both FOK and GTL failed for {outcome} ${size:.2f}")
+    print(f"[{_ts()}][ORDER] 💀 MISSED TRADE — both FOK and GTL failed for {outcome} ${size:.2f}")
     add_log("MISSED_TRADE", {
         "market_id": market_id, "outcome": outcome,
         "message": "Both FOK and GTL failed — trade missed",
@@ -1072,7 +1076,7 @@ async def btc5m_entry(sig: dict, secs_left: int, sess):
     b5  = S.btc5m
     mkt = b5["market_data"]
     if not mkt:
-        print(f"[BOT] ⚠ ENTRY SKIP — no market_data for {b5.get('slug','?')}")
+        print(f"[{_ts()}][BOT] ⚠ ENTRY SKIP — no market_data for {b5.get('slug','?')}")
         return
 
     outs   = mkt.get("outcomes", "[]"); prices = mkt.get("outcomePrices", "[]")
@@ -1083,7 +1087,7 @@ async def btc5m_entry(sig: dict, secs_left: int, sess):
         try: prices = json.loads(prices)
         except: prices = []
     if not outs or not prices or len(outs) != len(prices):
-        print(f"[BOT] ⚠ ENTRY SKIP — bad market outcomes/prices: outs={outs} prices={prices}")
+        print(f"[{_ts()}][BOT] ⚠ ENTRY SKIP — bad market outcomes/prices: outs={outs} prices={prices}")
         return
 
     tgt_price = None
@@ -1099,14 +1103,14 @@ async def btc5m_entry(sig: dict, secs_left: int, sess):
             clob_token_id = token_map.get("down") or token_map.get("no") or ""
 
     if tgt_price is None or not (0.02 < tgt_price < 0.98):
-        print(f"[BOT] ⚠ ENTRY SKIP — price out of range: tgt_price={tgt_price} dir={sig['dir']}")
+        print(f"[{_ts()}][BOT] ⚠ ENTRY SKIP — price out of range: tgt_price={tgt_price} dir={sig['dir']}")
         return
 
     true_prob = min(0.92, sig["confidence"])
     ev_val    = (true_prob*(1-tgt_price)) - ((1-true_prob)*tgt_price)
     min_ev    = getattr(C, "min_ev", 0.01)
     if ev_val < min_ev:
-        print(f"[BOT] ⚠ ENTRY SKIP — EV {ev_val:+.4f} < min {min_ev:.2f} "
+        print(f"[{_ts()}][BOT] ⚠ ENTRY SKIP — EV {ev_val:+.4f} < min {min_ev:.2f} "
               f"| conf={sig['confidence']:.2f} price={int(tgt_price*100)}¢ dir={sig['dir']} "
               f"trueProb={true_prob:.2f}")
         return
@@ -1148,7 +1152,7 @@ async def btc5m_loop():
     Spike detection: score jump ≥1.5 → fire immediately.
     Hard deadline: T-5s → force entry if not yet fired.
     """
-    print(f"[BTC5m] loop started — poll 2s, entry T-10s→T-5s, spike detect ON")
+    print(f"[{_ts()}][BTC5m] loop started — poll 2s, entry T-10s→T-5s, spike detect ON")
     b5 = S.btc5m
 
     async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as sess:
@@ -1177,7 +1181,7 @@ async def btc5m_loop():
                     b5["_mkt_logged"]   = False
                     b5["_zone_logged"]  = False
                     b5["_status_ts"]    = 0
-                    print(f"[BTC5m] ══ NEW WINDOW {slug} | {secs_left}s left ══")
+                    print(f"[{_ts()}][BTC5m] ══ NEW WINDOW {slug} | {secs_left}s left ══")
 
                 # Always fetch live price
                 price = await btc5m_fetch_price(sess)
@@ -1219,10 +1223,10 @@ async def btc5m_loop():
                         yes_p = float(raw_prices[0]) if len(raw_prices) > 0 else 0
                         no_p  = float(raw_prices[1]) if len(raw_prices) > 1 else 0
                         q     = mkt.get("question", "")[:65]
-                        print(f"[BTC5m] Market FOUND  | YES={yes_p:.2f} NO={no_p:.2f} | {q}")
+                        print(f"[{_ts()}][BTC5m] Market FOUND  | YES={yes_p:.2f} NO={no_p:.2f} | {q}")
                         b5["_mkt_logged"] = True
                     elif secs_left < 240:
-                        print(f"[BTC5m] Market NOT FOUND on Gamma — bot akan skip window ini jika tidak ditemukan")
+                        print(f"[{_ts()}][BTC5m] Market NOT FOUND on Gamma — bot akan skip window ini jika tidak ditemukan")
                         b5["_mkt_logged"] = True
 
                 # Always compute signal
@@ -1266,19 +1270,19 @@ async def btc5m_loop():
 
                 # Spike alert — log immediately regardless zone
                 if spike_detected and not b5["entry_fired"]:
-                    print(f"[BTC5m] ⚡ SPIKE T-{secs_left}s | {btc_str} | {dir_str} {conf_str} {scr_str} | delta={sig['score']-prev_score:+.1f}")
+                    print(f"[{_ts()}][BTC5m] ⚡ SPIKE T-{secs_left}s | {btc_str} | {dir_str} {conf_str} {scr_str} | delta={sig['score']-prev_score:+.1f}")
 
                 # Periodic status log every 60s (not in zone, not fired)
                 if (not b5["in_entry_zone"] and not b5["entry_fired"]
                         and now_ts - b5.get("_status_ts", 0) >= 60):
                     wait_str = "waiting entry zone" if S.running else "bot PAUSED"
                     brk_str  = f"⛔ {breaker_reason[:35]}" if not breaker_ok else ""
-                    print(f"[BTC5m]  T-{secs_left:3d}s | {btc_str} | {dir_str} {conf_str} {scr_str} | {mkt_tag} {wait_str} {brk_str}".rstrip())
+                    print(f"[{_ts()}][BTC5m]  T-{secs_left:3d}s | {btc_str} | {dir_str} {conf_str} {scr_str} | {mkt_tag} {wait_str} {brk_str}".rstrip())
                     b5["_status_ts"] = now_ts
 
                 # Entry zone entered (log once)
                 if b5["in_entry_zone"] and not b5.get("_zone_logged") and not b5["entry_fired"]:
-                    print(f"[BTC5m] ─── ZONE T-{secs_left}s | {btc_str} | {dir_str} {conf_str} {scr_str} | {mkt_tag} ───")
+                    print(f"[{_ts()}][BTC5m] ─── ZONE T-{secs_left}s | {btc_str} | {dir_str} {conf_str} {scr_str} | {mkt_tag} ───")
                     b5["_zone_logged"] = True
 
                 should_fire = (
@@ -1300,7 +1304,7 @@ async def btc5m_loop():
                         "deadline" if hard_deadline else
                         "zone"
                     )
-                    print(f"[BTC5m] 🎯 SIGNAL [{fire_reason}] {sig['dir']} {conf_str} {scr_str} secs={secs_left} → opening bet...")
+                    print(f"[{_ts()}][BTC5m] 🎯 SIGNAL [{fire_reason}] {sig['dir']} {conf_str} {scr_str} secs={secs_left} → opening bet...")
                     await btc5m_entry(sig, secs_left, sess)
                 elif (b5["in_entry_zone"] or hard_deadline) and not b5["entry_fired"]:
                     # In zone but not firing — log why (once at deadline)
@@ -1312,7 +1316,7 @@ async def btc5m_loop():
                         if not breaker_ok:           reasons.append(f"breaker:{breaker_reason[:30]}")
                         if not S.running:            reasons.append("bot stopped")
                         if S.gas_paused:             reasons.append("gas paused")
-                        print(f"[BTC5m] ⏭  SKIP window | {' | '.join(reasons) or 'already fired'}")
+                        print(f"[{_ts()}][BTC5m] ⏭  SKIP window | {' | '.join(reasons) or 'already fired'}")
 
                 # Update prev_score after entry decision
                 b5["prev_score"] = sig["score"]
@@ -1472,14 +1476,14 @@ async def open_position(market: dict, sig: dict):
         ok, reason = risk_ok(market["id"], sig)
         if not ok:
             if S.log and S.log[0].get("reason") == reason: return
-            print(f"[BOT] ⛔ BET REJECTED — {reason}")
+            print(f"[{_ts()}][BOT] ⛔ BET REJECTED — {reason}")
             add_log("REJECTED", {"reason": reason, "question": market["question"][:45],
                                  "strategy": sig.get("strategy", "")})
             return
         size = calc_size(sig["price"])
         size = min(size, S.capital)
         if size < C.min_bet:
-            print(f"[BOT] ⛔ BET REJECTED — size ${size:.2f} < min ${C.min_bet}")
+            print(f"[{_ts()}][BOT] ⛔ BET REJECTED — size ${size:.2f} < min ${C.min_bet}")
             return
         S.capital    = round(S.capital - size, 4)
         S.locked     = round(S.locked + size, 4)
@@ -1540,7 +1544,7 @@ async def open_position(market: dict, sig: dict):
                 S.locked   = round(S.locked  - size, 4)
                 S.pos_counter -= 1
             fail_type = order_result.get("type", "UNKNOWN")
-            print(f"[BOT] ❌ ORDER FAIL [{fail_type}] {sig['outcome']} ${size:.2f} "
+            print(f"[{_ts()}][BOT] ❌ ORDER FAIL [{fail_type}] {sig['outcome']} ${size:.2f} "
                   f"— capital rolled back → ${S.capital:.4f} | {market['question'][:50]}")
             add_log("ORDER_FAIL", {
                 "question":  market["question"][:55],
@@ -1571,7 +1575,7 @@ async def open_position(market: dict, sig: dict):
             "order_type": pos.get("order_type", "sim" if MODE == "sim" else ""),
         })
         _mode_tag = {"sim": "SIM", "dry_run": "DRY", "real": "REAL"}.get(MODE, MODE.upper())
-        print(f"[BOT] 📈 BET OPEN [{_mode_tag}] {pos['id']} {pos['outcome']} "
+        print(f"[{_ts()}][BOT] 📈 BET OPEN [{_mode_tag}] {pos['id']} {pos['outcome']} "
               f"${pos['size']:.2f}@{int(pos['price']*100)}¢ "
               f"EV={pos['ev']:+.3f} conf={pos.get('confidence',0):.2f} resolves={pos['resolve_fmt']}")
     await broadcast({"type": "log", "data": entry})
@@ -1614,7 +1618,7 @@ async def close_position(pos: dict, won: bool):
         hold_sec = int((datetime.now(timezone.utc) - datetime.fromisoformat(
             pos.get("opened_at", datetime.now(timezone.utc).isoformat())
         )).total_seconds())
-        print(f"[BOT] {result_icon} BET CLOSE {pos['id']} {pos['outcome']} "
+        print(f"[{_ts()}][BOT] {result_icon} BET CLOSE {pos['id']} {pos['outcome']} "
               f"{pos['status'].upper()} pnl={pnl:+.2f} | "
               f"daily={S.daily_pnl:+.2f} capital=${equity():.2f} "
               f"held={hold_sec}s bet=${pos['size']:.2f}@{int(pos['price']*100)}¢ "
@@ -2040,10 +2044,10 @@ async def resolver_loop():
                         if MODE == "sim":
                             tp  = pos.get("true_prob", 0.65)
                             won = random.random() < (tp * 0.93)
-                            print(f"[BOT] 🎲 SIM RESOLVE {pos['id']} {pos['outcome']} → {'WON' if won else 'LOST'} (random tp={tp:.2f})")
+                            print(f"[{_ts()}][BOT] 🎲 SIM RESOLVE {pos['id']} {pos['outcome']} → {'WON' if won else 'LOST'} (random tp={tp:.2f})")
                         else:
                             won, reason = await _resolve_dry_run(pos, sess)
-                            print(f"[BOT] 📊 DRY_RUN RESOLVE {pos['id']} {pos['outcome']} → {'WON' if won else 'LOST'} ({reason})")
+                            print(f"[{_ts()}][BOT] 📊 DRY_RUN RESOLVE {pos['id']} {pos['outcome']} → {'WON' if won else 'LOST'} ({reason})")
                         await close_position(pos, won)
             await asyncio.sleep(5)
 
