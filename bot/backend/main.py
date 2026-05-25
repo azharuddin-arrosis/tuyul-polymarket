@@ -630,6 +630,7 @@ def _build_order_client() -> "ClobClient | None":
     if not C.poly_private_key or not C.poly_api_key: return None
     if not C.poly_funder: return None
     try:
+        from py_clob_client_v2.clob_types import BalanceAllowanceParams, AssetType
         pk = C.poly_private_key.strip()
         if not pk.startswith("0x"): pk = "0x" + pk
         client = ClobClient(
@@ -640,7 +641,13 @@ def _build_order_client() -> "ClobClient | None":
             api_key=C.poly_api_key, api_secret=C.poly_secret,
             api_passphrase=C.poly_passphrase,
         ))
-        # POLY_1271: POLY_ADDRESS header must be deposit wallet = order signer
+        # Sync deposit wallet with CLOB (best-effort)
+        try:
+            client.update_balance_allowance(
+                BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=3)
+            )
+        except Exception: pass
+        # POLY_1271: set POLY_ADDRESS = funder after balance sync
         client.signer.address = lambda: C.poly_funder
         return client
     except Exception as e:
