@@ -630,7 +630,8 @@ def _build_clob_client() -> "ClobClient | None":
             host=CLOB,
             chain_id=POLYGON,
             key=pk,
-            signature_type=0,
+            signature_type=3,
+            funder=C.poly_funder or None,
         )
         # Level 2: set credentials setelah signer terbentuk
         client.set_api_creds(ApiCreds(
