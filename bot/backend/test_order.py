@@ -9,7 +9,7 @@ env_name = sys.argv[1] if len(sys.argv) > 1 else "real1"
 load_dotenv(f"backend/envs/{env_name}.env", override=True)
 
 from py_clob_client_v2.client import ClobClient
-from py_clob_client_v2.clob_types import ApiCreds, OrderArgs, BalanceAllowanceParams, AssetType
+from py_clob_client_v2.clob_types import ApiCreds, OrderArgs, OrderType, BalanceAllowanceParams, AssetType
 from py_clob_client_v2.constants import POLYGON
 from py_clob_client_v2.order_builder.constants import BUY
 
@@ -170,6 +170,43 @@ else:
             print("  ❌ No active BTC5m market")
 
     _asyncio.run(_find_and_order())
+
+# ─── 6. Direct Python SAFE order test ─────────────────────────
+print()
+print("─── 6. Direct SAFE order (Python SDK, no TS service) ───")
+import asyncio as _asyncio2
+
+async def _direct_order():
+    async with aiohttp.ClientSession() as sess:
+        ts = int(__import__("time").time()) // 300 * 300
+        slug = "btc-updown-5m-" + str(ts)
+        async with sess.get("https://gamma-api.polymarket.com/events",
+                           params={"slug": slug, "limit": 1}) as r:
+            data = await r.json()
+            for m in data[0].get("markets", []):
+                raw_ids = m.get("clobTokenIds", "[]")
+                if isinstance(raw_ids, str): raw_ids = json.loads(raw_ids)
+                token = raw_ids[0] if raw_ids else None
+                if not token: continue
+
+                print(f"  Token: {token}")
+                print(f"  Placing FOK BUY $1.00@50¢ via SAFE...")
+
+                c = ClobClient(host="https://clob.polymarket.com", chain_id=137, key=pk,
+                              signature_type=2, funder=funder or None)
+                c.set_api_creds(ApiCreds(api_key=api_key, api_secret=secret, api_passphrase=passphrase))
+
+                try:
+                    args = OrderArgs(token_id=token, price=0.50, size=1.00, side=BUY, builder_code=builder_code)
+                    signed = c.create_order(args)
+                    resp = c.post_order(signed, OrderType.FOK)
+                    print(f"  ✅ ORDER PLACED: {json.dumps(resp, default=str)[:400]}")
+                except Exception as e:
+                    print(f"  ❌ FAILED: {str(e)[:300]}")
+                return
+    print("  ❌ No active market")
+
+_asyncio2.run(_direct_order())
 
 print()
 print("=" * 60)
