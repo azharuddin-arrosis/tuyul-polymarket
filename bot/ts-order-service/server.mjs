@@ -84,20 +84,24 @@ const server = createServer(async (req, res) => {
             orderType,
         );
 
-        const success = resp?.success === true || !!resp?.orderID;
-        console.log(`[ORDER] ${success ? 'OK' : 'FAIL'} status=${resp?.status || '?'} orderID=${(resp?.orderID || '').slice(0, 16)}... size=${size} price=${price}`);
-        console.log(`[ORDER] response: ${JSON.stringify(resp)}`);
+        console.log(`[ORDER] RAW RESPONSE: ${JSON.stringify(resp)}`);
+
+        const success = (resp?.success === true || !!resp?.orderID)
+            && !resp?.error
+            && resp?.status !== 400;
 
         if (success) {
+            console.log(`[ORDER] OK orderID=${resp.orderID}`);
             res.writeHead(200);
             res.end(JSON.stringify({ ok: true, orderID: resp.orderID, status: resp.status }));
         } else {
+            const err = resp?.error || resp?.errorMsg || 'order rejected';
+            console.log(`[ORDER] FAILED: ${err}`);
             res.writeHead(400);
-            res.end(JSON.stringify({ ok: false, error: resp?.errorMsg || 'order rejected', raw: resp }));
+            res.end(JSON.stringify({ ok: false, error: err }));
         }
     } catch (e) {
         console.error(`[ORDER] EXCEPTION: ${e.message}`);
-        console.error(`[ORDER] stack: ${e.stack?.split('\n').slice(0,3).join(' | ')}`);
         res.writeHead(500);
         res.end(JSON.stringify({ ok: false, error: e.message }));
     }
