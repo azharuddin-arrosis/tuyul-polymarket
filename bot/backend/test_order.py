@@ -197,7 +197,7 @@ async def _direct_order():
                 c.set_api_creds(ApiCreds(api_key=api_key, api_secret=secret, api_passphrase=passphrase))
 
                 try:
-                    args = OrderArgs(token_id=token, price=0.50, size=1.00, side=BUY, builder_code=builder_code)
+                    args = OrderArgs(token_id=token, price=0.50, size=2.00, side=BUY, builder_code=builder_code)
                     signed = c.create_order(args)
                     resp = c.post_order(signed, OrderType.FOK)
                     print(f"  ✅ ORDER PLACED: {json.dumps(resp, default=str)[:400]}")
