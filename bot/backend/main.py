@@ -28,11 +28,11 @@ except ImportError:
     _EthAccount = None
     WEB3_OK = False
 
-# Optional py-clob-client — graceful fallback if not installed
+# Optional py-clob-client-v2 — handles CLOB v2 natively (timestamp, builder, metadata)
 try:
-    from py_clob_client.client import ClobClient
-    from py_clob_client.clob_types import OrderArgs, OrderType, TradeParams, PartialCreateOrderOptions, ApiCreds
-    from py_clob_client.constants import POLYGON
+    from py_clob_client_v2.client import ClobClient
+    from py_clob_client_v2.clob_types import OrderArgs, OrderType, ApiCreds
+    from py_clob_client_v2.constants import POLYGON
     CLOB_OK = True
 except ImportError:
     ClobClient = None
@@ -439,7 +439,7 @@ async def fetch_balance_usdc(sess: aiohttp.ClientSession) -> float:
     """
     if not CLOB_OK or not C.poly_api_key: return 0.0
     try:
-        from py_clob_client.clob_types import BalanceAllowanceParams, AssetType
+        from py_clob_client_v2.clob_types import BalanceAllowanceParams, AssetType
 
         def _fetch():
             client = _build_clob_client()
@@ -649,31 +649,6 @@ def _build_clob_client() -> "ClobClient | None":
         S.errors.append(f"[clob_init] {str(e)[:60]}")
         return None
 
-def _clob_post_order(client, signed_order, order_type) -> dict:
-    """Augment order body with timestamp+builder (CLOB v2 API) and POST."""
-    from py_clob_client.utilities import order_to_json
-    from py_clob_client.clob_types import RequestArgs
-    from py_clob_client.headers.headers import create_level_2_headers
-    from py_clob_client.http_helpers.helpers import post
-    from py_clob_client.endpoints import POST_ORDER as _EP
-    import json as _json, time as _time
-
-    body = order_to_json(signed_order, client.creds.api_key, order_type, False)
-    body["order"]["timestamp"] = str(int(_time.time() * 1000))
-    body["order"]["builder"]  = C.builder_code
-
-    ra = RequestArgs(
-        method="POST", request_path=_EP, body=body,
-        serialized_body=_json.dumps(body, separators=(",", ":"), ensure_ascii=False),
-    )
-    hdrs = create_level_2_headers(client.signer, client.creds, ra)
-
-    if client.can_builder_auth():
-        bh = client._generate_builder_headers(ra, hdrs)
-        if bh is not None:
-            return post(f"{client.host}{_EP}", headers=bh, data=ra.serialized_body)
-    return post(f"{client.host}{_EP}", headers=hdrs, data=ra.serialized_body)
-
 
 async def place_order_with_retry(
     market_id: str, outcome: str, price: float, size: float, sess,
@@ -749,14 +724,15 @@ async def place_order_with_retry(
     t0 = time.time()
     try:
         fok_args = OrderArgs(
+            token_id=token_id,
             price=price,
             size=size,
             side="BUY",
-            token_id=token_id,
+            builder_code=C.builder_code,
         )
         def _fok():
             ord = client.create_order(fok_args)
-            return _clob_post_order(client, ord, OrderType.FOK)
+            return client.post_order(ord, OrderType.FOK)
         resp = await asyncio.get_event_loop().run_in_executor(None, _fok)
         lat_ms = int((time.time() - t0) * 1000)
         order_id = resp.get("orderID") or resp.get("id") or ""
@@ -789,14 +765,15 @@ async def place_order_with_retry(
     t1 = time.time()
     try:
         gtl_args = OrderArgs(
+            token_id=token_id,
             price=gtl_price,
             size=size,
             side="BUY",
-            token_id=token_id,
+            builder_code=C.builder_code,
         )
         def _gtl():
             ord = client.create_order(gtl_args)
-            return _clob_post_order(client, ord, OrderType.GTD)
+            return client.post_order(ord, OrderType.GTD)
         resp = await asyncio.get_event_loop().run_in_executor(None, _gtl)
         lat_ms = int((time.time() - t1) * 1000)
         order_id = resp.get("orderID") or resp.get("id") or ""
