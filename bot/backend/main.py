@@ -1647,7 +1647,7 @@ async def redeem_winning_positions():
                     p for p in list(S.positions)
                     if p["status"] == "open"
                     and (now - datetime.fromisoformat(p["opened_at"])).total_seconds()
-                       >= p.get("resolve_sec", 86400) * 0.90  # check at 90% of resolve window
+                       >= p.get("resolve_sec", 86400)  # check right at resolve time (was 0.90)
                 ]
 
                 for pos in candidates:
@@ -1804,7 +1804,7 @@ async def redeem_winning_positions():
             except Exception as e:
                 S.errors.append(f"[redeem_loop] {str(e)[:60]}")
 
-            # Adaptive polling: 15s when any open pos has passed resolve_sec, else 60s
+            # Adaptive polling: 10s when any open pos has passed resolve_sec, else 30s
             # Critical-state (3+ attempts) → extra slow (300s) to avoid spamming a broken claim
             try:
                 now = datetime.now(timezone.utc)
@@ -1814,7 +1814,7 @@ async def redeem_winning_positions():
                     for p in S.positions
                 )
                 has_critical = any(p.get("claim_attempts", 0) >= 3 for p in S.positions)
-                sleep_sec = 300 if has_critical else (15 if has_expired else 60)
+                sleep_sec = 300 if has_critical else (10 if has_expired else 30)
             except Exception:
                 sleep_sec = 60
             await asyncio.sleep(sleep_sec)
