@@ -204,7 +204,7 @@ class BotState:
             "max_loss_strike":  0,       # consecutive losses → pause bot (0 = disabled)
             "max_win_strike":   0,       # consecutive wins → pause bot (0 = disabled)
             "daily_tp_usd":     0,       # daily P&L target → pause bot (0 = disabled)
-            "daily_sl_usd":     5.0,     # daily loss limit → pause bot (matches DAILY_LOSS_LIMIT)
+            "daily_sl_usd":     1005.0,     # daily loss limit → pause bot (matches DAILY_LOSS_LIMIT)
             "conf_threshold":   0.25,    # min signal confidence to enter
             "trigger_range":    0.0,     # additional spike trigger threshold (0 = use default 1.5)
             "price_min_cents":  0,       # only enter if YES token price >= this (cents, 0 = no min)
