@@ -614,13 +614,15 @@ def auto_pause_if_breaker(reason: str):
 
 # ─── ORDER RETRY: FOK → GTL fallback ─────────────────────────
 def _build_clob_client() -> "ClobClient | None":
-    """SAFE client for queries (balance, orders, reconcile)."""
+    """SAFE (Gnosis Safe) client for all operations (balance, orders, trading)."""
     if not CLOB_OK: return None
     if not C.poly_private_key or not C.poly_api_key: return None
     try:
         pk = C.poly_private_key.strip()
         if not pk.startswith("0x"): pk = "0x" + pk
-        client = ClobClient(host=CLOB, chain_id=POLYGON, key=pk, signature_type=2)
+        client = ClobClient(host=CLOB, chain_id=POLYGON, key=pk,
+                           signature_type=2,
+                           funder=C.poly_funder or None)
         client.set_api_creds(ApiCreds(
             api_key=C.poly_api_key, api_secret=C.poly_secret,
             api_passphrase=C.poly_passphrase,
@@ -662,34 +664,33 @@ async def place_order_with_retry(
             })
             return {"ok": False, "type": "MISSED", "order_id": ""}
 
-    # ── Real mode: call TS order service ──────────────────────
+    # ── Real mode: direct py-clob-client-v2 SAFE execution ───
     if not clob_token_id:
         print(f"[{_ts()}][BOT] ⚠ ENTRY SKIP — no clob_token_id")
         return {"ok": False, "type": "MISSED", "order_id": ""}
 
-    async def _post_order(token_id, price, size, order_type):
-        body = json.dumps({"token_id": token_id, "price": price, "size": size,
-                           "side": "BUY", "order_type": order_type})
+    def _post_order(token_id, price, size, order_type):
+        client = _build_clob_client()
+        if client is None:
+            return {"ok": False, "error": "CLOB client init failed"}
+        args = OrderArgs(token_id=token_id, price=price, size=size, side="BUY",
+                        builder_code=C.builder_code)
         try:
-            async with sess.post(f"{ORDER_SVC}/order", data=body,
-                                 headers={"Content-Type": "application/json"},
-                                 timeout=aiohttp.ClientTimeout(total=10)) as r:
-                return await r.json()
+            signed = client.create_order(args)
+            return client.post_order(signed, order_type)
         except Exception as e:
             return {"ok": False, "error": str(e)[:120]}
 
     # ── Step 1: FOK ───────────────────────────────────────────
     print(f"[{_ts()}][ORDER] 🔄 FOK {outcome} ${size:.2f}@{int(price*100)}¢ token={clob_token_id[:16]}…")
     t0 = time.time()
-    try:
-        resp = await _post_order(clob_token_id, price, size, "FOK")
-    except Exception as e:
-        resp = {"ok": False, "error": str(e)[:120]}
+    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, price, size, OrderType.FOK)
     lat_ms = int((time.time() - t0) * 1000)
-    if resp.get("ok"):
-        order_id = resp.get("orderID", "")
+    order_id = resp.get("orderID") or resp.get("id") or ""
+    if resp.get("status") in ("matched", "live", "MATCHED") or order_id:
         print(f"[{_ts()}][ORDER] ✅ FOK FILLED {outcome} ${size:.2f}@{int(price*100)}¢ "
               f"order={order_id[:16]}… lat={lat_ms}ms")
+        add_log("ORDER_FOK_OK", {"order_id": order_id, "size": size, "price": price, "latency_ms": lat_ms})
         return {"ok": True, "type": "FOK", "order_id": order_id}
     else:
         err_str = resp.get("error", str(resp))[:120]
@@ -699,15 +700,13 @@ async def place_order_with_retry(
     gtl_price = min(0.95, price)
     print(f"[{_ts()}][ORDER] 🔄 GTL fallback {outcome} ${size:.2f}@{int(gtl_price*100)}¢ (limit)")
     t1 = time.time()
-    try:
-        resp = await _post_order(clob_token_id, gtl_price, size, "GTD")
-    except Exception as e:
-        resp = {"ok": False, "error": str(e)[:120]}
+    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, gtl_price, size, OrderType.GTD)
     lat_ms = int((time.time() - t1) * 1000)
-    if resp.get("ok"):
-        order_id = resp.get("orderID", "")
+    order_id = resp.get("orderID") or resp.get("id") or ""
+    if order_id:
         print(f"[{_ts()}][ORDER] ✅ GTL POSTED {outcome} ${size:.2f}@{int(gtl_price*100)}¢ "
               f"order={order_id[:16]}… lat={lat_ms}ms")
+        add_log("ORDER_GTL_FALLBACK", {"order_id": order_id, "size": size, "price": gtl_price, "latency_ms": lat_ms})
         return {"ok": True, "type": "GTL", "order_id": order_id}
     else:
         err_str = resp.get("error", str(resp))[:120]
