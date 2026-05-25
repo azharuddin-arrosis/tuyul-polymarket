@@ -81,6 +81,8 @@ class C:
     poly_passphrase     = os.getenv("POLY_PASSPHRASE", "")
     # Builder code for order attribution (bytes32)
     builder_code        = os.getenv("BUILDER_CODE", "0x0000000000000000000000000000000000000000000000000000000000000000")
+    # Deposit wallet address (required for POLY_1271 signature type)
+    poly_funder         = os.getenv("POLY_FUNDER", "")
     # Builder Relayer (gasless redemption) — optional, falls back to py-clob-client if not set
     relayer_api_key     = os.getenv("RELAYER_API_KEY", "")
     relayer_api_address = os.getenv("RELAYER_API_ADDRESS", "")
@@ -607,18 +609,12 @@ def auto_pause_if_breaker(reason: str):
 def _build_clob_client() -> "ClobClient | None":
     """Instantiate ClobClient with real credentials. Returns None if not available.
 
-    Init pattern:
-    - signature_type=0 (standard EOA) — dipakai untuk ORDER SIGNING.
-      Ini correct untuk wallet yang dikontrol dengan raw private key (MetaMask-style EOA).
-      signature_type=2 adalah untuk browser proxy contract wallet, bukan raw key wallet.
+    - signature_type=3 (POLY_1271) — untuk Polymarket deposit wallet flow.
+      Funder address (deposit wallet) terpisah dari signer (EOA private key).
+      POLY_FUNDER diambil dari Polymarket Settings → deposit wallet address.
 
-    - USDC balance dibaca via BalanceAllowanceParams(signature_type=2) di fetch_balance_usdc()
+    - USDC balance dibaca via BalanceAllowanceParams di fetch_balance_usdc()
       yang TERPISAH dari client init — ini tetap benar dan tidak berubah.
-
-    - Kenapa bukan signature_type=2:
-      sig_type=2 → order struct dikirim dengan signatureType=2 (proxy contract mode)
-      CLOB server verify dengan cara proxy wallet, tapi wallet kita EOA biasa → mismatch
-      → error "order_version_mismatch" (400) saat post_order
 
     - creds di-set via set_api_creds() setelah signer terbentuk (L2 mode).
     """
@@ -630,13 +626,12 @@ def _build_clob_client() -> "ClobClient | None":
         pk = C.poly_private_key.strip()
         if not pk.startswith("0x"):
             pk = "0x" + pk
-        # signature_type=0 = standard EOA — correct untuk raw private key wallet
-        # JANGAN pakai signature_type=2 (proxy) → menyebabkan order_version_mismatch
         client = ClobClient(
             host=CLOB,
             chain_id=POLYGON,
             key=pk,
-            signature_type=0,
+            signature_type=3,
+            funder=C.poly_funder or None,
         )
         # Level 2: set credentials setelah signer terbentuk
         client.set_api_creds(ApiCreds(
