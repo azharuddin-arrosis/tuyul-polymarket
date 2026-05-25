@@ -62,7 +62,7 @@ class C:
     min_bet             = 1.00
     max_open_pos        = int(os.getenv("MAX_OPEN_POS", "5"))
     min_ev              = float(os.getenv("MIN_EV", "0.03"))
-    daily_loss_limit    = float(os.getenv("DAILY_LOSS_LIMIT", "5.0"))
+    daily_loss_limit    = float(os.getenv("DAILY_LOSS_LIMIT", "100.0"))
     scan_sec            = int(os.getenv("SCAN_INTERVAL", "10"))
     # Gas
     gas_per_tx_usd      = 0.02
