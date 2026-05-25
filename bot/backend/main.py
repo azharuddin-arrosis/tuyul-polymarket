@@ -614,13 +614,13 @@ def auto_pause_if_breaker(reason: str):
 
 # ─── ORDER RETRY: FOK → GTL fallback ─────────────────────────
 def _build_clob_client() -> "ClobClient | None":
-    """EOA client for queries (balance, orders, reconcile)."""
+    """SAFE client for queries (balance, orders, reconcile)."""
     if not CLOB_OK: return None
     if not C.poly_private_key or not C.poly_api_key: return None
     try:
         pk = C.poly_private_key.strip()
         if not pk.startswith("0x"): pk = "0x" + pk
-        client = ClobClient(host=CLOB, chain_id=POLYGON, key=pk, signature_type=0)
+        client = ClobClient(host=CLOB, chain_id=POLYGON, key=pk, signature_type=2)
         client.set_api_creds(ApiCreds(
             api_key=C.poly_api_key, api_secret=C.poly_secret,
             api_passphrase=C.poly_passphrase,

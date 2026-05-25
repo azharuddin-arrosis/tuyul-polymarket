@@ -152,7 +152,7 @@ POLYGON_CHAIN = 137
 client = None
 addr   = ""
 try:
-    client = ClobClient(host=CLOB_HOST, chain_id=POLYGON_CHAIN, key=PK, signature_type=1)
+    client = ClobClient(host=CLOB_HOST, chain_id=POLYGON_CHAIN, key=PK, signature_type=2)
     client.set_api_creds(ApiCreds(api_key=APIK, api_secret=SEC, api_passphrase=PASS_))
     addr = client.get_address()
     ok_client = bool(addr and addr.startswith("0x"))
