@@ -323,7 +323,15 @@ try:
     from py_clob_client.clob_types import BalanceAllowanceParams, AssetType
     params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=2)
     data = client.get_balance_allowance(params=params)
-    allowance_val = float(data.get("allowance", 0) or 0) / 1e6  # micro-USDC → USDC
+    # API v2 returns "allowances" (dict) instead of "allowance" (scalar)
+    _allowances = data.get("allowances") or {}
+    if _allowances:
+        # Any non-zero allowance = approved (values are raw micro-USDC or MAX_UINT256)
+        _max_allow = max(int(v or 0) for v in _allowances.values()) if _allowances else 0
+        allowance_val = min(_max_allow / 1e6, 999_999_999.0)  # cap MAX_UINT256 display
+    else:
+        # Fallback: old singular field
+        allowance_val = float(data.get("allowance", 0) or 0) / 1e6
     ok_allowance = allowance_val > 0
 except Exception as e:
     print(f"    {C.D}error: {str(e)[:120]}{C.X}")

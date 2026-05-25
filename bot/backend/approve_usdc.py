@@ -121,8 +121,14 @@ def approve_bot(bot_id: str) -> dict:
             resp = client.get_balance_allowance(
                 BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=2)
             )
-            raw = float(resp.get('allowance', 0) or 0)
-            bal = float(resp.get('balance',   0) or 0)
+            # API v2: "allowances" dict (exchange→amount), fallback to "allowance" scalar
+            _allowances = resp.get('allowances') or {}
+            if _allowances:
+                _max = max(int(v or 0) for v in _allowances.values())
+                raw = min(_max, int(1e12))  # cap MAX_UINT256 agar tidak overflow float
+            else:
+                raw = float(resp.get('allowance', 0) or 0)
+            bal = float(resp.get('balance', 0) or 0)
             return round(raw / 1e6, 4), round(bal / 1e6, 4)
         except:
             return None, None
