@@ -607,34 +607,44 @@ def auto_pause_if_breaker(reason: str):
 
 # ─── ORDER RETRY: FOK → GTL fallback ─────────────────────────
 def _build_clob_client() -> "ClobClient | None":
-    """Instantiate ClobClient with real credentials. Returns None if not available.
-
-    signature_type=0 (EOA) — V2 client natively handles timestamp/builder fields
-    required by CLOB v2 API. No deposit wallet needed for standard EOA wallets.
-    """
-    if not CLOB_OK:
-        return None
-    if not C.poly_private_key or not C.poly_api_key:
-        return None
+    """EOA client for queries (balance, orders, reconcile)."""
+    if not CLOB_OK: return None
+    if not C.poly_private_key or not C.poly_api_key: return None
     try:
         pk = C.poly_private_key.strip()
-        if not pk.startswith("0x"):
-            pk = "0x" + pk
-        client = ClobClient(
-            host=CLOB,
-            chain_id=POLYGON,
-            key=pk,
-            signature_type=0,
-        )
-        # Level 2: set credentials setelah signer terbentuk
+        if not pk.startswith("0x"): pk = "0x" + pk
+        client = ClobClient(host=CLOB, chain_id=POLYGON, key=pk, signature_type=0)
         client.set_api_creds(ApiCreds(
-            api_key=C.poly_api_key,
-            api_secret=C.poly_secret,
+            api_key=C.poly_api_key, api_secret=C.poly_secret,
             api_passphrase=C.poly_passphrase,
         ))
         return client
     except Exception as e:
         S.errors.append(f"[clob_init] {str(e)[:60]}")
+        return None
+
+
+def _build_order_client() -> "ClobClient | None":
+    """POLY_1271 client for order placement — CLOB requires deposit wallet flow."""
+    if not CLOB_OK: return None
+    if not C.poly_private_key or not C.poly_api_key: return None
+    if not C.poly_funder: return None
+    try:
+        pk = C.poly_private_key.strip()
+        if not pk.startswith("0x"): pk = "0x" + pk
+        client = ClobClient(
+            host=CLOB, chain_id=POLYGON, key=pk,
+            signature_type=3, funder=C.poly_funder,
+        )
+        client.set_api_creds(ApiCreds(
+            api_key=C.poly_api_key, api_secret=C.poly_secret,
+            api_passphrase=C.poly_passphrase,
+        ))
+        # POLY_1271: POLY_ADDRESS header must be deposit wallet = order signer
+        client.signer.address = lambda: C.poly_funder
+        return client
+    except Exception as e:
+        S.errors.append(f"[order_client_init] {str(e)[:60]}")
         return None
 
 
@@ -679,7 +689,7 @@ async def place_order_with_retry(
         return {"ok": False, "type": "MISSED", "order_id": ""}
 
     try:
-        client = await asyncio.get_event_loop().run_in_executor(None, _build_clob_client)
+        client = await asyncio.get_event_loop().run_in_executor(None, _build_order_client)
     except Exception as e:
         add_log("MISSED_TRADE", {
             "market_id": market_id, "outcome": outcome,
