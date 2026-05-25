@@ -135,9 +135,6 @@ if not real_test:
     print("  Skipped. Set TEST_REAL_ORDER=true in env to test.")
     print("  WARNING: This will place a REAL order with real money!")
 else:
-    if not funder:
-        print("  ❌ POLY_FUNDER not set")
-    else:
     import aiohttp, asyncio as _asyncio
 
     async def _find_and_order():
