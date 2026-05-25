@@ -115,13 +115,21 @@ _price_samples: list = []  # list of [timestamp_int, price_float]
 # Opsi B: always 10% of equity, min $1, max $50
 # $10→$1, $20→$2, $50→$5, $100→$10, $200→$20, $500→$50 (cap)
 # Max loss per trade = 10% — never all-in
-_COMPOUND_PCT      = 0.10   # 10% of equity per bet
+_COMPOUND_PCT      = 0.10   # 10% of equity per bet (≤$100)
 _COMPOUND_BASE_BET = 1.0    # minimum bet
 _COMPOUND_MAX_BET  = 50.0   # maximum bet cap
 
 def compound_bet(equity: float) -> float:
-    raw = equity * _COMPOUND_PCT
-    # Round to nearest $0.10, clamp min $1 max $50
+    # Tiered: -2% per $100 level
+    if equity <= 100:
+        pct = 0.10
+    elif equity <= 500:
+        pct = 0.08
+    elif equity <= 1000:
+        pct = 0.06
+    else:
+        pct = 0.04
+    raw = equity * pct
     return round(min(max(round(raw, 1), _COMPOUND_BASE_BET), _COMPOUND_MAX_BET), 2)
 
 def compound_next_at(equity: float) -> float:
@@ -673,8 +681,12 @@ async def place_order_with_retry(
         client = _build_clob_client()
         if client is None:
             return {"ok": False, "error": "CLOB client init failed"}
-        args = OrderArgs(token_id=token_id, price=price, size=size, side="BUY",
-                        builder_code=C.builder_code)
+        args_kw = {"token_id": token_id, "price": price, "size": size, "side": "BUY",
+                   "builder_code": C.builder_code}
+        # GTD orders need future expiration (+1 hour)
+        if order_type == OrderType.GTD:
+            args_kw["expiration"] = int(time.time()) + 3600
+        args = OrderArgs(**args_kw)
         try:
             signed = client.create_order(args)
             return client.post_order(signed, order_type)
@@ -1367,10 +1379,13 @@ async def orderbook_loop():
 
 # ─── POSITION MANAGEMENT ─────────────────────────────────────
 def calc_size(price: float) -> float:
-    eq      = equity()
-    max_bet = compound_bet(eq)
-    avail   = S.capital
-    return round(max(C.min_bet, min(max_bet, avail * 0.40)), 2)
+    if price <= 0: return 2.0
+    eq = equity()
+    max_dollars = compound_bet(eq)         # dollars
+    max_shares  = max_dollars / price      # convert to shares
+    avail_shares = S.capital / price       # shares from available capital
+    min_shares = max(2.0, 1.0 / price)     # at least $1 worth (2 shares @ 50¢)
+    return round(max(min_shares, min(max_shares, avail_shares * 0.40)), 2)
 
 def risk_ok(mid: str, sig: dict) -> tuple[bool, str]:
     if not S.running:
