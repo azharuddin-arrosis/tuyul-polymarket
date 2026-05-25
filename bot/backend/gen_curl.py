@@ -46,7 +46,14 @@ from py_clob_client_v2.client import ClobClient
 from py_clob_client_v2.clob_types import OrderArgs, ApiCreds
 from py_clob_client_v2.constants import POLYGON
 
-c = ClobClient(host='https://clob.polymarket.com', chain_id=137, key=pk, signature_type=0)
+from py_clob_client_v2.order_utils.model.signature_type_v2 import SignatureTypeV2
+
+funder = os.getenv('POLY_FUNDER', '').strip()
+sig_type = int(os.getenv('GEN_SIG_TYPE', '0'))
+
+c = ClobClient(host='https://clob.polymarket.com', chain_id=137, key=pk,
+               signature_type=sig_type,
+               funder=funder if funder and sig_type == 3 else None)
 c.set_api_creds(ApiCreds(api_key=api_key, api_secret=secret, api_passphrase=passphrase))
 signed = c.create_order(OrderArgs(token_id=token, price=0.50, size=1.00, side='BUY'))
 
