@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { ClobClient, SignatureTypeV2, Side, OrderType, ApiCreds } from '@polymarket/clob-client-v2';
+import { ClobClient, Side, OrderType } from '@polymarket/clob-client-v2';
 import { createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { polygon } from 'viem/chains';
@@ -31,8 +31,12 @@ const client = new ClobClient({
     host: HOST,
     chain: CHAIN_ID,
     signer,
-    creds: { key: API_KEY, secret: SECRET, passphrase: PASSPHRASE },
-    signatureType: SignatureTypeV2.POLY_1271,
+    creds: {
+        key: API_KEY,
+        secret: SECRET,
+        passphrase: PASSPHRASE,
+    },
+    signatureType: 3,
     funderAddress: FUNDER,
 });
 
@@ -52,7 +56,6 @@ const server = createServer(async (req, res) => {
         return res.end(JSON.stringify({ error: 'not found' }));
     }
 
-    // Read body
     let body = '';
     for await (const chunk of req) body += chunk;
 
@@ -77,14 +80,14 @@ const server = createServer(async (req, res) => {
             : OrderType.GTC;
 
         const resp = await client.createAndPostOrder(
-            { tokenID: token_id, price, size, side: orderSide, builderCode: BUILDER_CODE },
+            { tokenID: token_id, price, size, side: orderSide },
             { tickSize: '0.01', negRisk: false },
             orderType,
         );
 
         console.log(`[ORDER] ${resp.status} ${resp.orderID?.slice(0, 16)}... size=${size} price=${price}`);
         res.writeHead(200);
-        res.end(JSON.stringify({ ok: true, ...resp }));
+        res.end(JSON.stringify({ ok: true, orderID: resp.orderID, status: resp.status, ...resp }));
     } catch (e) {
         console.error(`[ORDER] FAILED: ${e.message}`);
         res.writeHead(400);
