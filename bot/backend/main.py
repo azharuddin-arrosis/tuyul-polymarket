@@ -681,6 +681,10 @@ async def place_order_with_retry(
         client = _build_clob_client()
         if client is None:
             return {"ok": False, "error": "CLOB client init failed"}
+        price = round(price, 2)  # 2 decimal precision for CLOB
+        size  = round(size, 2)
+        if order_type == OrderType.GTD:
+            size = max(size, 5.0)  # GTD min 5 shares
         args_kw = {"token_id": token_id, "price": price, "size": size, "side": "BUY",
                    "builder_code": C.builder_code}
         # GTD orders need future expiration (+1 hour)
