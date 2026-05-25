@@ -27,19 +27,31 @@ if (!PK || !FUNDER || !API_KEY) {
 const account = privateKeyToAccount(PK);
 const signer = createWalletClient({ account, transport: http(), chain: polygon });
 
+// Derive fresh API credentials via TS SDK
+async function getOrCreateCreds() {
+    const temp = new ClobClient({ host: HOST, chain: CHAIN_ID, signer });
+    try {
+        const creds = await temp.createOrDeriveApiKey();
+        console.log(`Derived API key: ${creds.key}`);
+        return creds;
+    } catch (e) {
+        console.error(`Failed to derive API key: ${e.message}`);
+        return { key: API_KEY, secret: SECRET, passphrase: PASSPHRASE };
+    }
+}
+
+const creds = await getOrCreateCreds();
+
 const client = new ClobClient({
     host: HOST,
     chain: CHAIN_ID,
     signer,
-    creds: {
-        key: API_KEY,
-        secret: SECRET,
-        passphrase: PASSPHRASE,
-    },
-    signatureType: 1,
+    creds,
+    signatureType: 3,
+    funderAddress: FUNDER,
 });
 
-console.log(`CLOB client ready — POLY_PROXY mode`);
+console.log(`CLOB client ready — POLY_1271 funder=${FUNDER}`);
 
 // ── HTTP Server ───────────────────────────────────────────────
 const server = createServer(async (req, res) => {
