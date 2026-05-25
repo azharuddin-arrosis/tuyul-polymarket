@@ -364,33 +364,48 @@ else:
 # ─── 10. Binance connectivity ──────────────────────────────────
 section("10. Binance API (Primary Data Source)")
 
-BINANCE = "https://api.binance.com/api/v3"
+BN_MIRRORS = [
+    "https://api.binance.com/api/v3",
+    "https://api1.binance.com/api/v3",
+    "https://api2.binance.com/api/v3",
+    "https://api3.binance.com/api/v3",
+]
 BN_UA = {"User-Agent": "Mozilla/5.0 polypox-validator", "Accept": "application/json"}
 
 ok_bn_price = False
 ok_bn_klines = False
 bn_price = 0.0
 bn_klines_n = 0
+bn_used = ""
 
-try:
-    req = urllib.request.Request(f"{BINANCE}/ticker/price?symbol=BTCUSDT", headers=BN_UA)
-    with urllib.request.urlopen(req, timeout=8) as r:
-        data = json.loads(r.read())
-    bn_price = float(data.get("price", 0))
-    ok_bn_price = bn_price > 0
-except Exception as e:
-    print(f"    {C.D}price error: {str(e)[:80]}{C.X}")
-check("Binance /ticker/price BTCUSDT", ok_bn_price, f"price=${bn_price:,.2f}" if ok_bn_price else "UNREACHABLE — use VPN SG")
+for bn in BN_MIRRORS:
+    if ok_bn_price: break
+    try:
+        req = urllib.request.Request(f"{bn}/ticker/price?symbol=BTCUSDT", headers=BN_UA)
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read())
+        bn_price = float(data.get("price", 0))
+        ok_bn_price = bn_price > 0
+        if ok_bn_price: bn_used = bn.split("//")[-1].split("/")[0]
+    except Exception as e:
+        pass
 
-try:
-    req = urllib.request.Request(f"{BINANCE}/klines?symbol=BTCUSDT&interval=1m&limit=5", headers=BN_UA)
-    with urllib.request.urlopen(req, timeout=8) as r:
-        data = json.loads(r.read())
-    bn_klines_n = len(data)
-    ok_bn_klines = bn_klines_n > 0
-except Exception as e:
-    print(f"    {C.D}klines error: {str(e)[:80]}{C.X}")
-check("Binance /klines 1m BTCUSDT", ok_bn_klines, f"returned {bn_klines_n} candles" if ok_bn_klines else "UNREACHABLE — use VPN SG")
+check("Binance /ticker/price BTCUSDT", ok_bn_price,
+      f"price=${bn_price:,.2f} via {bn_used}" if ok_bn_price else "ALL MIRRORS BLOCKED — use VPN SG")
+
+for bn in BN_MIRRORS:
+    if ok_bn_klines: break
+    try:
+        req = urllib.request.Request(f"{bn}/klines?symbol=BTCUSDT&interval=1m&limit=5", headers=BN_UA)
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read())
+        bn_klines_n = len(data)
+        ok_bn_klines = bn_klines_n > 0
+    except Exception as e:
+        pass
+
+check("Binance /klines 1m BTCUSDT", ok_bn_klines,
+      f"returned {bn_klines_n} candles via {bn_used}" if ok_bn_klines else "ALL MIRRORS BLOCKED — use VPN SG")
 
 # ─── 11. CLOB /markets/{condition_id} reachability ───────────
 section("11. CLOB Market Resolution Endpoint")

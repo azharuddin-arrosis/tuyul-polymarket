@@ -135,19 +135,49 @@ if not real_test:
     print("  Skipped. Set TEST_REAL_ORDER=true in env to test.")
     print("  WARNING: This will place a REAL order with real money!")
 else:
-    token = os.getenv("TEST_TOKEN_ID", "")
-    if not token:
-        print("  ❌ TEST_TOKEN_ID not set")
+    if not funder:
+        print("  ❌ POLY_FUNDER not set")
     else:
-        print(f"  Placing FOK BUY $1.00@50¢ token={token[:16]}...")
-        try:
-            client3.signer.address = lambda: funder
-            fok_args = OrderArgs(token_id=token, price=0.50, size=1.00, side=BUY, builder_code=builder_code)
-            ord_signed = client3.create_order(fok_args)
-            resp = client3.post_order(ord_signed, "FOK")
-            print(f"  ✅ RESPONSE: {json.dumps(resp, default=str)[:300]}")
-        except Exception as e:
-            print(f"  ❌ FAILED: {str(e)[:200]}")
+        import aiohttp, asyncio as _asyncio
+
+        async def _find_token():
+            async with aiohttp.ClientSession() as sess:
+                ts = int(__import__("time").time()) // 300 * 300
+                slug = "btc-updown-5m-" + str(ts)
+                try:
+                    async with sess.get("https://gamma-api.polymarket.com/events",
+                                       params={"slug": slug, "limit": 1}) as r:
+                        data = await r.json()
+                        evs = data if isinstance(data, list) else []
+                        for m in evs[0].get("markets", []):
+                            raw_ids = m.get("clobTokenIds", "[]")
+                            if isinstance(raw_ids, str): raw_ids = json.loads(raw_ids)
+                            outs = m.get("outcomes", "[]")
+                            if isinstance(outs, str): outs = json.loads(outs)
+                            for idx, o in enumerate(outs):
+                                if idx < len(raw_ids) and raw_ids[idx]:
+                                    return raw_ids[idx], str(o)
+                except: pass
+            return None, None
+
+        token, outcome = _asyncio.run(_find_token())
+        if not token:
+            print("  ❌ No active BTC5m market — try again in a few seconds")
+        else:
+            print(f"  Found: token={token} outcome={outcome}")
+            print(f"  Placing FOK BUY $1.00@50¢ ...")
+            try:
+                client3 = ClobClient(host="https://clob.polymarket.com", chain_id=137, key=pk,
+                                     signature_type=3, funder=funder)
+                client3.set_api_creds(ApiCreds(api_key=api_key, api_secret=secret, api_passphrase=passphrase))
+                client3.signer.address = lambda: funder
+
+                fok_args = OrderArgs(token_id=token, price=0.50, size=1.00, side=BUY, builder_code=builder_code)
+                ord_signed = client3.create_order(fok_args)
+                resp = client3.post_order(ord_signed, "FOK")
+                print(f"  ✅ RESPONSE: {json.dumps(resp, default=str)[:400]}")
+            except Exception as e:
+                print(f"  ❌ FAILED: {str(e)[:300]}")
 
 print()
 print("=" * 60)

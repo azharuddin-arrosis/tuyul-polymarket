@@ -94,7 +94,12 @@ class C:
     polygon_rpc         = os.getenv("POLYGON_RPC", "https://polygon-rpc.com")
 
 GAMMA    = "https://gamma-api.polymarket.com"
-BINANCE  = "https://api.binance.com/api/v3"   # fallback only
+BINANCE_MIRRORS = [
+    "https://api.binance.com/api/v3",
+    "https://api1.binance.com/api/v3",
+    "https://api2.binance.com/api/v3",
+    "https://api3.binance.com/api/v3",
+]
 CRYPTOCOMPARE = "https://min-api.cryptocompare.com/data"
 COINGECKO = "https://api.coingecko.com/api/v3"
 CLOB     = "https://clob.polymarket.com"
@@ -881,17 +886,18 @@ def _build_synthetic_klines(limit: int = 30) -> list:
     return candles[-limit:] if len(candles) > limit else candles
 
 async def btc5m_fetch_klines(sess, limit=120) -> list:
-    # Primary: Binance (gold standard — real volume, most accurate OHLCV)
-    try:
-        async with sess.get(f"{BINANCE}/klines", params={
-            "symbol": "BTCUSDT", "interval": "1m", "limit": limit
-        }, headers=_CLOB_UA) as r:
-            if r.status == 200:
-                data = await r.json()
-                if data:
-                    return [{"ts": int(k[0])//1000, "open": float(k[1]), "high": float(k[2]),
-                             "low": float(k[3]), "close": float(k[4]), "volume": float(k[5])} for k in data]
-    except: pass
+    # Try all Binance mirrors first
+    for bn in BINANCE_MIRRORS:
+        try:
+            async with sess.get(f"{bn}/klines", params={
+                "symbol": "BTCUSDT", "interval": "1m", "limit": limit
+            }, headers=_CLOB_UA) as r:
+                if r.status == 200:
+                    data = await r.json()
+                    if data:
+                        return [{"ts": int(k[0])//1000, "open": float(k[1]), "high": float(k[2]),
+                                 "low": float(k[3]), "close": float(k[4]), "volume": float(k[5])} for k in data]
+        except: pass
     # Fallback: CryptoCompare
     try:
         async with sess.get(f"{CRYPTOCOMPARE}/v2/histominute", params={
@@ -908,15 +914,16 @@ async def btc5m_fetch_klines(sess, limit=120) -> list:
     return _build_synthetic_klines(limit)
 
 async def btc5m_fetch_price(sess) -> float:
-    # Primary: Binance (lowest latency, most accurate)
-    try:
-        async with sess.get(f"{BINANCE}/ticker/price", params={"symbol": "BTCUSDT"},
-                            headers=_CLOB_UA) as r:
-            if r.status == 200:
-                price = float((await r.json()).get("price", 0))
-                if price > 0:
-                    return price
-    except: pass
+    # Try all Binance mirrors first
+    for bn in BINANCE_MIRRORS:
+        try:
+            async with sess.get(f"{bn}/ticker/price", params={"symbol": "BTCUSDT"},
+                                headers=_CLOB_UA) as r:
+                if r.status == 200:
+                    price = float((await r.json()).get("price", 0))
+                    if price > 0:
+                        return price
+        except: pass
     # Fallback: CoinGecko
     try:
         async with sess.get(f"{COINGECKO}/simple/price", params={"ids": "bitcoin", "vs_currencies": "usd"}) as r:
@@ -1978,22 +1985,22 @@ async def scanner_loop():
 async def _fetch_btc_close_at(ts: int, sess: aiohttp.ClientSession) -> float:
     """Fetch BTC close price at given UNIX timestamp using Binance 1m klines.
     Returns 0 if all sources fail. Used by dry_run resolver."""
-    # Binance: get 1m kline starting at ts (close = price at ts+60)
-    try:
-        async with sess.get(f"{BINANCE}/klines", params={
-            "symbol": "BTCUSDT", "interval": "1m",
-            "startTime": (ts - 60) * 1000, "limit": 2,
-        }, headers=_CLOB_UA, timeout=aiohttp.ClientTimeout(total=8)) as r:
-            if r.status == 200:
-                data = await r.json()
-                if data:
-                    # Pick kline whose close timestamp matches ts
-                    for k in data:
-                        k_open_ts = int(k[0]) // 1000
-                        if k_open_ts + 60 >= ts:
-                            return float(k[4])  # close price
-                    return float(data[-1][4])
-    except: pass
+    # Try all Binance mirrors
+    for bn in BINANCE_MIRRORS:
+        try:
+            async with sess.get(f"{bn}/klines", params={
+                "symbol": "BTCUSDT", "interval": "1m",
+                "startTime": (ts - 60) * 1000, "limit": 2,
+            }, headers=_CLOB_UA, timeout=aiohttp.ClientTimeout(total=8)) as r:
+                if r.status == 200:
+                    data = await r.json()
+                    if data:
+                        for k in data:
+                            k_open_ts = int(k[0]) // 1000
+                            if k_open_ts + 60 >= ts:
+                                return float(k[4])
+                        return float(data[-1][4])
+        except: pass
     # Fallback: CryptoCompare
     try:
         async with sess.get(f"{CRYPTOCOMPARE}/v2/histominute", params={
