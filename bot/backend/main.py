@@ -697,42 +697,37 @@ async def place_order_with_retry(
         except Exception as e:
             return {"ok": False, "error": str(e)[:120]}
 
-    # ── Step 1: FOK ───────────────────────────────────────────
-    print(f"[{_ts()}][ORDER] 🔄 FOK {outcome} ${size:.2f}@{int(price*100)}¢ token={clob_token_id[:16]}…")
+    # ── SAFE (GTL primary — FOK has decimal bug in py-clob-client-v2) ──
+    print(f"[{_ts()}][ORDER] 🔄 GTL {outcome} ${size:.2f}@{int(price*100)}¢ token={clob_token_id[:16]}…")
     t0 = time.time()
-    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, price, size, OrderType.FOK)
+    gtl_size = max(size, 5.0)  # GTD min 5 shares
+    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, price, gtl_size, OrderType.GTD)
     lat_ms = int((time.time() - t0) * 1000)
     order_id = resp.get("orderID") or resp.get("id") or ""
-    if resp.get("status") in ("matched", "live", "MATCHED") or order_id:
-        print(f"[{_ts()}][ORDER] ✅ FOK FILLED {outcome} ${size:.2f}@{int(price*100)}¢ "
-              f"order={order_id[:16]}… lat={lat_ms}ms")
-        add_log("ORDER_FOK_OK", {"order_id": order_id, "size": size, "price": price, "latency_ms": lat_ms})
-        return {"ok": True, "type": "FOK", "order_id": order_id}
-    else:
-        err_str = resp.get("error", str(resp))[:120]
-        print(f"[{_ts()}][ORDER] ❌ FOK ERROR lat={lat_ms}ms — {err_str}")
-
-    # ── Step 2: GTL fallback ──────────────────────────────────
-    gtl_price = min(0.95, price)
-    print(f"[{_ts()}][ORDER] 🔄 GTL fallback {outcome} ${size:.2f}@{int(gtl_price*100)}¢ (limit)")
-    t1 = time.time()
-    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, gtl_price, size, OrderType.GTD)
-    lat_ms = int((time.time() - t1) * 1000)
-    order_id = resp.get("orderID") or resp.get("id") or ""
     if order_id:
-        print(f"[{_ts()}][ORDER] ✅ GTL POSTED {outcome} ${size:.2f}@{int(gtl_price*100)}¢ "
+        # Track actual fill amounts (fixed-point, 6 decimals → divide by 1e6)
+        actual_spent  = float(resp.get("makingAmount", 0) or 0) / 1e6
+        actual_shares = float(resp.get("takingAmount", 0) or 0) / 1e6
+        if actual_spent > 0:
+            actual_price = actual_spent / actual_shares if actual_shares > 0 else price
+            actual_size  = actual_spent
+        else:
+            actual_price = price
+            actual_size  = size
+        print(f"[{_ts()}][ORDER] ✅ GTL POSTED {outcome} ${actual_size:.2f}@{int(actual_price*100)}¢ "
               f"order={order_id[:16]}… lat={lat_ms}ms")
-        add_log("ORDER_GTL_FALLBACK", {"order_id": order_id, "size": size, "price": gtl_price, "latency_ms": lat_ms})
-        return {"ok": True, "type": "GTL", "order_id": order_id}
+        add_log("ORDER_OK", {"order_id": order_id, "size": actual_size, "price": actual_price, "latency_ms": lat_ms, "type": "GTL"})
+        return {"ok": True, "type": "GTL", "order_id": order_id, "actual_price": actual_price, "actual_size": actual_size}
     else:
         err_str = resp.get("error", str(resp))[:120]
         print(f"[{_ts()}][ORDER] ❌ GTL ERROR lat={lat_ms}ms — {err_str}")
+        add_log("ORDER_FAIL", {"error": err_str, "latency_ms": lat_ms})
 
-    # ── Step 3: Both failed → MISSED ──────────────────────────
-    print(f"[{_ts()}][ORDER] 💀 MISSED TRADE — both FOK and GTL failed for {outcome} ${size:.2f}")
+    # ── MISSED ────────────────────────────────────────────────
+    print(f"[{_ts()}][ORDER] 💀 MISSED TRADE — GTL failed for {outcome} ${size:.2f}")
     add_log("MISSED_TRADE", {
         "market_id": market_id, "outcome": outcome,
-        "message": "Both FOK and GTL failed — trade missed",
+        "message": "GTL order failed",
     })
     return {"ok": False, "type": "MISSED", "order_id": ""}
 
@@ -1497,6 +1492,11 @@ async def open_position(market: dict, sig: dict):
         # Stamp order metadata onto the position record
         pos["order_id"]   = order_result["order_id"]
         pos["order_type"] = order_result["type"]
+        # Use actual fill price/size if available
+        if order_result.get("actual_size"):
+            pos["size"]   = order_result["actual_size"]
+            pos["price"]  = order_result["actual_price"]
+            pos["shares"] = round(pos["size"] / pos["price"], 4) if pos["price"] > 0 else 0
 
     async with _lock:
         if MODE == "real" and pos not in S.positions:
