@@ -50,28 +50,9 @@ c = ClobClient(host='https://clob.polymarket.com', chain_id=137, key=pk, signatu
 c.set_api_creds(ApiCreds(api_key=api_key, api_secret=secret, api_passphrase=passphrase))
 signed = c.create_order(OrderArgs(token_id=token, price=0.50, size=1.00, side='BUY'))
 
-# Build order body (V2 format)
-raw = signed.order.dict()
-raw['timestamp'] = str(int(time.time() * 1000))
-raw['builder'] = builder_code
-raw['metadata'] = ''
-raw['tokenId'] = str(raw['tokenId'])
-raw['makerAmount'] = str(raw['makerAmount'])
-raw['takerAmount'] = str(raw['takerAmount'])
-raw['expiration'] = str(raw.get('expiration', 0))
-raw['side'] = 'BUY'
-raw.pop('taker', None)
-raw.pop('nonce', None)
-raw.pop('feeRateBps', None)
-raw['signature'] = signed.signature
+from py_clob_client_v2.order_utils.model.order_data_v2 import order_to_json_v2
 
-body = {
-    'order': raw,
-    'owner': api_key,
-    'orderType': 'FOK',
-    'deferExec': False,
-    'postOnly': False,
-}
+body = order_to_json_v2(signed, api_key, 'FOK', False, False)
 
 # Compute HMAC L2 headers
 now_ts = int(time.time())
