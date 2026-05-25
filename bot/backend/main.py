@@ -102,6 +102,7 @@ BINANCE_MIRRORS = [
 ]
 CRYPTOCOMPARE = "https://min-api.cryptocompare.com/data"
 COINGECKO = "https://api.coingecko.com/api/v3"
+ORDER_SVC   = os.getenv("ORDER_SERVICE_URL", "http://127.0.0.1:3100")
 CLOB     = "https://clob.polymarket.com"
 BTC5M_WIN = 300
 
@@ -629,37 +630,6 @@ def _build_clob_client() -> "ClobClient | None":
         return None
 
 
-def _build_order_client() -> "ClobClient | None":
-    """POLY_1271 client for order placement — CLOB requires deposit wallet flow."""
-    if not CLOB_OK: return None
-    if not C.poly_private_key or not C.poly_api_key: return None
-    if not C.poly_funder: return None
-    try:
-        from py_clob_client_v2.clob_types import BalanceAllowanceParams, AssetType
-        pk = C.poly_private_key.strip()
-        if not pk.startswith("0x"): pk = "0x" + pk
-        client = ClobClient(
-            host=CLOB, chain_id=POLYGON, key=pk,
-            signature_type=3, funder=C.poly_funder,
-        )
-        client.set_api_creds(ApiCreds(
-            api_key=C.poly_api_key, api_secret=C.poly_secret,
-            api_passphrase=C.poly_passphrase,
-        ))
-        # Sync deposit wallet with CLOB (best-effort)
-        try:
-            client.update_balance_allowance(
-                BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=3)
-            )
-        except Exception: pass
-        # POLY_1271: set POLY_ADDRESS = funder after balance sync
-        client.signer.address = lambda: C.poly_funder
-        return client
-    except Exception as e:
-        S.errors.append(f"[order_client_init] {str(e)[:60]}")
-        return None
-
-
 async def place_order_with_retry(
     market_id: str, outcome: str, price: float, size: float, sess,
     clob_token_id: str = ""
@@ -691,125 +661,58 @@ async def place_order_with_retry(
             })
             return {"ok": False, "type": "MISSED", "order_id": ""}
 
-    # ── Real mode: py-clob-client execution ──────────────────
-    if not CLOB_OK:
-        add_log("MISSED_TRADE", {
-            "market_id": market_id, "outcome": outcome,
-            "reason": "py-clob-client not installed",
-            "message": "Install py-clob-client to enable real order execution",
-        })
-        return {"ok": False, "type": "MISSED", "order_id": ""}
-
-    try:
-        client = await asyncio.get_event_loop().run_in_executor(None, _build_order_client)
-    except Exception as e:
-        add_log("MISSED_TRADE", {
-            "market_id": market_id, "outcome": outcome,
-            "reason": f"clob_init_error: {str(e)[:60]}",
-            "message": "Failed to initialise CLOB client",
-        })
-        return {"ok": False, "type": "MISSED", "order_id": ""}
-
-    if client is None:
-        add_log("MISSED_TRADE", {
-            "market_id": market_id, "outcome": outcome,
-            "reason": "missing_credentials",
-            "message": "POLY_PRIVATE_KEY or POLY_API_KEY not set",
-        })
-        return {"ok": False, "type": "MISSED", "order_id": ""}
-
-    # Determine token_id: use clob_token_id from market dict (ERC-1155 token ID per outcome).
-    # market_id is the Gamma integer ID — NOT valid for CLOB.  caller must pass clob_token_id.
+    # ── Real mode: call TS order service ──────────────────────
     if not clob_token_id:
-        add_log("MISSED_TRADE", {
-            "market_id": market_id, "outcome": outcome,
-            "reason": "missing_clob_token_id",
-            "message": "clob_token_id not resolved from Gamma — order aborted to prevent CLOB 404",
-        })
+        print(f"[{_ts()}][BOT] ⚠ ENTRY SKIP — no clob_token_id")
         return {"ok": False, "type": "MISSED", "order_id": ""}
-    token_id = clob_token_id
 
-    # ── Step 1: FOK (Fill-or-Kill) ────────────────────────────
-    print(f"[{_ts()}][ORDER] 🔄 FOK {outcome} ${size:.2f}@{int(price*100)}¢ token={token_id[:16]}…")
+    async def _post_order(token_id, price, size, order_type):
+        body = json.dumps({"token_id": token_id, "price": price, "size": size,
+                           "side": "BUY", "order_type": order_type})
+        try:
+            async with sess.post(f"{ORDER_SVC}/order", data=body,
+                                 headers={"Content-Type": "application/json"},
+                                 timeout=aiohttp.ClientTimeout(total=10)) as r:
+                return await r.json()
+        except Exception as e:
+            return {"ok": False, "error": str(e)[:120]}
+
+    # ── Step 1: FOK ───────────────────────────────────────────
+    print(f"[{_ts()}][ORDER] 🔄 FOK {outcome} ${size:.2f}@{int(price*100)}¢ token={clob_token_id[:16]}…")
     t0 = time.time()
     try:
-        fok_args = OrderArgs(
-            token_id=token_id,
-            price=price,
-            size=size,
-            side="BUY",
-            builder_code=C.builder_code,
-        )
-        def _fok():
-            ord = client.create_order(fok_args)
-            return client.post_order(ord, OrderType.FOK)
-        resp = await asyncio.get_event_loop().run_in_executor(None, _fok)
-        lat_ms = int((time.time() - t0) * 1000)
-        order_id = resp.get("orderID") or resp.get("id") or ""
-        status   = resp.get("status", "")
-        if resp.get("status") in ("matched", "MATCHED") or order_id:
-            print(f"[{_ts()}][ORDER] ✅ FOK FILLED {outcome} ${size:.2f}@{int(price*100)}¢ "
-                  f"order={order_id[:16]}… lat={lat_ms}ms")
-            add_log("ORDER_FOK_OK", {
-                "market_id": market_id, "outcome": outcome,
-                "order_id": order_id, "size": size, "price": price,
-                "latency_ms": lat_ms,
-                "message": f"FOK filled ({lat_ms}ms): {order_id}",
-            })
-            return {"ok": True, "type": "FOK", "order_id": order_id}
-        else:
-            print(f"[{_ts()}][ORDER] ⚠ FOK no fill status={status!r} lat={lat_ms}ms — trying GTL")
+        resp = await _post_order(clob_token_id, price, size, "FOK")
     except Exception as e:
-        lat_ms = int((time.time() - t0) * 1000)
-        err_str = str(e)[:120]
+        resp = {"ok": False, "error": str(e)[:120]}
+    lat_ms = int((time.time() - t0) * 1000)
+    if resp.get("ok"):
+        order_id = resp.get("orderID", "")
+        print(f"[{_ts()}][ORDER] ✅ FOK FILLED {outcome} ${size:.2f}@{int(price*100)}¢ "
+              f"order={order_id[:16]}… lat={lat_ms}ms")
+        return {"ok": True, "type": "FOK", "order_id": order_id}
+    else:
+        err_str = resp.get("error", str(resp))[:120]
         print(f"[{_ts()}][ORDER] ❌ FOK ERROR lat={lat_ms}ms — {err_str}")
-        add_log("ORDER_FOK_FAIL", {
-            "market_id": market_id, "outcome": outcome,
-            "error": err_str, "latency_ms": lat_ms,
-            "message": f"FOK failed ({lat_ms}ms) — attempting GTL fallback",
-        })
 
-    # ── Step 2: GTL limit order @ $0.95 ──────────────────────
+    # ── Step 2: GTL fallback ──────────────────────────────────
     gtl_price = min(0.95, price)
     print(f"[{_ts()}][ORDER] 🔄 GTL fallback {outcome} ${size:.2f}@{int(gtl_price*100)}¢ (limit)")
     t1 = time.time()
     try:
-        gtl_args = OrderArgs(
-            token_id=token_id,
-            price=gtl_price,
-            size=size,
-            side="BUY",
-            builder_code=C.builder_code,
-        )
-        def _gtl():
-            ord = client.create_order(gtl_args)
-            return client.post_order(ord, OrderType.GTD)
-        resp = await asyncio.get_event_loop().run_in_executor(None, _gtl)
-        lat_ms = int((time.time() - t1) * 1000)
-        order_id = resp.get("orderID") or resp.get("id") or ""
-        if order_id:
-            print(f"[{_ts()}][ORDER] ✅ GTL POSTED {outcome} ${size:.2f}@{int(gtl_price*100)}¢ "
-                  f"order={order_id[:16]}… lat={lat_ms}ms")
-            add_log("ORDER_GTL_FALLBACK", {
-                "market_id": market_id, "outcome": outcome,
-                "order_id": order_id, "size": size, "price": gtl_price,
-                "latency_ms": lat_ms,
-                "message": f"GTL limit posted @ {int(gtl_price*100)}¢ ({lat_ms}ms): {order_id}",
-            })
-            return {"ok": True, "type": "GTL", "order_id": order_id}
-        else:
-            print(f"[{_ts()}][ORDER] ⚠ GTL no order_id resp={resp} lat={lat_ms}ms")
+        resp = await _post_order(clob_token_id, gtl_price, size, "GTD")
     except Exception as e:
-        lat_ms = int((time.time() - t1) * 1000)
-        err_str = str(e)[:120]
+        resp = {"ok": False, "error": str(e)[:120]}
+    lat_ms = int((time.time() - t1) * 1000)
+    if resp.get("ok"):
+        order_id = resp.get("orderID", "")
+        print(f"[{_ts()}][ORDER] ✅ GTL POSTED {outcome} ${size:.2f}@{int(gtl_price*100)}¢ "
+              f"order={order_id[:16]}… lat={lat_ms}ms")
+        return {"ok": True, "type": "GTL", "order_id": order_id}
+    else:
+        err_str = resp.get("error", str(resp))[:120]
         print(f"[{_ts()}][ORDER] ❌ GTL ERROR lat={lat_ms}ms — {err_str}")
-        add_log("ORDER_GTL_FAIL", {
-            "market_id": market_id, "outcome": outcome,
-            "error": err_str, "latency_ms": lat_ms,
-            "message": f"GTL fallback failed ({lat_ms}ms)",
-        })
 
-    # ── Step 3: Both failed → MISSED_TRADE ───────────────────
+    # ── Step 3: Both failed → MISSED ──────────────────────────
     print(f"[{_ts()}][ORDER] 💀 MISSED TRADE — both FOK and GTL failed for {outcome} ${size:.2f}")
     add_log("MISSED_TRADE", {
         "market_id": market_id, "outcome": outcome,

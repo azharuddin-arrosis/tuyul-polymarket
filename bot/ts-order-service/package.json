@@ -1,0 +1,12 @@
+{
+  "name": "polypox-order-service",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@polymarket/clob-client-v2": "^1.0.1",
+    "viem": "^2.0.0"
+  }
+}
