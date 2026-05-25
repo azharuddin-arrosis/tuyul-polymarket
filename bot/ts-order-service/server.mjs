@@ -36,10 +36,10 @@ const client = new ClobClient({
         secret: SECRET,
         passphrase: PASSPHRASE,
     },
-    signatureType: 0,
+    signatureType: 1,
 });
 
-console.log('CLOB client ready — EOA mode (sig_type=0)');
+console.log('CLOB client ready — POLY_PROXY mode (sig_type=1)');
 console.log('API key:', API_KEY.slice(0, 12) + '...');
 
 // ── HTTP Server ───────────────────────────────────────────────
