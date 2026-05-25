@@ -60,11 +60,16 @@ body = {
     "postOnly": False,
 }
 
-print(f'maker: {order_dict[\"maker\"][:16]}...')
-print(f'signer: {order_dict[\"signer\"][:16]}...')
-print(f'signatureType: {order_dict[\"signatureType\"]}')
-print(f'timestamp: {order_dict[\"timestamp\"]}')
-print(f'builder: {order_dict[\"builder\"][:20]}...')
+maker = order_dict.get('maker', '?')
+signer = order_dict.get('signer', '?')
+sig_type = order_dict.get('signatureType', '?')
+ts = order_dict.get('timestamp', '?')
+bld = order_dict.get('builder', '')
+print('maker: ' + str(maker)[:16] + '...')
+print('signer: ' + str(signer)[:16] + '...')
+print('signatureType: ' + str(sig_type))
+print('timestamp: ' + str(ts))
+print('builder: ' + str(bld)[:20] + '...')
 
 # POST to CLOB
 serialized = json.dumps(body, separators=(",", ":"), ensure_ascii=False)
@@ -73,6 +78,8 @@ hdrs = create_level_2_headers(v1.signer, v1.creds, ra)
 
 try:
     resp = http_post(f"https://clob.polymarket.com{POST_ORDER}", headers=hdrs, data=serialized)
-    print(f'\n✅ RESPONSE: {json.dumps(resp, default=str)[:400]}')
+    print()
+    print('SUCCESS:', json.dumps(resp, default=str)[:400])
 except Exception as e:
-    print(f'\n❌ ERROR: {str(e)[:300]}')
+    print()
+    print('ERROR:', str(e)[:300])
