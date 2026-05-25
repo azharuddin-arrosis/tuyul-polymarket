@@ -609,14 +609,8 @@ def auto_pause_if_breaker(reason: str):
 def _build_clob_client() -> "ClobClient | None":
     """Instantiate ClobClient with real credentials. Returns None if not available.
 
-    - signature_type=3 (POLY_1271) — untuk Polymarket deposit wallet flow.
-      Funder address (deposit wallet) terpisah dari signer (EOA private key).
-      POLY_FUNDER diambil dari Polymarket Settings → deposit wallet address.
-
-    - USDC balance dibaca via BalanceAllowanceParams di fetch_balance_usdc()
-      yang TERPISAH dari client init — ini tetap benar dan tidak berubah.
-
-    - creds di-set via set_api_creds() setelah signer terbentuk (L2 mode).
+    signature_type=0 (EOA) — V2 client natively handles timestamp/builder fields
+    required by CLOB v2 API. No deposit wallet needed for standard EOA wallets.
     """
     if not CLOB_OK:
         return None
@@ -630,8 +624,7 @@ def _build_clob_client() -> "ClobClient | None":
             host=CLOB,
             chain_id=POLYGON,
             key=pk,
-            signature_type=3,
-            funder=C.poly_funder or None,
+            signature_type=0,
         )
         # Level 2: set credentials setelah signer terbentuk
         client.set_api_creds(ApiCreds(
@@ -639,9 +632,6 @@ def _build_clob_client() -> "ClobClient | None":
             api_secret=C.poly_secret,
             api_passphrase=C.poly_passphrase,
         ))
-        # POLY_1271: POLY_ADDRESS header must be deposit wallet, not EOA
-        if C.poly_funder:
-            client.signer.address = lambda: C.poly_funder
         return client
     except Exception as e:
         S.errors.append(f"[clob_init] {str(e)[:60]}")
