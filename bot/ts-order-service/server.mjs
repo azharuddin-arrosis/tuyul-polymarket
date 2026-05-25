@@ -47,11 +47,10 @@ const client = new ClobClient({
     chain: CHAIN_ID,
     signer,
     creds,
-    signatureType: 3,
-    funderAddress: FUNDER,
+    signatureType: 0,
 });
 
-console.log(`CLOB client ready — POLY_1271 funder=${FUNDER}`);
+console.log('CLOB client ready — EOA mode (sig_type=0)');
 
 // ── HTTP Server ───────────────────────────────────────────────
 const server = createServer(async (req, res) => {
