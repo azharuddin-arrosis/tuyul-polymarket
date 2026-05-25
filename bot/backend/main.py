@@ -2086,6 +2086,78 @@ def api_storage():
 @app.get("/api/btc5m")
 def api_btc5m(): return get_btc5m_info()
 
+@app.get("/api/predictions")
+def api_predictions():
+    b5 = S.btc5m
+    klines = b5.get("klines", [])
+    price  = b5.get("btc_price", 0)
+    ticks  = b5.get("ticks", [])
+    now_ts = int(datetime.now(timezone.utc).timestamp())
+    win_ts = btc5m_window_ts(now_ts)
+    win_open = b5.get("win_open", price)
+
+    if not klines or price <= 0:
+        return {"predictions": [], "current": {}, "error": "no data"}
+
+    current = btc5m_analyze(klines, price, win_open, ticks)
+
+    # Build 5 future window predictions
+    closes = [k["close"] for k in klines]
+    predictions = []
+    decay = 0.35  # confidence decay per window
+
+    # Current trend signals
+    mom_up = sum(1 for i in range(1, min(6, len(closes))) if closes[-i] > closes[-i-1]) if len(closes) >= 6 else 0
+    mom_dn = sum(1 for i in range(1, min(6, len(closes))) if closes[-i] < closes[-i-1]) if len(closes) >= 6 else 0
+    recent_roc = (closes[-1] - closes[-4]) / closes[-4] if len(closes) >= 4 and closes[-4] > 0 else 0
+
+    ema9  = sum(closes[-9:]) / min(9, len(closes)) if closes else price
+    ema21 = sum(closes[-21:]) / min(21, len(closes)) if closes else price
+    ema_bull = ema9 > ema21
+
+    base_score = current.get("score", 0)
+    base_dir   = current.get("dir", "")
+
+    for i in range(1, 6):
+        future_ts = win_ts + (i * 300)
+        secs_until = future_ts - now_ts
+
+        # Score projection: base score persists with decay + momentum adjustment
+        mom_bonus = (mom_up - mom_dn) * 0.8 + (1 if ema_bull else -1) * 0.5 + (1 if recent_roc > 0 else -1) * 0.3
+        projected_score = (base_score * (1 - decay * i)) + (mom_bonus * min(i, 2))
+        projected_conf = min(abs(projected_score) / 7.0, 1.0)
+        projected_dir  = "UP" if projected_score > 0.1 else "DOWN" if projected_score < -0.1 else "FLAT"
+        if projected_conf < 0.10:
+            projected_dir = "FLAT"
+
+        predictions.append({
+            "window":    i,
+            "ts":        future_ts,
+            "secs_until": max(0, secs_until),
+            "time_str":  f"{(secs_until // 60)}m{(secs_until % 60)}s",
+            "direction": projected_dir,
+            "confidence": round(projected_conf, 2),
+            "score":      round(projected_score, 2),
+        })
+
+    return {
+        "predictions": predictions,
+        "current": {
+            "direction":  base_dir,
+            "confidence": current.get("confidence", 0),
+            "score":      current.get("score", 0),
+            "price":      price,
+            "win_open":   win_open,
+            "secs_left":  win_ts + 300 - now_ts,
+        },
+        "indicators": {
+            "ema_bull": ema_bull,
+            "mom_up":   mom_up,
+            "mom_dn":   mom_dn,
+            "recent_roc": round(recent_roc * 100, 3),
+        },
+    }
+
 @app.get("/api/orderbook")
 def api_orderbook(): return get_orderbook_snapshot()
 
