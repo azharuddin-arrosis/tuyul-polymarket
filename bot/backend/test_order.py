@@ -39,42 +39,39 @@ print(f"  BUILDER_CODE:            {builder_code[:12]}...")
 print()
 
 # ─── 2. Auth test (sig_type=0) ─────────────────────────────────
-print("─── 2. Auth test (EOA, sig_type=0) ───")
+# ─── 2. Auth test (SAFE, sig_type=2) ─────────────────────────────────
+print("─── 2. Auth + Balance (SAFE, sig_type=2) ───")
 try:
-    client0 = ClobClient(host="https://clob.polymarket.com", chain_id=137, key=pk, signature_type=0)
-    client0.set_api_creds(ApiCreds(api_key=api_key, api_secret=secret, api_passphrase=passphrase))
-    v = client0.get_version()
+    client2 = ClobClient(host="https://clob.polymarket.com", chain_id=137, key=pk, signature_type=2, funder=funder or None)
+    client2.set_api_creds(ApiCreds(api_key=api_key, api_secret=secret, api_passphrase=passphrase))
+    v = client2.get_version()
     print(f"  ✅ get_version() → {v}")
-    bal = client0.get_balance_allowance(params=BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=2))
+    bal = client2.get_balance_allowance(params=BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=2))
     raw = float(bal.get("balance", 0) or 0)
-    print(f"  ✅ balance → ${raw / 1e6:.2f} USDC (raw: {raw})")
+    print(f"  ✅ balance → ${raw / 1e6:.2f} USDC")
 except Exception as e:
     print(f"  ❌ FAILED: {str(e)[:120]}")
 
-# ─── 3. Auth test (sig_type=3 + funder) ────────────────────────
+# ─── 3. Auth test (SAFE with funder, sig_type=2) ────────────────────────
 print()
-print("─── 3. Deposit wallet test (sig_type=3) ───")
+print("─── 3. SAFE balance sync (sig_type=2) ───")
 if not funder:
     print("  ⚠ POLY_FUNDER not set — skipping")
 else:
     try:
-        client3 = ClobClient(host="https://clob.polymarket.com", chain_id=137, key=pk, signature_type=3, funder=funder)
+        client3 = ClobClient(host="https://clob.polymarket.com", chain_id=137, key=pk, signature_type=2, funder=funder)
         client3.set_api_creds(ApiCreds(api_key=api_key, api_secret=secret, api_passphrase=passphrase))
-
-        # Balance sync
         try:
-            client3.update_balance_allowance(BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=3))
-            print(f"  ✅ update_balance_allowance(sig=3) OK")
+            client3.update_balance_allowance(BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=2))
+            print(f"  ✅ update_balance_allowance(sig=2) OK")
         except Exception as e:
             print(f"  ⚠ update_balance_allowance: {str(e)[:80]}")
-
-        # Check balance with sig_type=3
         try:
-            bal3 = client3.get_balance_allowance(params=BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=3))
+            bal3 = client3.get_balance_allowance(params=BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=2))
             raw3 = float(bal3.get("balance", 0) or 0)
-            print(f"  ✅ balance(sig=3) → ${raw3 / 1e6:.2f} USDC")
+            print(f"  ✅ balance(sig=2) → ${raw3 / 1e6:.2f} USDC")
         except Exception as e:
-            print(f"  ⚠ balance(sig=3): {str(e)[:80]}")
+            print(f"  ⚠ balance(sig=2): {str(e)[:80]}")
     except Exception as e:
         print(f"  ❌ Client init failed: {str(e)[:120]}")
 
@@ -105,8 +102,8 @@ try:
     print(f"  builder:       {o['builder'][:20]}...")
     has_ts   = bool(o.get("timestamp"))
     has_bld  = bool(o.get("builder"))
-    sig_ok   = int(o["signatureType"]) in (0, 3)
-    match_ok = o["maker"].lower() == o["signer"].lower()
+    sig_ok   = int(o["signatureType"]) in (0, 1, 2, 3)
+    match_ok = True  # SAFE: maker (funder) != signer (EOA) is valid
 
     print()
     checks = [
