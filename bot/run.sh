@@ -75,10 +75,19 @@ if [ "${1:-}" = "clean" ]; then
         for f in "$BOT_ROOT/logs/backend-${TARGET_BOT}-"*.log "$BOT_ROOT/logs/frontend-${TARGET_BOT}-"*.log; do
             [ -f "$f" ] && > "$f"
         done
-        echo -e "${G}✓ logs cleared for $TARGET_BOT (all modes)${X}"
+        # Also clean state + DB
+        rm -f "$BOT_ROOT/data/${TARGET_BOT}/state_${TARGET_BOT}.json" 2>/dev/null
+        rm -f "$BOT_ROOT/data/${TARGET_BOT}/trades.db" 2>/dev/null
+        echo -e "${G}✓ logs + state cleared for $TARGET_BOT (all modes)${X}"
     else
         for f in "$BOT_ROOT/logs/"*.log; do [ -f "$f" ] && > "$f"; done
-        echo -e "${G}✓ all logs cleared${X}"
+        # Clean all state + DB
+        for d in "$BOT_ROOT/data/"real*; do
+            [ -d "$d" ] || continue
+            bid=$(basename "$d")
+            rm -f "$d/state_${bid}.json" "$d/trades.db" 2>/dev/null
+        done
+        echo -e "${G}✓ all logs + state cleared${X}"
     fi
     exit 0
 fi
@@ -128,14 +137,16 @@ sleep 1
 ENV_FILE=""
 if [ "$MODE" = "real" ] || [ "$MODE" = "dry_run" ]; then
     ENV_FILE="backend/envs/${BOT_ID}.env"
-    if [ ! -f "$ENV_FILE" ]; then
+    if [ "$MODE" = "real" ] && [ ! -f "$ENV_FILE" ]; then
         echo -e "${R}✗ $ENV_FILE not found for mode=$MODE${X}"
         echo "  Available env files:"
         ls backend/envs/*.env 2>/dev/null | sed 's|backend/envs/|    |'
         exit 1
     fi
-    echo -e "${B}→ loading $ENV_FILE${X}"
-    set -a; source "$ENV_FILE"; set +a
+    if [ -f "$ENV_FILE" ]; then
+        echo -e "${B}→ loading $ENV_FILE${X}"
+        set -a; source "$ENV_FILE"; set +a
+    fi
     # CRITICAL: override BOT_MODE from arg (env file may say 'real' but we want 'dry_run')
     export BOT_MODE="$MODE"
     # Real mode safety reminder
@@ -180,13 +191,13 @@ BE_LOG="$BOT_ROOT/logs/backend-${BOT_ID}-${MODE_SUFFIX}.log"
 FE_LOG="$BOT_ROOT/logs/frontend-${BOT_ID}-${MODE_SUFFIX}.log"
 TS_LOG="$BOT_ROOT/logs/ts-order-${BOT_ID}.log"
 
-# Auto-clean: reset state for real mode (balance fetches from Polymarket on startup)
-if [ "$MODE" = "real" ]; then
-    rm -f "$DATA_DIR/state_${BOT_ID}.json" 2>/dev/null
-    :> "$BE_LOG"
-    :> "$FE_LOG"
-    echo -e "${D}→ cleaned state + logs for $BOT_ID${X}"
-fi
+# Auto-clean: comment out to keep state between restarts
+# if [ "$MODE" = "real" ]; then
+#     rm -f "$DATA_DIR/state_${BOT_ID}.json" 2>/dev/null
+#     :> "$BE_LOG"
+#     :> "$FE_LOG"
+#     echo -e "${D}→ cleaned state + logs for $BOT_ID${X}"
+# fi
 
 # ─── Start TS Order Service (real mode only) ──────────────────
 if [ "$MODE" = "real" ] && [ -f "$BOT_ROOT/ts-order-service/server.mjs" ]; then

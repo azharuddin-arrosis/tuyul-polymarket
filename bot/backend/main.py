@@ -683,39 +683,38 @@ async def place_order_with_retry(
         if client is None:
             return {"ok": False, "error": "CLOB client init failed"}
         price = round(price, 2)
-        size  = max(round(size, 2), 5.0)  # GTD min 5 shares
-        args_kw = {"token_id": token_id, "price": price, "size": size, "side": "BUY",
-                   "builder_code": C.builder_code, "expiration": int(time.time()) + 3600}
+        size  = max(round(size, 2), 2.0)
+        args = OrderArgs(token_id=token_id, price=price, size=size, side="BUY",
+                        builder_code=C.builder_code)
         try:
-            signed = client.create_order(OrderArgs(**args_kw))
+            signed = client.create_order(args)
             return client.post_order(signed, order_type)
         except Exception as e:
             return {"ok": False, "error": str(e)[:120]}
 
-    # ── GTL limit order ────────────────────────────────────────
-    print(f"[{_ts()}][ORDER] 🔄 GTL {outcome} ${size*price:.2f}@{int(price*100)}¢ token={clob_token_id[:16]}…")
+    # ── FOK market order ───────────────────────────────────────
+    print(f"[{_ts()}][ORDER] 🔄 FOK {outcome} ${size*price:.2f}@{int(price*100)}¢ token={clob_token_id[:16]}…")
     t0 = time.time()
-    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, price, size, OrderType.GTD)
+    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, price, size, OrderType.FOK)
     lat_ms = int((time.time() - t0) * 1000)
     order_id = resp.get("orderID") or resp.get("id") or ""
     if order_id:
-        status = resp.get("status", "?")
         actual_spent  = float(resp.get("makingAmount", 0) or 0) / 1e6
         actual_shares = float(resp.get("takingAmount", 0) or 0) / 1e6
         actual_price  = actual_spent / actual_shares if actual_spent > 0 and actual_shares > 0 else price
         actual_spent  = actual_spent if actual_spent > 0 else size * price
-        print(f"[{_ts()}][ORDER] ✅ GTL {status} {outcome} ${actual_spent:.2f}@{int(actual_price*100)}¢ "
+        print(f"[{_ts()}][ORDER] ✅ FOK {outcome} ${actual_spent:.2f}@{int(actual_price*100)}¢ "
               f"order={order_id[:16]}… lat={lat_ms}ms")
         add_log("ORDER_OK", {"order_id": order_id, "size": actual_spent, "price": actual_price,
-                             "latency_ms": lat_ms, "type": "GTL"})
-        return {"ok": True, "type": "GTL", "order_id": order_id, "actual_price": actual_price, "actual_size": actual_spent}
+                             "latency_ms": lat_ms, "type": "FOK"})
+        return {"ok": True, "type": "FOK", "order_id": order_id, "actual_price": actual_price, "actual_size": actual_spent}
     else:
         err_str = resp.get("error", str(resp))[:120]
-        print(f"[{_ts()}][ORDER] ❌ GTL ERROR lat={lat_ms}ms — {err_str}")
+        print(f"[{_ts()}][ORDER] ❌ FOK ERROR lat={lat_ms}ms — {err_str}")
 
     # ── MISSED ────────────────────────────────────────────────
-    print(f"[{_ts()}][ORDER] 💀 MISSED TRADE — GTL failed for {outcome} ${size*price:.2f}")
-    add_log("MISSED_TRADE", {"market_id": market_id, "outcome": outcome, "message": "GTL order failed"})
+    print(f"[{_ts()}][ORDER] 💀 MISSED TRADE — FOK failed for {outcome} ${size*price:.2f}")
+    add_log("MISSED_TRADE", {"market_id": market_id, "outcome": outcome, "message": "FOK order failed"})
     return {"ok": False, "type": "MISSED", "order_id": ""}
 
 # ─── COMPOUND / SALARY ────────────────────────────────────────
@@ -1994,6 +1993,8 @@ async def resolver_loop():
                         if pos.get("category") == "btc5m":
                             try:
                                 win_close = await _fetch_btc_close_at(pos.get("win_ts", 0) + 300, sess)
+                                if win_close <= 0:
+                                    win_close = await btc5m_fetch_price(sess)
                                 win_open  = pos.get("win_open_btc", 0)
                                 if win_close > 0 and win_open > 0:
                                     actual_up = win_close > win_open
