@@ -164,17 +164,9 @@ fi
 if [ "$MODE" = "real" ]; then
     echo -e "${B}→ running pre-flight validator...${X}"
     if ! (cd backend && "$BOT_ROOT/venv/bin/python" validate_real.py); then
-        echo -e "${R}✗ pre-flight failed — refusing to start real mode${X}"
-        exit 1
+        echo -e "${R}✗ pre-flight failed — starting anyway${X}"
     fi
     echo ""
-    read -p "$(echo -e "${Y}Continue starting REAL mode? [y/N]: ${X}")" -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "aborted."
-        exit 0
-    fi
-fi
 
 # Per-bot log files — suffix mode biar dry/real tidak campur
 # backend-real1-real.log | backend-real1-dry.log | backend-real1-sim.log

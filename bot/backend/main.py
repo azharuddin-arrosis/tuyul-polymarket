@@ -2476,7 +2476,16 @@ async def startup():
             (BOT_ID, MODE, datetime.now().isoformat(), C.usdc_capital, C.pol_balance))
         con.commit(); con.close()
     resumed = load_state()
-    db_load_daily_loss()                           # Sprint 1: restore daily P&L from DB
+    db_load_daily_loss()
+    # If fresh start (no saved state), fetch real USDC balance from Polymarket
+    if not resumed:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as sess:
+            try:
+                real_balance = await fetch_balance_usdc(sess)
+                if real_balance > 0:
+                    S.capital = real_balance
+                    print(f"[{BOT_ID}] Fresh start — set capital from Polymarket: ${real_balance:.2f}")
+            except Exception: pass
     # Auto-start trading for DRY_RUN and SIM modes (REAL mode requires manual RUN)
     if MODE in ("dry_run", "sim"):
         S.running = True
