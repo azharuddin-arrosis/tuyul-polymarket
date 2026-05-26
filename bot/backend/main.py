@@ -1373,7 +1373,7 @@ def calc_size(price: float) -> float:
     max_dollars = compound_bet(eq)
     max_shares  = max_dollars / price
     avail_shares = S.capital / price
-    min_shares = max(2.0, 1.0 / price)  # at least $1 worth (2 shares @ 50¢)
+    min_shares = max(2.0, 1.01 / price)  # slight buffer above $1 min
     return round(max(min_shares, min(max_shares, avail_shares * 0.40)), 2)
 
 def risk_ok(mid: str, sig: dict) -> tuple[bool, str]:
