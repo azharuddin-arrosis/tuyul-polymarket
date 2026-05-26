@@ -687,7 +687,7 @@ async def place_order_with_retry(
         try:
             from py_clob_client_v2.clob_types import MarketOrderArgs
             # FOK market order: amount=dollars, price=worst-price limit
-            amount = round(size * price, 2)
+            amount = max(1.00, round(size * price, 2))  # force ≥ $1
             args = MarketOrderArgs(token_id=token_id, amount=amount, price=price,
                                   side="BUY", builder_code=C.builder_code)
             signed = client.create_market_order(args)
