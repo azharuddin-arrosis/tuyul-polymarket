@@ -160,6 +160,7 @@ class BotState:
         self.pol_left             = C.pol_balance
         self.pos_counter          = 0
         self.running              = MODE == "sim"   # sim always runs, real needs manual start
+        self.cooldown_until       = 0.0              # cooldown after start (5min), unix timestamp
         self.gas_paused           = False
         self.ws_clients           = set()
         self.errors               = []
@@ -683,47 +684,40 @@ async def place_order_with_retry(
             return {"ok": False, "error": "CLOB client init failed"}
         price = round(price, 2)
         size  = round(size, 2)
-        args_kw = {"token_id": token_id, "price": price, "size": max(size, 5.0), "side": "BUY",
-                   "builder_code": C.builder_code, "expiration": int(time.time()) + 3600}
         try:
-            signed = client.create_order(OrderArgs(**args_kw))
-            return client.post_order(signed, order_type)
+            from py_clob_client_v2.clob_types import MarketOrderArgs
+            # FOK market order: amount=dollars, price=worst-price limit
+            amount = round(size * price, 2)
+            args = MarketOrderArgs(token_id=token_id, amount=amount, price=price,
+                                  side="BUY", builder_code=C.builder_code)
+            signed = client.create_market_order(args)
+            return client.post_order(signed, OrderType.FOK)
         except Exception as e:
             return {"ok": False, "error": str(e)[:120]}
 
-    # ── GTL limit order (reliable, fills at market price) ─────
-    print(f"[{_ts()}][ORDER] 🔄 GTL {outcome} ${size:.2f}@{int(price*100)}¢ token={clob_token_id[:16]}…")
+    # ── FOK market order (instant fill) ────────────────────────
+    print(f"[{_ts()}][ORDER] 🔄 FOK {outcome} ${size*price:.2f}@{int(price*100)}¢ token={clob_token_id[:16]}…")
     t0 = time.time()
-    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, price, max(size, 5.0), OrderType.GTD)
+    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, price, size, OrderType.FOK)
     lat_ms = int((time.time() - t0) * 1000)
     order_id = resp.get("orderID") or resp.get("id") or ""
-    if order_id:
-        status = resp.get("status", "?")
+    status   = resp.get("status", "?")
+    if order_id and status in ("matched", "MATCHED", "delayed"):
         actual_spent  = float(resp.get("makingAmount", 0) or 0) / 1e6
         actual_shares = float(resp.get("takingAmount", 0) or 0) / 1e6
-        # Only count as success if order actually MATCHED (not just live/resting)
-        if actual_spent <= 0:
-            print(f"[{_ts()}][ORDER] ⚠ GTL {status} {outcome} order={order_id[:16]}… NOT MATCHED — cancel+rollback")
-            # Cancel the unfilled order
-            try:
-                client = _build_clob_client()
-                if client:
-                    client.cancel_order(order_id=order_id)
-            except Exception: pass
-            return {"ok": False, "type": "SKIP", "order_id": order_id}
-        actual_price = actual_spent / actual_shares if actual_shares > 0 else price
-        print(f"[{_ts()}][ORDER] ✅ GTL {status} {outcome} ${actual_spent:.2f}@{int(actual_price*100)}¢ "
+        actual_price  = actual_spent / actual_shares if actual_shares > 0 else price
+        print(f"[{_ts()}][ORDER] ✅ FOK {status} {outcome} ${actual_spent:.2f}@{int(actual_price*100)}¢ "
               f"order={order_id[:16]}… lat={lat_ms}ms")
         add_log("ORDER_OK", {"order_id": order_id, "size": actual_spent, "price": actual_price,
-                             "latency_ms": lat_ms, "type": "GTL", "status": status})
-        return {"ok": True, "type": "GTL", "order_id": order_id, "actual_price": actual_price, "actual_size": actual_spent}
+                             "latency_ms": lat_ms, "type": "FOK"})
+        return {"ok": True, "type": "FOK", "order_id": order_id, "actual_price": actual_price, "actual_size": actual_spent}
     else:
         err_str = resp.get("error", str(resp))[:120]
-        print(f"[{_ts()}][ORDER] ❌ GTL ERROR lat={lat_ms}ms — {err_str}")
+        print(f"[{_ts()}][ORDER] ❌ FOK {status} lat={lat_ms}ms — {err_str}")
 
     # ── MISSED ────────────────────────────────────────────────
-    print(f"[{_ts()}][ORDER] 💀 MISSED TRADE — GTL failed for {outcome} ${size:.2f}")
-    add_log("MISSED_TRADE", {"market_id": market_id, "outcome": outcome, "message": "GTL order failed"})
+    print(f"[{_ts()}][ORDER] 💀 MISSED TRADE — FOK failed for {outcome} ${size*price:.2f}")
+    add_log("MISSED_TRADE", {"market_id": market_id, "outcome": outcome, "message": "FOK order failed"})
     return {"ok": False, "type": "MISSED", "order_id": ""}
 
 # ─── COMPOUND / SALARY ────────────────────────────────────────
@@ -1216,6 +1210,7 @@ async def btc5m_loop():
                     and sig["dir"]
                     and S.running
                     and not S.gas_paused
+                    and time.time() >= S.cooldown_until  # 5 min cooldown after start
                     and cfg.get("trading_active", True)
                     and breaker_ok
                     and sig["confidence"] >= conf_min
@@ -1373,12 +1368,12 @@ async def orderbook_loop():
 
 # ─── POSITION MANAGEMENT ─────────────────────────────────────
 def calc_size(price: float) -> float:
-    if price <= 0: return 5.0
+    if price <= 0: return 2.0
     eq = equity()
     max_dollars = compound_bet(eq)
     max_shares  = max_dollars / price
     avail_shares = S.capital / price
-    min_shares = max(5.0, 1.0 / price)  # GTL min 5 shares, at least $1 worth
+    min_shares = max(2.0, 1.0 / price)  # at least $1 worth (2 shares @ 50¢)
     return round(max(min_shares, min(max_shares, avail_shares * 0.40)), 2)
 
 def risk_ok(mid: str, sig: dict) -> tuple[bool, str]:
@@ -2310,6 +2305,7 @@ async def api_bot_start(force: bool = False):
         }
 
     S.running = True
+    S.cooldown_until = time.time() + 300  # 5 min cooldown
     _breaker_paused_reason = ""
     # Resume gas pause kalau user explicit start (assume they topped up or want to retry)
     if S.gas_paused and n_orders > C.gas_stop_orders:
