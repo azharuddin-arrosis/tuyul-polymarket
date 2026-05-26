@@ -169,7 +169,6 @@ if [ "$MODE" = "real" ]; then
     echo ""
 
 # Per-bot log files — suffix mode biar dry/real tidak campur
-# backend-real1-real.log | backend-real1-dry.log | backend-real1-sim.log
 case "$MODE" in
   real)    MODE_SUFFIX="real" ;;
   dry_run) MODE_SUFFIX="dry"  ;;
@@ -179,6 +178,14 @@ esac
 BE_LOG="$BOT_ROOT/logs/backend-${BOT_ID}-${MODE_SUFFIX}.log"
 FE_LOG="$BOT_ROOT/logs/frontend-${BOT_ID}-${MODE_SUFFIX}.log"
 TS_LOG="$BOT_ROOT/logs/ts-order-${BOT_ID}.log"
+
+# Auto-clean: reset state for real mode (balance fetches from Polymarket on startup)
+if [ "$MODE" = "real" ]; then
+    rm -f "$DATA_DIR/state_${BOT_ID}.json" 2>/dev/null
+    :> "$BE_LOG"
+    :> "$FE_LOG"
+    echo -e "${D}→ cleaned state + logs for $BOT_ID${X}"
+fi
 
 # ─── Start TS Order Service (real mode only) ──────────────────
 if [ "$MODE" = "real" ] && [ -f "$BOT_ROOT/ts-order-service/server.mjs" ]; then

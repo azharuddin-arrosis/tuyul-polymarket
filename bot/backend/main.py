@@ -1373,12 +1373,12 @@ async def orderbook_loop():
 
 # ─── POSITION MANAGEMENT ─────────────────────────────────────
 def calc_size(price: float) -> float:
-    if price <= 0: return 2.0
+    if price <= 0: return 5.0
     eq = equity()
-    max_dollars = compound_bet(eq)         # dollars
-    max_shares  = max_dollars / price      # convert to shares
-    avail_shares = S.capital / price       # shares from available capital
-    min_shares = max(2.0, 1.0 / price)     # at least $1 worth (2 shares @ 50¢)
+    max_dollars = compound_bet(eq)
+    max_shares  = max_dollars / price
+    avail_shares = S.capital / price
+    min_shares = max(5.0, 1.0 / price)  # GTL min 5 shares, at least $1 worth
     return round(max(min_shares, min(max_shares, avail_shares * 0.40)), 2)
 
 def risk_ok(mid: str, sig: dict) -> tuple[bool, str]:
