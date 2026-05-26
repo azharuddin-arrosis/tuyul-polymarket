@@ -705,7 +705,8 @@ async def place_order_with_retry(
     lat_ms = int((time.time() - t0) * 1000)
     order_id = resp.get("orderID") or resp.get("id") or ""
     if order_id:
-        # Track actual fill amounts (fixed-point, 6 decimals → divide by 1e6)
+        status = resp.get("status", "?")
+        # Track actual fill amounts
         actual_spent  = float(resp.get("makingAmount", 0) or 0) / 1e6
         actual_shares = float(resp.get("takingAmount", 0) or 0) / 1e6
         if actual_spent > 0:
@@ -714,9 +715,10 @@ async def place_order_with_retry(
         else:
             actual_price = price
             actual_size  = size
-        print(f"[{_ts()}][ORDER] ✅ GTL POSTED {outcome} ${actual_size:.2f}@{int(actual_price*100)}¢ "
+        print(f"[{_ts()}][ORDER] ✅ GTL {status} {outcome} ${actual_size:.2f}@{int(actual_price*100)}¢ "
               f"order={order_id[:16]}… lat={lat_ms}ms")
-        add_log("ORDER_OK", {"order_id": order_id, "size": actual_size, "price": actual_price, "latency_ms": lat_ms, "type": "GTL"})
+        add_log("ORDER_OK", {"order_id": order_id, "size": actual_size, "price": actual_price,
+                             "latency_ms": lat_ms, "type": "GTL", "status": status})
         return {"ok": True, "type": "GTL", "order_id": order_id, "actual_price": actual_price, "actual_size": actual_size}
     else:
         err_str = resp.get("error", str(resp))[:120]
