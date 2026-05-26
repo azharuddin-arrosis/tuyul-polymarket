@@ -1035,7 +1035,7 @@ async def btc5m_entry(sig: dict, secs_left: int, sess):
             tgt_price = float(prices[i])
             clob_token_id = token_map.get("down") or token_map.get("no") or ""
 
-    if tgt_price is None or not (0.02 < tgt_price < 0.98):
+    if tgt_price is None or not (0.15 < tgt_price < 0.85):
         print(f"[{_ts()}][BOT] ⚠ ENTRY SKIP — price out of range: tgt_price={tgt_price} dir={sig['dir']}")
         return
 
