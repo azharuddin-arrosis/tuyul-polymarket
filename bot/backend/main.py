@@ -2007,7 +2007,7 @@ async def resolver_loop():
                         # Fast-resolve: use BTC close price to detect loss early
                         if pos.get("category") == "btc5m":
                             try:
-                                win_close = await _fetch_btc_close_at(pos.get("win_ts", 0), sess)
+                                win_close = await _fetch_btc_close_at(pos.get("win_ts", 0) + 300, sess)
                                 win_open  = pos.get("win_open_btc", 0)
                                 if win_close > 0 and win_open > 0:
                                     actual_up = win_close > win_open
