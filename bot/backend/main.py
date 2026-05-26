@@ -1747,6 +1747,29 @@ async def redeem_winning_positions():
 
                         claimed_usdc = 0.0
                         if result:
+                            claimed_usdc = float(result.get("payout", 0) or result.get("amount", 0) or 0)
+
+                        # Update position with actual fill data from redeem
+                        if claimed_usdc > 0:
+                            actual_pnl = round(claimed_usdc - pos["size"], 4)
+                            pos["payout_actual"] = claimed_usdc
+                            pos["shares_actual"] = round(claimed_usdc, 4)
+
+                        # Close position in state
+                        await close_position(pos, True)
+
+                        # Override P&L with actual if available
+                        if claimed_usdc > 0:
+                            async with _lock:
+                                for p in S.closed_trades:
+                                    if p.get("id") == pos.get("id"):
+                                        p["pnl"] = round(claimed_usdc - p["size"], 4)
+                                        p["payout"] = claimed_usdc
+                                        break
+                            continue
+
+                        claimed_usdc = 0.0
+                        if result:
                             # Result may contain payout amount
                             claimed_usdc = float(result.get("payout", 0) or result.get("amount", 0) or 0)
 
@@ -1967,26 +1990,38 @@ async def _resolve_dry_run(pos: dict, sess: aiohttp.ClientSession) -> tuple[bool
 
 async def resolver_loop():
     """Sim & dry_run: auto-resolve positions on window expiry.
-    - SIM:    random.random() < true_prob * 0.93 (simulated outcome)
-    - DRY_RUN: fetch real BTC close price → deterministic resolve (matches Polymarket reality)
-    Real positions resolve via redeem loop."""
+    Real BTC5m: fast-close LOSSES (no need to wait for CLOB), leave WINS for claim."""
     async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as sess:
         while True:
-            if MODE in ("sim", "dry_run"):
-                now = datetime.now(timezone.utc)
-                for pos in list(S.positions):
-                    if pos["status"] != "open": continue
-                    if pos.get("mode") == "real": continue
-                    opened  = datetime.fromisoformat(pos["opened_at"])
-                    elapsed = (now-opened).total_seconds()
-                    if elapsed >= pos.get("resolve_sec", 86400):
+            now = datetime.now(timezone.utc)
+            for pos in list(S.positions):
+                if pos["status"] != "open": continue
+                opened  = datetime.fromisoformat(pos["opened_at"])
+                elapsed = (now-opened).total_seconds()
+                # Close window + 60s grace for CLOB indexing
+                if elapsed >= pos.get("resolve_sec", 86400) + 60:
+                    pos_mode = pos.get("mode", MODE)
+                    if pos_mode == "real":
+                        # Fast-resolve: use BTC close price to detect loss early
+                        if pos.get("category") == "btc5m":
+                            try:
+                                win_close = await _fetch_btc_close_at(pos.get("win_ts", 0), sess)
+                                win_open  = pos.get("win_open_btc", 0)
+                                if win_close > 0 and win_open > 0:
+                                    actual_up = win_close > win_open
+                                    won = actual_up if pos["outcome"] == "UP" else not actual_up
+                                    if not won:
+                                        await close_position(pos, False)
+                                        continue  # LOST → closed, no need to wait for CLOB
+                                    # WON → keep open, wait for CLOB claim via redeem loop
+                            except Exception: pass
+                        continue  # non-btc5m real → wait for redeem loop
+                    elif pos_mode in ("sim", "dry_run"):
                         if MODE == "sim":
                             tp  = pos.get("true_prob", 0.65)
                             won = random.random() < (tp * 0.93)
-                            print(f"[{_ts()}][BOT] 🎲 SIM RESOLVE {pos['id']} {pos['outcome']} → {'WON' if won else 'LOST'} (random tp={tp:.2f})")
                         else:
                             won, reason = await _resolve_dry_run(pos, sess)
-                            print(f"[{_ts()}][BOT] 📊 DRY_RUN RESOLVE {pos['id']} {pos['outcome']} → {'WON' if won else 'LOST'} ({reason})")
                         await close_position(pos, won)
             await asyncio.sleep(5)
 
