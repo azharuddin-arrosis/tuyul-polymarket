@@ -683,41 +683,46 @@ async def place_order_with_retry(
         if client is None:
             return {"ok": False, "error": "CLOB client init failed"}
         price = round(price, 2)
-        size  = round(size, 2)
+        size  = max(round(size, 2), 5.0)
+        args_kw = {"token_id": token_id, "price": price, "size": size, "side": "BUY",
+                   "builder_code": C.builder_code, "expiration": int(time.time()) + 3600}
         try:
-            from py_clob_client_v2.clob_types import MarketOrderArgs
-            # FOK market order: amount=dollars, price=worst-price limit
-            amount = max(1.00, round(size * price, 2))  # force ≥ $1
-            args = MarketOrderArgs(token_id=token_id, amount=amount, price=price,
-                                  side="BUY", builder_code=C.builder_code)
-            signed = client.create_market_order(args)
-            return client.post_order(signed, OrderType.FOK)
+            signed = client.create_order(OrderArgs(**args_kw))
+            return client.post_order(signed, order_type)
         except Exception as e:
             return {"ok": False, "error": str(e)[:120]}
 
-    # ── FOK market order (instant fill) ────────────────────────
-    print(f"[{_ts()}][ORDER] 🔄 FOK {outcome} ${size*price:.2f}@{int(price*100)}¢ token={clob_token_id[:16]}…")
+    # ── GTL limit order ────────────────────────────────────────
+    print(f"[{_ts()}][ORDER] 🔄 GTL {outcome} ${size*price:.2f}@{int(price*100)}¢ token={clob_token_id[:16]}…")
     t0 = time.time()
-    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, price, size, OrderType.FOK)
+    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, price, size, OrderType.GTD)
     lat_ms = int((time.time() - t0) * 1000)
     order_id = resp.get("orderID") or resp.get("id") or ""
-    status   = resp.get("status", "?")
-    if order_id and status in ("matched", "MATCHED", "delayed"):
+    if order_id:
+        status = resp.get("status", "?")
         actual_spent  = float(resp.get("makingAmount", 0) or 0) / 1e6
         actual_shares = float(resp.get("takingAmount", 0) or 0) / 1e6
-        actual_price  = actual_spent / actual_shares if actual_shares > 0 else price
-        print(f"[{_ts()}][ORDER] ✅ FOK {status} {outcome} ${actual_spent:.2f}@{int(actual_price*100)}¢ "
+        if actual_spent <= 0:
+            # Not matched → cancel immediately, retry next window
+            print(f"[{_ts()}][ORDER] ⚠ GTL {status} not matched — cancel, retry next window")
+            try:
+                client = _build_clob_client()
+                if client: client.cancel_order(order_id=order_id)
+            except Exception: pass
+            return {"ok": False, "type": "SKIP", "order_id": order_id}
+        actual_price = actual_spent / actual_shares if actual_shares > 0 else price
+        print(f"[{_ts()}][ORDER] ✅ GTL {status} {outcome} ${actual_spent:.2f}@{int(actual_price*100)}¢ "
               f"order={order_id[:16]}… lat={lat_ms}ms")
         add_log("ORDER_OK", {"order_id": order_id, "size": actual_spent, "price": actual_price,
-                             "latency_ms": lat_ms, "type": "FOK"})
-        return {"ok": True, "type": "FOK", "order_id": order_id, "actual_price": actual_price, "actual_size": actual_spent}
+                             "latency_ms": lat_ms, "type": "GTL", "status": status})
+        return {"ok": True, "type": "GTL", "order_id": order_id, "actual_price": actual_price, "actual_size": actual_spent}
     else:
         err_str = resp.get("error", str(resp))[:120]
-        print(f"[{_ts()}][ORDER] ❌ FOK {status} lat={lat_ms}ms — {err_str}")
+        print(f"[{_ts()}][ORDER] ❌ GTL ERROR lat={lat_ms}ms — {err_str}")
 
     # ── MISSED ────────────────────────────────────────────────
-    print(f"[{_ts()}][ORDER] 💀 MISSED TRADE — FOK failed for {outcome} ${size*price:.2f}")
-    add_log("MISSED_TRADE", {"market_id": market_id, "outcome": outcome, "message": "FOK order failed"})
+    print(f"[{_ts()}][ORDER] 💀 MISSED TRADE — GTL failed for {outcome} ${size*price:.2f}")
+    add_log("MISSED_TRADE", {"market_id": market_id, "outcome": outcome, "message": "GTL order failed"})
     return {"ok": False, "type": "MISSED", "order_id": ""}
 
 # ─── COMPOUND / SALARY ────────────────────────────────────────
