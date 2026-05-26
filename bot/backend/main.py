@@ -703,7 +703,13 @@ async def place_order_with_retry(
         actual_shares = float(resp.get("takingAmount", 0) or 0) / 1e6
         # Only count as success if order actually MATCHED (not just live/resting)
         if actual_spent <= 0:
-            print(f"[{_ts()}][ORDER] ⚠ GTL {status} {outcome} order={order_id[:16]}… NOT MATCHED — skipping")
+            print(f"[{_ts()}][ORDER] ⚠ GTL {status} {outcome} order={order_id[:16]}… NOT MATCHED — cancel+rollback")
+            # Cancel the unfilled order
+            try:
+                client = _build_clob_client()
+                if client:
+                    client.cancel_order(order_id=order_id)
+            except Exception: pass
             return {"ok": False, "type": "SKIP", "order_id": order_id}
         actual_price = actual_spent / actual_shares if actual_shares > 0 else price
         print(f"[{_ts()}][ORDER] ✅ GTL {status} {outcome} ${actual_spent:.2f}@{int(actual_price*100)}¢ "
