@@ -226,7 +226,7 @@ echo -e "${B}→ starting backend${X} ${D}(BOT_ID=$BOT_ID MODE=$MODE BE=$BE_PORT
     echo "═══════════════════════════════════════════════════════════════" >> "$BE_LOG"
     PYTHONUNBUFFERED=1 BOT_ID="$BOT_ID" BOT_MODE="$MODE" DATA_DIR="$DATA_DIR" \
         "$BOT_ROOT/venv/bin/python" -u -m uvicorn main:app \
-        --host 127.0.0.1 --port "$BE_PORT" --log-level warning \
+        --host 0.0.0.0 --port "$BE_PORT" --log-level warning \
         >> "$BE_LOG" 2>&1
 ) &
 BACKEND_PID=$!
