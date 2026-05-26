@@ -681,30 +681,24 @@ async def place_order_with_retry(
         client = _build_clob_client()
         if client is None:
             return {"ok": False, "error": "CLOB client init failed"}
-        price = round(price, 2)  # 2 decimal precision for CLOB
+        price = round(price, 2)
         size  = round(size, 2)
-        if order_type == OrderType.GTD:
-            size = max(size, 5.0)  # GTD min 5 shares
-        args_kw = {"token_id": token_id, "price": price, "size": size, "side": "BUY",
-                   "builder_code": C.builder_code}
-        # GTD orders need future expiration (+1 hour)
-        if order_type == OrderType.GTD:
-            args_kw["expiration"] = int(time.time()) + 3600
-        args = OrderArgs(**args_kw)
+        args_kw = {"token_id": token_id, "price": price, "size": max(size, 5.0), "side": "BUY",
+                   "builder_code": C.builder_code, "expiration": int(time.time()) + 3600}
         try:
-            signed = client.create_order(args)
+            signed = client.create_order(OrderArgs(**args_kw))
             return client.post_order(signed, order_type)
         except Exception as e:
             return {"ok": False, "error": str(e)[:120]}
 
-    # ── Step 1: FOK (Fill-or-Kill) ────────────────────────────
-    print(f"[{_ts()}][ORDER] 🔄 FOK {outcome} ${size:.2f}@{int(price*100)}¢ token={clob_token_id[:16]}…")
+    # ── GTL limit order (reliable, fills at market price) ─────
+    print(f"[{_ts()}][ORDER] 🔄 GTL {outcome} ${size:.2f}@{int(price*100)}¢ token={clob_token_id[:16]}…")
     t0 = time.time()
-    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, price, size, OrderType.FOK)
+    resp = await asyncio.get_event_loop().run_in_executor(None, _post_order, clob_token_id, price, max(size, 5.0), OrderType.GTD)
     lat_ms = int((time.time() - t0) * 1000)
     order_id = resp.get("orderID") or resp.get("id") or ""
-    status   = resp.get("status", "?")
-    if order_id and status in ("matched", "live", "MATCHED", "delayed"):
+    if order_id:
+        status = resp.get("status", "?")
         actual_spent  = float(resp.get("makingAmount", 0) or 0) / 1e6
         actual_shares = float(resp.get("takingAmount", 0) or 0) / 1e6
         if actual_spent > 0:
@@ -712,22 +706,19 @@ async def place_order_with_retry(
             actual_size  = actual_spent
         else:
             actual_price = price
-            actual_size  = size
-        print(f"[{_ts()}][ORDER] ✅ FOK {status} {outcome} ${actual_size:.2f}@{int(actual_price*100)}¢ "
+            actual_size  = size * price  # convert shares → dollars
+        print(f"[{_ts()}][ORDER] ✅ GTL {status} {outcome} ${actual_size:.2f}@{int(actual_price*100)}¢ "
               f"order={order_id[:16]}… lat={lat_ms}ms")
         add_log("ORDER_OK", {"order_id": order_id, "size": actual_size, "price": actual_price,
-                             "latency_ms": lat_ms, "type": "FOK"})
-        return {"ok": True, "type": "FOK", "order_id": order_id, "actual_price": actual_price, "actual_size": actual_size}
+                             "latency_ms": lat_ms, "type": "GTL", "status": status})
+        return {"ok": True, "type": "GTL", "order_id": order_id, "actual_price": actual_price, "actual_size": actual_size}
     else:
         err_str = resp.get("error", str(resp))[:120]
-        print(f"[{_ts()}][ORDER] ❌ FOK ERROR lat={lat_ms}ms — {err_str}")
+        print(f"[{_ts()}][ORDER] ❌ GTL ERROR lat={lat_ms}ms — {err_str}")
 
     # ── MISSED ────────────────────────────────────────────────
-    print(f"[{_ts()}][ORDER] 💀 MISSED TRADE — FOK failed for {outcome} ${size:.2f}")
-    add_log("MISSED_TRADE", {
-        "market_id": market_id, "outcome": outcome,
-        "message": "FOK order failed",
-    })
+    print(f"[{_ts()}][ORDER] 💀 MISSED TRADE — GTL failed for {outcome} ${size:.2f}")
+    add_log("MISSED_TRADE", {"market_id": market_id, "outcome": outcome, "message": "GTL order failed"})
     return {"ok": False, "type": "MISSED", "order_id": ""}
 
 # ─── COMPOUND / SALARY ────────────────────────────────────────
