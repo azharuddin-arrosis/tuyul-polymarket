@@ -167,6 +167,7 @@ if [ "$MODE" = "real" ]; then
         echo -e "${R}✗ pre-flight failed — starting anyway${X}"
     fi
     echo ""
+fi
 
 # Per-bot log files — suffix mode biar dry/real tidak campur
 case "$MODE" in
