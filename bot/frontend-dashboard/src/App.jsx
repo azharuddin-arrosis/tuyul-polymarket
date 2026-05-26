@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 
+const HOST = window.location.hostname || 'localhost'
+
 // ─── THEMES ──────────────────────────────────────────────────
 const THEMES = {
   'Midnight Indigo': {
@@ -55,7 +57,7 @@ function useLatency(backendPort) {
     const ping = async () => {
       // Backend ping
       const t0 = performance.now()
-      try { await fetch(`http://localhost:${backendPort}/health`, { signal: AbortSignal.timeout(2000) }); if (!cancelled) setLat(l => ({ ...l, be: Math.round(performance.now() - t0) })) }
+      try { await fetch(`http://${HOST}:${backendPort}/health`, { signal: AbortSignal.timeout(2000) }); if (!cancelled) setLat(l => ({ ...l, be: Math.round(performance.now() - t0) })) }
       catch { if (!cancelled) setLat(l => ({ ...l, be: null })) }
       // Binance ping
       const t1 = performance.now()
@@ -81,7 +83,7 @@ function useBotsLatency(bots) {
         bots.map(async (b) => {
           const t0 = performance.now()
           try {
-            await fetch(`http://localhost:${b.backend_port}/health`, { signal: AbortSignal.timeout(2000) })
+            await fetch(`http://${HOST}:${b.backend_port}}/health`, { signal: AbortSignal.timeout(2000) })
             return [b.id, Math.round(performance.now() - t0)]
           } catch {
             return [b.id, null]
@@ -129,10 +131,10 @@ function useDashboard() {
       const updates = await Promise.all(bots.map(async (b) => {
         try {
           const [stats, hist, gas, storage] = await Promise.all([
-            fetch(`http://localhost:${b.backend_port}/api/stats`,          { signal: AbortSignal.timeout(3000) }).then(r => r.ok ? r.json() : null).catch(() => null),
-            fetch(`http://localhost:${b.backend_port}/api/history?limit=300`, { signal: AbortSignal.timeout(3000) }).then(r => r.ok ? r.json() : []).catch(() => []),
-            fetch(`http://localhost:${b.backend_port}/api/gas`,            { signal: AbortSignal.timeout(3000) }).then(r => r.ok ? r.json() : null).catch(() => null),
-            fetch(`http://localhost:${b.backend_port}/api/storage`,        { signal: AbortSignal.timeout(3000) }).then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch(`http://${HOST}:${b.backend_port}}/api/stats`,          { signal: AbortSignal.timeout(3000) }).then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch(`http://${HOST}:${b.backend_port}}/api/history?limit=300`, { signal: AbortSignal.timeout(3000) }).then(r => r.ok ? r.json() : []).catch(() => []),
+            fetch(`http://${HOST}:${b.backend_port}}/api/gas`,            { signal: AbortSignal.timeout(3000) }).then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch(`http://${HOST}:${b.backend_port}}/api/storage`,        { signal: AbortSignal.timeout(3000) }).then(r => r.ok ? r.json() : null).catch(() => null),
           ])
           return [b.id, { stats, hist, gas, storage, health: !!stats }]
         } catch {
@@ -602,7 +604,7 @@ function BotCard({ bot, data, onStart, onStop, onDayClick, onWithdrawal, onHisto
 
   const openDetail = () => {
     const t = localStorage.getItem('polypox-theme') || 'Midnight Indigo'
-    window.open(`http://localhost:${bot.frontend_port}?theme=${encodeURIComponent(t)}`, '_blank')
+    window.open(`http://${HOST}:${bot.frontend_port}?theme=${encodeURIComponent(t)}`, '_blank')
   }
 
   return (
@@ -868,7 +870,7 @@ function WithdrawalView({ bots, data, onBack }) {
                   setWdResult(null)
                   try {
                     const amount = (wdModal.capital * wdModal.percent / 100).toFixed(2)
-                    const url = `http://localhost:${wdModal.backendPort}/api/withdrawal/execute?bot_id=${wdModal.botId}&amount=${amount}`
+                    const url = `http://${HOST}:${wdModal.backendPort}/api/withdrawal/execute?bot_id=${wdModal.botId}&amount=${amount}`
                     const response = await fetch(url, { method: 'POST' })
                     const result = await response.json()
                     if (result.ok) {
@@ -943,8 +945,8 @@ function LogViewer({ bots, onBack, initialBot }) {
     const load = async () => {
       try {
         const [br, fr] = await Promise.all([
-          fetch(`http://localhost:${port}/api/logs/file?type=backend&lines=400`,  { signal: AbortSignal.timeout(4000) }),
-          fetch(`http://localhost:${port}/api/logs/file?type=frontend&lines=400`, { signal: AbortSignal.timeout(4000) }),
+          fetch(`http://${HOST}:${port}/api/logs/file?type=backend&lines=400`,  { signal: AbortSignal.timeout(4000) }),
+          fetch(`http://${HOST}:${port}/api/logs/file?type=frontend&lines=400`, { signal: AbortSignal.timeout(4000) }),
         ])
         const [bd, fd] = await Promise.all([br.json(), fr.json()])
         if (!cancelled) {
@@ -1161,7 +1163,7 @@ export default function App() {
 
   const startBot = async (bot) => {
     try {
-      const r = await fetch(`http://localhost:${bot.backend_port}/api/bot/start`, { method: 'POST' })
+      const r = await fetch(`http://${HOST}:${bot.backend_port}/api/bot/start`, { method: 'POST' })
       const d = await r.json()
       if (!d.ok && d.reason === 'gas_insufficient') {
         const msg = `⚠ ${bot.id} — Gas insufficient!\n\n` +
@@ -1179,7 +1181,7 @@ export default function App() {
     }
   }
   const stopBot = (bot) => {
-    fetch(`http://localhost:${bot.backend_port}/api/bot/stop`, { method: 'POST' })
+    fetch(`http://${HOST}:${bot.backend_port}/api/bot/stop`, { method: 'POST' })
       .catch(() => alert(`Failed to stop ${bot.id}`))
   }
 
@@ -1194,7 +1196,7 @@ export default function App() {
   const handleHistory = async (bot) => {
     setHistoryLoading(true)
     try {
-      const response = await fetch(`http://localhost:${bot.backend_port}/api/withdrawal/history?bot_id=${bot.id}`)
+      const response = await fetch(`http://${HOST}:${bot.backend_port}/api/withdrawal/history?bot_id=${bot.id}`)
       const result = await response.json()
       if (result.ok) {
         setHistoryModal({ botId: bot.id, history: result.history || [] })
@@ -1384,7 +1386,7 @@ export default function App() {
                   setWdResult(null)
                   try {
                     const amount = (wdModal.capital * wdModal.percent / 100).toFixed(2)
-                    const url = `http://localhost:${wdModal.backendPort}/api/withdrawal/execute?bot_id=${wdModal.botId}&amount=${amount}`
+                    const url = `http://${HOST}:${wdModal.backendPort}/api/withdrawal/execute?bot_id=${wdModal.botId}&amount=${amount}`
                     const response = await fetch(url, { method: 'POST' })
                     const result = await response.json()
                     if (result.ok) {
