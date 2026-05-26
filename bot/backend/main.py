@@ -701,17 +701,16 @@ async def place_order_with_retry(
         status = resp.get("status", "?")
         actual_spent  = float(resp.get("makingAmount", 0) or 0) / 1e6
         actual_shares = float(resp.get("takingAmount", 0) or 0) / 1e6
-        if actual_spent > 0:
-            actual_price = actual_spent / actual_shares if actual_shares > 0 else price
-            actual_size  = actual_spent
-        else:
-            actual_price = price
-            actual_size  = size * price  # convert shares → dollars
-        print(f"[{_ts()}][ORDER] ✅ GTL {status} {outcome} ${actual_size:.2f}@{int(actual_price*100)}¢ "
+        # Only count as success if order actually MATCHED (not just live/resting)
+        if actual_spent <= 0:
+            print(f"[{_ts()}][ORDER] ⚠ GTL {status} {outcome} order={order_id[:16]}… NOT MATCHED — skipping")
+            return {"ok": False, "type": "SKIP", "order_id": order_id}
+        actual_price = actual_spent / actual_shares if actual_shares > 0 else price
+        print(f"[{_ts()}][ORDER] ✅ GTL {status} {outcome} ${actual_spent:.2f}@{int(actual_price*100)}¢ "
               f"order={order_id[:16]}… lat={lat_ms}ms")
-        add_log("ORDER_OK", {"order_id": order_id, "size": actual_size, "price": actual_price,
+        add_log("ORDER_OK", {"order_id": order_id, "size": actual_spent, "price": actual_price,
                              "latency_ms": lat_ms, "type": "GTL", "status": status})
-        return {"ok": True, "type": "GTL", "order_id": order_id, "actual_price": actual_price, "actual_size": actual_size}
+        return {"ok": True, "type": "GTL", "order_id": order_id, "actual_price": actual_price, "actual_size": actual_spent}
     else:
         err_str = resp.get("error", str(resp))[:120]
         print(f"[{_ts()}][ORDER] ❌ GTL ERROR lat={lat_ms}ms — {err_str}")
